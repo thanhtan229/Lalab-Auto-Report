@@ -5,77 +5,81 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="850">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="#F5F6F8">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="{StaticResource Tinix.Color.Bg.Body}">
         <Grid Margin="24">
-            <Border Background="White" CornerRadius="8" Padding="24" BorderBrush="#E0E0E0" BorderThickness="1" MaxWidth="750" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="28" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" MaxWidth="780" HorizontalAlignment="Left" VerticalAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="CÀI ĐẶT HỆ THỐNG" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20"/>
+                    <!-- Header -->
+                    <StackPanel Margin="0,0,0,24">
+                        <TextBlock Text="CẤU HÌNH XƯỞNG IN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Cài Đặt Hệ Thống &amp; Lưu Trữ" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                    </StackPanel>
 
                     <!-- Root Folder -->
-                    <TextBlock Text="Thư mục gốc chứa ảnh (Root Folder)" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
-                    <TextBlock Text="Cấu trúc thư mục mong đợi: Root / YYYY-MM-DD / Tên Khách Hàng / Quy Cách In / ..." Foreground="#64748B" FontSize="12" Margin="0,0,0,8"/>
-                    <Grid Margin="0,0,0,16">
+                    <TextBlock Text="Thư mục gốc chứa ảnh (Root Folder)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
+                    <TextBlock Text="Cấu trúc thư mục mong đợi: Root / YYYY-MM-DD / Tên Khách Hàng / Quy Cách In / ..." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,18">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding RootFolder, UpdateSourceTrigger=PropertyChanged}" Height="36" Padding="8,6" FontSize="13" VerticalContentAlignment="Center"/>
-                        <Button Grid.Column="1" Command="{Binding BrowseRootFolderCommand}" Content="Chọn thư mục..." Margin="8,0,0,0" Padding="16,6" Height="36" FontWeight="SemiBold" Background="#0284C7" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                        <TextBox Text="{Binding RootFolder, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13"/>
+                        <Button Grid.Column="1" Command="{Binding BrowseRootFolderCommand}" Content="Chọn thư mục..." Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Secondary}" Height="36" Padding="16,0"/>
                     </Grid>
 
                     <!-- Supported Extensions -->
-                    <TextBlock Text="Định dạng file ảnh hỗ trợ (phân cách bằng dấu phẩy)" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
-                    <TextBox Text="{Binding SupportedExtensions, UpdateSourceTrigger=PropertyChanged}" Height="36" Padding="8,6" FontSize="13" VerticalContentAlignment="Center" Margin="0,0,0,16"/>
+                    <TextBlock Text="Định dạng file ảnh hỗ trợ (phân cách bằng dấu phẩy)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
+                    <TextBox Text="{Binding SupportedExtensions, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13" Margin="0,0,0,18"/>
 
                     <!-- Scan behavior options -->
-                    <TextBlock Text="Tùy chọn khởi động" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
-                    <CheckBox Content="Tự động quét thư mục ngày hôm nay khi mở ứng dụng" IsChecked="{Binding AutoScanStartup}" Margin="0,0,0,8"/>
-                    <CheckBox Content="Quét thêm ngày hôm qua nếu bật tùy chọn trên" IsChecked="{Binding StartupIncludeYesterday}" IsEnabled="{Binding AutoScanStartup}" Margin="20,0,0,16"/>
+                    <TextBlock Text="Tùy chọn khởi động" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,8" FontSize="13"/>
+                    <CheckBox Content="Tự động quét thư mục ngày hôm nay khi mở ứng dụng" IsChecked="{Binding AutoScanStartup}" Margin="0,0,0,8" FontSize="13"/>
+                    <CheckBox Content="Quét thêm ngày hôm qua nếu bật tùy chọn trên" IsChecked="{Binding StartupIncludeYesterday}" IsEnabled="{Binding AutoScanStartup}" Margin="20,0,0,18" FontSize="13"/>
 
                     <!-- Database info -->
-                    <TextBlock Text="Cơ sở dữ liệu SQLite" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
-                    <Grid Margin="0,0,0,16">
+                    <TextBlock Text="Cơ sở dữ liệu SQLite cục bộ (Local-first)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
+                    <Grid Margin="0,0,0,20">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding DatabasePath, Mode=OneWay}" IsReadOnly="True" Height="36" Padding="8,6" FontSize="12" Background="#F1F5F9" VerticalContentAlignment="Center"/>
-                        <Button Grid.Column="1" Command="{Binding OpenDataFolderCommand}" Content="Mở thư mục Data" Margin="8,0,0,0" Padding="12,6" Height="36" Background="#E2E8F0" Foreground="#1E293B" BorderThickness="0" Cursor="Hand"/>
+                        <TextBox Text="{Binding DatabasePath, Mode=OneWay}" IsReadOnly="True" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="12" Background="{StaticResource Tinix.Color.Bg.Subtle}"/>
+                        <Button Grid.Column="1" Command="{Binding OpenDataFolderCommand}" Content="Mở thư mục Data" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Secondary}" Height="36" Padding="14,0"/>
                     </Grid>
 
                     <!-- Backup & Recovery Section -->
-                    <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,8,0,24">
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
                         <StackPanel>
-                            <TextBlock Text="Sao Lưu &amp; Phục Hồi Dữ Liệu" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,6"/>
-                            <TextBlock Text="Dữ liệu quyết định (giá, quy cách, khách hàng, đơn đã khóa) được lưu trong SQLite. Hãy định kỳ sao lưu dữ liệu." Foreground="#64748B" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="Sao Lưu &amp; Phục Hồi Dữ Liệu" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Dữ liệu quyết định (giá, quy cách, khách hàng, đơn đã khóa) được lưu an toàn trong SQLite. Hãy định kỳ sao lưu dữ liệu." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
 
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                <Button Command="{Binding BackupNowCommand}" Content="⚡ Sao Lưu Ngay" Height="34" Padding="16,0" FontWeight="SemiBold" Background="#0284C7" Foreground="White" BorderThickness="0" Cursor="Hand"/>
-                                <Button Command="{Binding BrowseAndRestoreCommand}" Content="📂 Khôi Phục Từ File..." Height="34" Padding="16,0" FontWeight="SemiBold" Background="#475569" Foreground="White" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0"/>
+                                <Button Command="{Binding BackupNowCommand}" Content="⚡ Sao Lưu Ngay" Height="36" Style="{StaticResource Tinix.Button.Primary}" Padding="18,0"/>
+                                <Button Command="{Binding BrowseAndRestoreCommand}" Content="📂 Khôi Phục Từ File..." Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="16,0" Margin="8,0,0,0"/>
                             </StackPanel>
 
-                            <TextBlock Text="{Binding BackupStatusMessage}" Foreground="#0369A1" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding BackupStatusMessage}" Foreground="{StaticResource Tinix.Color.Info}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
 
                             <!-- Recent backups list -->
-                            <TextBlock Text="Các bản sao lưu gần đây:" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,6"/>
+                            <TextBlock Text="Các bản sao lưu gần đây:" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
                             <ItemsControl ItemsSource="{Binding RecentBackups}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="4,6">
+                                        <Border BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,0,0,1" Padding="4,8">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding FileName}" FontSize="12" FontWeight="Medium" Foreground="#1E293B" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding CreatedAtUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss} UTC'}" FontSize="11" Foreground="#64748B" Margin="12,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding FileName}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding CreatedAtUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss} UTC'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="12,0" VerticalAlignment="Center"/>
                                                 <Button Grid.Column="2" 
                                                         Command="{Binding DataContext.RestoreBackupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                                         CommandParameter="{Binding}" 
                                                         Content="Khôi phục" 
-                                                        Padding="8,2" FontSize="11" 
-                                                        Background="#F1F5F9" Foreground="#0F172A" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand"/>
+                                                        Style="{StaticResource Tinix.Button.Secondary}"
+                                                        Padding="10,2" FontSize="11"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -86,13 +90,13 @@
 
                     <!-- Save button and message -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <Button Command="{Binding SaveSettingsCommand}" Content="Lưu Cài Đặt" Height="40" Padding="24,0" FontWeight="Bold" Background="#0F172A" Foreground="White" BorderThickness="0" Cursor="Hand"/>
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="#16A34A" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                        <Button Command="{Binding SaveSettingsCommand}" Content="Lưu Cài Đặt" Height="40" Padding="28,0" Style="{StaticResource Tinix.Button.Primary}" FontSize="13"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0" FontSize="13"/>
                     </StackPanel>
 
                     <!-- Application Info -->
-                    <Border BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="0,12,0,0">
-                        <TextBlock Text="{Binding AppVersion, StringFormat='Lalab Auto Report v{0} • Windows Local-First • SQLite WAL'}" Foreground="#94A3B8" FontSize="12"/>
+                    <Border BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                        <TextBlock Text="{Binding AppVersion, StringFormat='Lalab Auto Report v{0} • Tinix UX/UI Standard • Windows Local-First • SQLite WAL'}" Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="12"/>
                     </Border>
                 </StackPanel>
             </Border>

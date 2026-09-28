@@ -59,6 +59,9 @@ public partial class DashboardViewModel : ObservableObject
     private int _totalCustomers;
 
     [ObservableProperty]
+    private bool _hasOrders;
+
+    [ObservableProperty]
     private int _needsReviewCount;
 
     [ObservableProperty]
@@ -480,6 +483,8 @@ public partial class DashboardViewModel : ObservableObject
         {
             FilteredOrders.Add(order);
         }
+
+        HasOrders = FilteredOrders.Count > 0;
     }
 
     private void UpdateSummary()

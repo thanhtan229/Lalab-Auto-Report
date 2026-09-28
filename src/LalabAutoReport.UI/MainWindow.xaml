@@ -9,7 +9,8 @@
         Title="Lalab Auto Report — Quản Lý In &amp; Báo Cáo" Height="780" Width="1240"
         MinHeight="600" MinWidth="950"
         WindowStartupLocation="CenterScreen"
-        Background="#F1F5F9">
+        FontFamily="{StaticResource Tinix.Font.UI}"
+        Background="{StaticResource Tinix.Color.Bg.Body}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
@@ -28,16 +29,47 @@
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView/>
         </DataTemplate>
+
+        <!-- Sidebar Item Style -->
+        <Style x:Key="TinixNavItemStyle" TargetType="Button">
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="navBorder" Background="{TemplateBinding Background}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="12,0" SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="activeIndicator" Grid.Column="0" Width="3" Height="20" Background="{StaticResource Tinix.Color.Primary}" CornerRadius="1.5" HorizontalAlignment="Left" Margin="-6,0,8,0" Visibility="Collapsed"/>
+                                <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="navBorder" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="230"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- LEFT SIDEBAR -->
-        <Border Grid.Column="0" Background="#0F172A" BorderBrush="#1E293B" BorderThickness="0,0,1,0">
+        <!-- LEFT SIDEBAR (Tinix Warm Light Profile) -->
+        <Border Grid.Column="0" Background="{StaticResource Tinix.Color.Bg.Sidebar}" BorderBrush="{StaticResource Tinix.Color.Border}" BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -47,53 +79,56 @@
 
                 <!-- App Brand -->
                 <StackPanel Grid.Row="0" Margin="20,24,20,24">
-                    <TextBlock Text="LALAB PRINT" Foreground="#38BDF8" FontWeight="ExtraBold" FontSize="18"/>
-                    <TextBlock Text="Auto Report System" Foreground="#94A3B8" FontSize="11" Margin="0,2,0,0"/>
+                    <TextBlock Text="TINIX WORKSHOP" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
+                    <TextBlock Text="LALAB REPORT" FontFamily="{StaticResource Tinix.Font.Display}" FontWeight="Bold" FontSize="20" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                    <TextBlock Text="Quản lý in &amp; đối soát ảnh" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,2,0,0"/>
                 </StackPanel>
 
                 <!-- Navigation items -->
-                <StackPanel Grid.Row="1" Margin="10,0">
-                    <Button Command="{Binding NavigateToDashboardCommand}" Height="40" Margin="0,0,0,6" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" Padding="14,0" Cursor="Hand">
+                <StackPanel Grid.Row="1" Margin="12,0">
+                    <Button Command="{Binding NavigateToDashboardCommand}" Style="{StaticResource TinixNavItemStyle}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📋 " FontSize="14"/>
-                            <TextBlock Text="Quét &amp; Đơn hàng" Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="📋 " FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Quét &amp; Đơn hàng" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Command="{Binding NavigateToReportsCommand}" Height="40" Margin="0,0,0,6" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" Padding="14,0" Cursor="Hand">
+                    <Button Command="{Binding NavigateToReportsCommand}" Style="{StaticResource TinixNavItemStyle}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📊 " FontSize="14"/>
-                            <TextBlock Text="Báo cáo doanh thu" Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="📊 " FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Báo cáo doanh thu" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Command="{Binding NavigateToCustomersCommand}" Height="40" Margin="0,0,0,6" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" Padding="14,0" Cursor="Hand">
+                    <Button Command="{Binding NavigateToCustomersCommand}" Style="{StaticResource TinixNavItemStyle}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="👥 " FontSize="14"/>
-                            <TextBlock Text="Khách hàng &amp; Alias" Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="👥 " FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Khách hàng &amp; Alias" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Command="{Binding NavigateToPriceListCommand}" Height="40" Margin="0,0,0,6" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" Padding="14,0" Cursor="Hand">
+                    <Button Command="{Binding NavigateToPriceListCommand}" Style="{StaticResource TinixNavItemStyle}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🏷️ " FontSize="14"/>
-                            <TextBlock Text="Bảng giá quy cách" Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="🏷️ " FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Bảng giá quy cách" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Command="{Binding NavigateToSettingsCommand}" Height="40" Margin="0,0,0,6" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" Padding="14,0" Cursor="Hand">
+                    <Button Command="{Binding NavigateToSettingsCommand}" Style="{StaticResource TinixNavItemStyle}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚙️ " FontSize="14"/>
-                            <TextBlock Text="Cài đặt hệ thống" Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="⚙️ " FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Cài đặt hệ thống" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
 
                 <!-- Footer version -->
-                <StackPanel Grid.Row="2" Margin="20,16">
-                    <TextBlock Text="Phiên bản 1.0.0" Foreground="#64748B" FontSize="11"/>
-                    <TextBlock Text="Local-first Desktop" Foreground="#475569" FontSize="10"/>
-                </StackPanel>
+                <Border Grid.Row="2" Padding="20,16" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,1,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Lalab Auto Report v1.0" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontWeight="SemiBold" FontSize="11"/>
+                        <TextBlock Text="Tinix Light Standard" Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="10" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
 
@@ -104,18 +139,18 @@
                 <RowDefinition Height="*"/>    <!-- Current view -->
             </Grid.RowDefinitions>
 
-            <!-- Root Folder Warning Banner -->
-            <Border Grid.Row="0" Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="0,0,0,1" Padding="16,10" Visibility="{Binding HasRootFolderWarning, Converter={StaticResource BoolToVis}}">
+            <!-- Root Folder Warning Banner (Tinix Amber Alert) -->
+            <Border Grid.Row="0" Background="{StaticResource Tinix.Color.Warning.Bg}" BorderBrush="{StaticResource Tinix.Color.Warning.Border}" BorderThickness="0,0,0,1" Padding="18,12" Visibility="{Binding HasRootFolderWarning, Converter={StaticResource BoolToVis}}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="⚠️ " FontSize="14"/>
-                        <TextBlock Text="Chưa cấu hình Thư Mục Gốc (Root Folder) hoặc đường dẫn không hợp lệ. Vui lòng cài đặt trước khi quét." Foreground="#92400E" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Text="⚠️ " FontSize="15" VerticalAlignment="Center"/>
+                        <TextBlock Text="Chưa cấu hình Thư Mục Gốc (Root Folder) hoặc đường dẫn không hợp lệ. Vui lòng cài đặt trước khi quét." Foreground="{StaticResource Tinix.Color.Warning}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Margin="4,0,0,0"/>
                     </StackPanel>
-                    <Button Grid.Column="1" Command="{Binding NavigateToSettingsCommand}" Content="Cài Đặt Ngay" Padding="12,4" Background="#D97706" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                    <Button Grid.Column="1" Command="{Binding NavigateToSettingsCommand}" Content="Cài Đặt Ngay" Style="{StaticResource Tinix.Button.Primary}" Padding="14,6" FontSize="12"/>
                 </Grid>
             </Border>
 

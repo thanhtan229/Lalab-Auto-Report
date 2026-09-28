@@ -6,14 +6,17 @@
              xmlns:domain="clr-namespace:LalabAutoReport.Core.Domain;assembly=LalabAutoReport.Core"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
-    <Grid Background="#F8FAFC" Margin="24">
+    <Grid Background="{StaticResource Tinix.Color.Bg.Body}" Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="QUẢN LÝ KHÁCH HÀNG &amp; ALIAS" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,16"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,18">
+            <TextBlock Text="DANH MỤC KHÁCH HÀNG" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
+            <TextBlock Text="Quản Lý Khách Hàng &amp; Alias Thư Mục" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+        </StackPanel>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -22,7 +25,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- LEFT: Customer List & Search -->
-            <Border Grid.Column="0" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,16,0" Padding="16">
+            <Border Grid.Column="0" Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Margin="0,0,16,0" Padding="18">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -31,37 +34,58 @@
                     </Grid.RowDefinitions>
 
                     <!-- Search -->
-                    <TextBox Grid.Row="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" Padding="8,4" VerticalContentAlignment="Center" Margin="0,0,0,12"/>
+                    <TextBox Grid.Row="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,0,12">
+                        <TextBox.Resources>
+                            <VisualBrush x:Key="CueSearch" AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                                <VisualBrush.Visual>
+                                    <TextBlock Text="🔍 Tìm kiếm khách hàng..." Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0"/>
+                                </VisualBrush.Visual>
+                            </VisualBrush>
+                        </TextBox.Resources>
+                        <TextBox.Style>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="">
+                                        <Setter Property="Background" Value="{StaticResource CueSearch}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
 
                     <!-- List -->
-                    <ListBox Grid.Row="1" ItemsSource="{Binding FilteredCustomers}" SelectedItem="{Binding SelectedCustomer}" BorderThickness="0">
+                    <ListBox Grid.Row="1" ItemsSource="{Binding FilteredCustomers}" SelectedItem="{Binding SelectedCustomer}" BorderThickness="0" Background="Transparent">
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type domain:Customer}">
-                                <StackPanel Margin="0,4">
-                                    <TextBlock Text="{Binding CanonicalName}" FontWeight="Bold" Foreground="#0F172A" FontSize="13"/>
-                                    <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias: {0}'}" FontSize="11" Foreground="#64748B"/>
-                                </StackPanel>
+                                <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="12,8" Margin="0,0,0,6" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding CanonicalName}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13"/>
+                                        <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias thư mục: {0}'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
                     <!-- Add Customer -->
-                    <StackPanel Grid.Row="2" Margin="0,12,0,0">
-                        <TextBlock Text="Thêm khách hàng mới:" FontSize="12" Foreground="#64748B" Margin="0,0,0,4"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding NewCustomerName, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" VerticalContentAlignment="Center"/>
-                            <Button Grid.Column="1" Command="{Binding CreateCustomerCommand}" Content="Thêm" Margin="6,0,0,0" Padding="12,0" Background="#0284C7" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
-                        </Grid>
-                    </StackPanel>
+                    <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,1,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Thêm khách hàng mới:" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding NewCustomerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
+                                <Button Grid.Column="1" Command="{Binding CreateCustomerCommand}" Content="Thêm" Margin="6,0,0,0" Style="{StaticResource Tinix.Button.Primary}" Padding="14,0" Height="34"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
 
             <!-- RIGHT: Customer Detail & Aliases -->
-            <Border Grid.Column="1" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Padding="20">
+            <Border Grid.Column="1" Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="20">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -72,43 +96,45 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                        <TextBlock Text="Tên Khách Hàng Chuẩn (Canonical):" FontSize="12" Foreground="#64748B"/>
-                        <TextBlock Text="{Binding SelectedCustomer.CanonicalName}" FontSize="18" FontWeight="Bold" Foreground="#0F172A" Margin="0,2,0,0"/>
+                        <TextBlock Text="Tên Khách Hàng Chuẩn (Canonical):" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                        <TextBlock Text="{Binding SelectedCustomer.CanonicalName}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,0"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="1" Text="Danh sách Alias (tên thư mục tự động map vào khách hàng này):" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="1" Text="Danh sách Alias (tên thư mục tự động gán vào khách hàng này):" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,8" FontSize="13"/>
 
                     <!-- Aliases List -->
-                    <ListBox Grid.Row="2" ItemsSource="{Binding SelectedCustomer.Aliases}" BorderBrush="#E2E8F0" Margin="0,0,0,12">
+                    <ListBox Grid.Row="2" ItemsSource="{Binding SelectedCustomer.Aliases}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" Background="{StaticResource Tinix.Color.Bg.Subtle}" Margin="0,0,0,12" Padding="6">
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type domain:CustomerAlias}">
-                                <Grid Margin="4,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="#1E293B" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1" Content="Xóa" Padding="8,2" Background="#FEE2E2" Foreground="#B91C1C" BorderThickness="0" Click="RemoveAlias_Click" Cursor="Hand"/>
-                                </Grid>
+                                <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="10,6" Margin="0,2" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" FontFamily="Consolas" FontSize="13"/>
+                                        <Button Grid.Column="1" Content="Xóa" Padding="10,3" Style="{StaticResource Tinix.Button.Danger}" FontSize="11" Click="RemoveAlias_Click"/>
+                                    </Grid>
+                                </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
                     <!-- Add Alias -->
                     <StackPanel Grid.Row="3" Margin="0,0,0,12">
-                        <TextBlock Text="Thêm alias mới cho khách này:" FontSize="12" Foreground="#64748B" Margin="0,0,0,4"/>
+                        <TextBlock Text="Thêm alias mới cho khách này:" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding NewAliasText, UpdateSourceTrigger=PropertyChanged}" Height="34" Padding="8,4" VerticalContentAlignment="Center"/>
-                            <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Padding="14,0" Background="#0F172A" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                            <TextBox Text="{Binding NewAliasText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
+                            <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Primary}" Padding="16,0" Height="34"/>
                         </Grid>
                     </StackPanel>
 
                     <!-- Status -->
-                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="#16A34A" FontWeight="SemiBold"/>
+                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" FontSize="12"/>
                 </Grid>
             </Border>
         </Grid>

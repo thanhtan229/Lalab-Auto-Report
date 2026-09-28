@@ -1,0 +1,286 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ==========================================
+         TINIX COMPONENT STYLES
+         ========================================== -->
+
+    <!-- BUTTON: PRIMARY (Tinix Orange) -->
+    <Style x:Key="Tinix.Button.Primary" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Primary}"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Primary.Hover}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Primary.Active}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BUTTON: SECONDARY (Clean Surface with Subtle Border) -->
+    <Style x:Key="Tinix.Button.Secondary" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Bg.Surface}"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Bg.Subtle}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Bg.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BUTTON: GHOST / TERTIARY -->
+    <Style x:Key="Tinix.Button.Ghost" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BUTTON: DANGER / DESTRUCTIVE -->
+    <Style x:Key="Tinix.Button.Danger" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Danger}"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Opacity" Value="0.8"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BUTTON: SIDEBAR NAVIGATION ITEM -->
+    <Style x:Key="Tinix.Button.SidebarNav" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- TEXTBOX: STANDARD -->
+    <Style x:Key="Tinix.TextBox.Standard" TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Bg.Surface}"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- CARD CONTAINER -->
+    <Style x:Key="Tinix.Card" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Bg.Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Tinix.Radius.Lg}"/>
+        <Setter Property="Padding" Value="18"/>
+    </Style>
+
+    <!-- STATUS BADGE BORDER STYLES -->
+    <Style x:Key="Tinix.Badge.Success" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Success.Bg}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Success.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Tinix.Radius.Full}"/>
+        <Setter Property="Padding" Value="10,3"/>
+    </Style>
+
+    <Style x:Key="Tinix.Badge.Warning" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Warning.Bg}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Warning.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Tinix.Radius.Full}"/>
+        <Setter Property="Padding" Value="10,3"/>
+    </Style>
+
+    <Style x:Key="Tinix.Badge.Danger" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Danger.Bg}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Danger.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Tinix.Radius.Full}"/>
+        <Setter Property="Padding" Value="10,3"/>
+    </Style>
+
+    <Style x:Key="Tinix.Badge.Info" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Info.Bg}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Info.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Tinix.Radius.Full}"/>
+        <Setter Property="Padding" Value="10,3"/>
+    </Style>
+
+    <Style x:Key="Tinix.Badge.Neutral" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Tinix.Radius.Full}"/>
+        <Setter Property="Padding" Value="10,3"/>
+    </Style>
+
+</ResourceDictionary>

@@ -6,14 +6,17 @@
              xmlns:domain="clr-namespace:LalabAutoReport.Core.Domain;assembly=LalabAutoReport.Core"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900">
-    <Grid Background="#F8FAFC" Margin="24">
+    <Grid Background="{StaticResource Tinix.Color.Bg.Body}" Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="BẢNG GIÁ QUY CÁCH IN" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,16"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,18">
+            <TextBlock Text="ĐƠN GIÁ &amp; QUY CÁCH" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
+            <TextBlock Text="Bảng Giá Quy Cách In Ảnh" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+        </StackPanel>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -22,7 +25,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- LEFT: Specifications Table & Add Form -->
-            <Border Grid.Column="0" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,16,0" Padding="16">
+            <Border Grid.Column="0" Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Margin="0,0,16,0" Padding="18">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -30,42 +33,80 @@
                     </Grid.RowDefinitions>
 
                     <!-- Specs List -->
-                    <ListBox Grid.Row="0" ItemsSource="{Binding Specifications}" SelectedItem="{Binding SelectedSpec}" BorderThickness="0">
+                    <ListBox Grid.Row="0" ItemsSource="{Binding Specifications}" SelectedItem="{Binding SelectedSpec}" BorderThickness="0" Background="Transparent">
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type domain:PrintSpecification}">
-                                <Grid Margin="0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="{Binding CanonicalName}" FontWeight="Bold" Foreground="#0F172A" FontSize="14"/>
-                                        <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias: {0}'}" FontSize="11" Foreground="#64748B"/>
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="1" Text="{Binding UnitPrice, StringFormat='{}{0:N0} đ'}" FontWeight="Bold" Foreground="#0284C7" FontSize="14" VerticalAlignment="Center"/>
-                                </Grid>
+                                <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="12,10" Margin="0,0,0,6" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding CanonicalName}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="14"/>
+                                            <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias: {0}'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding UnitPrice, StringFormat='{}{0:N0} đ'}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" FontSize="14" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <!-- Add Specification -->
-                    <StackPanel Grid.Row="1" Margin="0,16,0,0">
-                        <TextBlock Text="Thêm quy cách in mới:" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,8"/>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="120"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding NewSpecName, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" VerticalContentAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBox Grid.Column="1" Text="{Binding NewSpecPrice, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" VerticalContentAlignment="Center"/>
-                        </Grid>
-                        <Button Command="{Binding CreateSpecificationCommand}" Content="Thêm Quy Cách" Height="34" Background="#0284C7" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
-                    </StackPanel>
+                    <!-- Add Specification Form -->
+                    <Border Grid.Row="1" Margin="0,16,0,0" Padding="0,14,0,0" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,1,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Thêm quy cách in mới:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,8" FontSize="13"/>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding NewSpecName, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,6,0">
+                                    <TextBox.Resources>
+                                        <VisualBrush x:Key="CueSpecName" AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                                            <VisualBrush.Visual>
+                                                <TextBlock Text="Tên quy cách (vd: 13x18 in)" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0" FontSize="11"/>
+                                            </VisualBrush.Visual>
+                                        </VisualBrush>
+                                    </TextBox.Resources>
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}">
+                                            <Style.Triggers>
+                                                <Trigger Property="Text" Value="">
+                                                    <Setter Property="Background" Value="{StaticResource CueSpecName}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                                <TextBox Grid.Column="1" Text="{Binding NewSpecPrice, UpdateSourceTrigger=PropertyChanged}" Height="34">
+                                    <TextBox.Resources>
+                                        <VisualBrush x:Key="CueSpecPrice" AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                                            <VisualBrush.Visual>
+                                                <TextBlock Text="Đơn giá VND" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0" FontSize="11"/>
+                                            </VisualBrush.Visual>
+                                        </VisualBrush>
+                                    </TextBox.Resources>
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}">
+                                            <Style.Triggers>
+                                                <Trigger Property="Text" Value="">
+                                                    <Setter Property="Background" Value="{StaticResource CueSpecPrice}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                            </Grid>
+                            <Button Command="{Binding CreateSpecificationCommand}" Content="Thêm Quy Cách" Height="36" Style="{StaticResource Tinix.Button.Primary}"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
 
             <!-- RIGHT: Aliases & Edit -->
-            <Border Grid.Column="1" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Padding="20">
+            <Border Grid.Column="1" Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="20">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -76,36 +117,38 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                        <TextBlock Text="Quy cách được chọn:" FontSize="12" Foreground="#64748B"/>
-                        <TextBlock Text="{Binding SelectedSpec.CanonicalName}" FontSize="18" FontWeight="Bold" Foreground="#0F172A" Margin="0,2,0,4"/>
-                        <TextBlock Text="{Binding SelectedSpec.UnitPrice, StringFormat='{}Đơn giá hiện tại: {0:N0} đ'}" FontSize="14" FontWeight="SemiBold" Foreground="#0284C7"/>
+                        <TextBlock Text="Quy cách đang chọn:" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                        <TextBlock Text="{Binding SelectedSpec.CanonicalName}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,4"/>
+                        <TextBlock Text="{Binding SelectedSpec.UnitPrice, StringFormat='{}Đơn giá hiện tại: {0:N0} đ'}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="1" Text="Danh sách Alias thư mục map vào quy cách này:" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,8"/>
+                    <TextBlock Grid.Row="1" Text="Danh sách Alias thư mục map vào quy cách này:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,8" FontSize="13"/>
 
-                    <ListBox Grid.Row="2" ItemsSource="{Binding SelectedSpec.Aliases}" BorderBrush="#E2E8F0" Margin="0,0,0,12">
+                    <ListBox Grid.Row="2" ItemsSource="{Binding SelectedSpec.Aliases}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" Background="{StaticResource Tinix.Color.Bg.Subtle}" Margin="0,0,0,12" Padding="6">
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type domain:PrintSpecificationAlias}">
-                                <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="#1E293B" Padding="4"/>
+                                <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="10,6" Margin="0,2" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                                    <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontFamily="Consolas" FontSize="13"/>
+                                </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
                     <!-- Add Spec Alias -->
                     <StackPanel Grid.Row="3" Margin="0,0,0,12">
-                        <TextBlock Text="Thêm alias cho quy cách này (ví dụ: '13x18' map vào '13x18 in'):" FontSize="12" Foreground="#64748B" Margin="0,0,0,4"/>
+                        <TextBlock Text="Thêm alias cho quy cách này (ví dụ: '13x18' map vào '13x18 in'):" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding NewSpecAlias, UpdateSourceTrigger=PropertyChanged}" Height="34" Padding="8,4" VerticalContentAlignment="Center"/>
-                            <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Padding="14,0" Background="#0F172A" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                            <TextBox Text="{Binding NewSpecAlias, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
+                            <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Primary}" Padding="16,0" Height="34"/>
                         </Grid>
                     </StackPanel>
 
                     <!-- Status -->
-                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="#16A34A" FontWeight="SemiBold"/>
+                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" FontSize="12"/>
                 </Grid>
             </Border>
         </Grid>

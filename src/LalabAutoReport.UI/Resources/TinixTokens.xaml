@@ -1,0 +1,94 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ==========================================
+         TINIX DESIGN TOKENS
+         Shared UX/UI Contract for Lalab Auto Report
+         ========================================== -->
+
+    <!-- BRAND COLORS -->
+    <Color x:Key="TinixColorPrimaryRaw">#FF4800</Color>
+    <Color x:Key="TinixColorPrimaryHoverRaw">#C93700</Color>
+    <Color x:Key="TinixColorPrimaryActiveRaw">#9F2800</Color>
+    <Color x:Key="TinixColorPrimarySubtleRaw">#1AFF4800</Color>
+    <Color x:Key="TinixColorPrimaryFocusRaw">#26FF4800</Color>
+
+    <SolidColorBrush x:Key="Tinix.Color.Primary" Color="{StaticResource TinixColorPrimaryRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Primary.Hover" Color="{StaticResource TinixColorPrimaryHoverRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Primary.Active" Color="{StaticResource TinixColorPrimaryActiveRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Primary.Subtle" Color="{StaticResource TinixColorPrimarySubtleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Primary.Focus" Color="{StaticResource TinixColorPrimaryFocusRaw}"/>
+
+    <!-- NEUTRAL SURFACES & TEXT -->
+    <Color x:Key="TinixColorBgBodyRaw">#F8F5EE</Color>
+    <Color x:Key="TinixColorBgSurfaceRaw">#FFFFFF</Color>
+    <Color x:Key="TinixColorBgSubtleRaw">#FCFCFA</Color>
+    <Color x:Key="TinixColorBgSidebarRaw">#F1EFEA</Color>
+    <Color x:Key="TinixColorBorderRaw">#CFCCCB</Color>
+    <Color x:Key="TinixColorBorderSubtleRaw">#EAE8E4</Color>
+    <Color x:Key="TinixColorTextPrimaryRaw">#1F1F1F</Color>
+    <Color x:Key="TinixColorTextSecondaryRaw">#5F6368</Color>
+    <Color x:Key="TinixColorTextMutedRaw">#9B9897</Color>
+
+    <SolidColorBrush x:Key="Tinix.Color.Bg.Body" Color="{StaticResource TinixColorBgBodyRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Bg.Surface" Color="{StaticResource TinixColorBgSurfaceRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Bg.Subtle" Color="{StaticResource TinixColorBgSubtleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Bg.Sidebar" Color="{StaticResource TinixColorBgSidebarRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Border" Color="{StaticResource TinixColorBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Border.Subtle" Color="{StaticResource TinixColorBorderSubtleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Text.Primary" Color="{StaticResource TinixColorTextPrimaryRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Text.Secondary" Color="{StaticResource TinixColorTextSecondaryRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Text.Muted" Color="{StaticResource TinixColorTextMutedRaw}"/>
+
+    <!-- SEMANTIC STATUS COLORS -->
+    <!-- Success: Teal -->
+    <Color x:Key="TinixColorSuccessRaw">#124548</Color>
+    <Color x:Key="TinixColorSuccessBgRaw">#DFF2E7</Color>
+    <Color x:Key="TinixColorSuccessBorderRaw">#B8E4CC</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Success" Color="{StaticResource TinixColorSuccessRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Success.Bg" Color="{StaticResource TinixColorSuccessBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Success.Border" Color="{StaticResource TinixColorSuccessBorderRaw}"/>
+
+    <!-- Warning: Amber -->
+    <Color x:Key="TinixColorWarningRaw">#8A5700</Color>
+    <Color x:Key="TinixColorWarningBgRaw">#FFF0C9</Color>
+    <Color x:Key="TinixColorWarningBorderRaw">#E9C66E</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Warning" Color="{StaticResource TinixColorWarningRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Warning.Bg" Color="{StaticResource TinixColorWarningBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Warning.Border" Color="{StaticResource TinixColorWarningBorderRaw}"/>
+
+    <!-- Danger: Red -->
+    <Color x:Key="TinixColorDangerRaw">#D9002B</Color>
+    <Color x:Key="TinixColorDangerBgRaw">#F7DFDC</Color>
+    <Color x:Key="TinixColorDangerBorderRaw">#E8A4A1</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Danger" Color="{StaticResource TinixColorDangerRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Danger.Bg" Color="{StaticResource TinixColorDangerBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Danger.Border" Color="{StaticResource TinixColorDangerBorderRaw}"/>
+
+    <!-- Info: Navy -->
+    <Color x:Key="TinixColorInfoRaw">#15295A</Color>
+    <Color x:Key="TinixColorInfoBgRaw">#CAEBFF</Color>
+    <Color x:Key="TinixColorInfoBorderRaw">#A6DCFF</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Info" Color="{StaticResource TinixColorInfoRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Info.Bg" Color="{StaticResource TinixColorInfoBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Info.Border" Color="{StaticResource TinixColorInfoBorderRaw}"/>
+
+    <!-- TYPOGRAPHY -->
+    <FontFamily x:Key="Tinix.Font.Display">Georgia, Times New Roman, Serif</FontFamily>
+    <FontFamily x:Key="Tinix.Font.UI">Segoe UI, Helvetica Neue, Sans-Serif</FontFamily>
+
+    <sys:Double x:Key="Tinix.FontSize.Display">28</sys:Double>
+    <sys:Double x:Key="Tinix.FontSize.Section">20</sys:Double>
+    <sys:Double x:Key="Tinix.FontSize.Subsection">16</sys:Double>
+    <sys:Double x:Key="Tinix.FontSize.Body">14</sys:Double>
+    <sys:Double x:Key="Tinix.FontSize.Small">13</sys:Double>
+    <sys:Double x:Key="Tinix.FontSize.Caption">11</sys:Double>
+
+    <!-- CORNER RADIUS -->
+    <CornerRadius x:Key="Tinix.Radius.Sm">4</CornerRadius>
+    <CornerRadius x:Key="Tinix.Radius.Md">8</CornerRadius>
+    <CornerRadius x:Key="Tinix.Radius.Lg">16</CornerRadius>
+    <CornerRadius x:Key="Tinix.Radius.Full">9999</CornerRadius>
+
+</ResourceDictionary>

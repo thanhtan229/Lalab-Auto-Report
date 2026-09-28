@@ -57,20 +57,52 @@ public partial class OrderDisplayModel : ObservableObject
         }
     }
 
-    public string StatusBadgeColor
+    public string StatusBadgeColor => StatusBadgeFg;
+
+    public string StatusBadgeBg
     {
         get
         {
-            if (FilesystemChangedAfterLock)
-                return "#D32F2F"; // Red warning
-
+            if (FilesystemChangedAfterLock) return "#F7DFDC";
             return Status switch
             {
-                OrderStatus.Ready => "#2E7D32",        // Green
-                OrderStatus.NeedsReview => "#ED6C02",  // Amber / Warning
-                OrderStatus.Locked => "#1565C0",       // Blue
-                OrderStatus.Error => "#D32F2F",        // Red
-                _ => "#757575"                         // Gray
+                OrderStatus.Ready => "#DFF2E7",
+                OrderStatus.NeedsReview => "#FFF0C9",
+                OrderStatus.Locked => "#CAEBFF",
+                OrderStatus.Error => "#F7DFDC",
+                _ => "#EAE8E4"
+            };
+        }
+    }
+
+    public string StatusBadgeFg
+    {
+        get
+        {
+            if (FilesystemChangedAfterLock) return "#D9002B";
+            return Status switch
+            {
+                OrderStatus.Ready => "#124548",
+                OrderStatus.NeedsReview => "#8A5700",
+                OrderStatus.Locked => "#15295A",
+                OrderStatus.Error => "#D9002B",
+                _ => "#5F6368"
+            };
+        }
+    }
+
+    public string StatusBadgeBorder
+    {
+        get
+        {
+            if (FilesystemChangedAfterLock) return "#E8A4A1";
+            return Status switch
+            {
+                OrderStatus.Ready => "#B8E4CC",
+                OrderStatus.NeedsReview => "#E9C66E",
+                OrderStatus.Locked => "#A6DCFF",
+                OrderStatus.Error => "#E8A4A1",
+                _ => "#CFCCCB"
             };
         }
     }
@@ -173,18 +205,50 @@ public partial class OrderItemDisplayModel : ObservableObject
         }
     }
 
-    public string StatusBadgeColor
+    public string StatusBadgeColor => StatusBadgeFg;
+
+    public string StatusBadgeBg
     {
         get
         {
             if (PrintFolderStatus == PrintFolderResolutionStatus.NoPrintFolder ||
                 PrintFolderStatus == PrintFolderResolutionStatus.AmbiguousPrintFolder)
-                return "#ED6C02"; // Orange
+                return "#FFF0C9"; // Amber bg
             if (HasMismatch && !BillQuantity.HasValue)
-                return "#D32F2F"; // Red
+                return "#F7DFDC"; // Danger bg
             if (HasMismatch && BillQuantity.HasValue)
-                return "#0288D1"; // Blue resolved
-            return "#2E7D32"; // Green
+                return "#CAEBFF"; // Info bg
+            return "#DFF2E7"; // Success bg
+        }
+    }
+
+    public string StatusBadgeFg
+    {
+        get
+        {
+            if (PrintFolderStatus == PrintFolderResolutionStatus.NoPrintFolder ||
+                PrintFolderStatus == PrintFolderResolutionStatus.AmbiguousPrintFolder)
+                return "#8A5700"; // Amber fg
+            if (HasMismatch && !BillQuantity.HasValue)
+                return "#D9002B"; // Danger fg
+            if (HasMismatch && BillQuantity.HasValue)
+                return "#15295A"; // Info fg
+            return "#124548"; // Success fg
+        }
+    }
+
+    public string StatusBadgeBorder
+    {
+        get
+        {
+            if (PrintFolderStatus == PrintFolderResolutionStatus.NoPrintFolder ||
+                PrintFolderStatus == PrintFolderResolutionStatus.AmbiguousPrintFolder)
+                return "#E9C66E"; // Amber border
+            if (HasMismatch && !BillQuantity.HasValue)
+                return "#E8A4A1"; // Danger border
+            if (HasMismatch && BillQuantity.HasValue)
+                return "#A6DCFF"; // Info border
+            return "#B8E4CC"; // Success border
         }
     }
 
