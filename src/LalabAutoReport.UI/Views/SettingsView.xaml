@@ -1,0 +1,53 @@
+<UserControl x:Class="LalabAutoReport.UI.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid Background="#F5F6F8" Margin="24">
+        <Border Background="White" CornerRadius="8" Padding="24" BorderBrush="#E0E0E0" BorderThickness="1" MaxWidth="700" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="CÀI ĐẶT HỆ THỐNG" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20"/>
+
+                <!-- Root Folder -->
+                <TextBlock Text="Thư mục gốc chứa ảnh (Root Folder)" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
+                <TextBlock Text="Cấu trúc thư mục mong đợi: Root / YYYY-MM-DD / Tên Khách Hàng / Quy Cách In / ..." Foreground="#64748B" FontSize="12" Margin="0,0,0,8"/>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding RootFolder, UpdateSourceTrigger=PropertyChanged}" Height="36" Padding="8,6" FontSize="13" VerticalContentAlignment="Center"/>
+                    <Button Grid.Column="1" Command="{Binding BrowseRootFolderCommand}" Content="Chọn thư mục..." Margin="8,0,0,0" Padding="16,6" Height="36" FontWeight="SemiBold" Background="#0284C7" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                </Grid>
+
+                <!-- Supported Extensions -->
+                <TextBlock Text="Định dạng file ảnh hỗ trợ (phân cách bằng dấu phẩy)" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
+                <TextBox Text="{Binding SupportedExtensions, UpdateSourceTrigger=PropertyChanged}" Height="36" Padding="8,6" FontSize="13" VerticalContentAlignment="Center" Margin="0,0,0,16"/>
+
+                <!-- Scan behavior options -->
+                <TextBlock Text="Tùy chọn khởi động" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
+                <CheckBox Content="Tự động quét thư mục ngày hôm nay khi mở ứng dụng" IsChecked="{Binding AutoScanStartup}" Margin="0,0,0,8"/>
+                <CheckBox Content="Quét thêm ngày hôm qua nếu bật tùy chọn trên" IsChecked="{Binding StartupIncludeYesterday}" IsEnabled="{Binding AutoScanStartup}" Margin="20,0,0,16"/>
+
+                <!-- Database info -->
+                <TextBlock Text="Cơ sở dữ liệu SQLite" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
+                <Grid Margin="0,0,0,24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding DatabasePath, Mode=OneWay}" IsReadOnly="True" Height="36" Padding="8,6" FontSize="12" Background="#F1F5F9" VerticalContentAlignment="Center"/>
+                    <Button Grid.Column="1" Command="{Binding OpenDataFolderCommand}" Content="Mở thư mục Data" Margin="8,0,0,0" Padding="12,6" Height="36" Background="#E2E8F0" Foreground="#1E293B" BorderThickness="0" Cursor="Hand"/>
+                </Grid>
+
+                <!-- Save button and message -->
+                <StackPanel Orientation="Horizontal">
+                    <Button Command="{Binding SaveSettingsCommand}" Content="Lưu Cài Đặt" Height="40" Padding="24,0" FontWeight="Bold" Background="#0F172A" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#16A34A" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
