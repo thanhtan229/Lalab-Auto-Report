@@ -18,6 +18,7 @@ public class ScanService : IScanService
     private readonly IPrintFolderResolver _printFolderResolver;
     private readonly ISettingsRepository _settingsRepository;
     private readonly IOrderRepository? _orderRepository;
+    private readonly IBillRepository? _billRepository;
     private readonly ICustomerResolver? _customerResolver;
     private readonly IPrintSpecificationResolver? _specificationResolver;
     private readonly ILogger<ScanService>? _logger;
@@ -30,6 +31,7 @@ public class ScanService : IScanService
         IOrderRepository? orderRepository = null,
         ICustomerResolver? customerResolver = null,
         IPrintSpecificationResolver? specificationResolver = null,
+        IBillRepository? billRepository = null,
         ILogger<ScanService>? logger = null)
     {
         _fileSystem = fileSystem;
@@ -39,6 +41,7 @@ public class ScanService : IScanService
         _orderRepository = orderRepository;
         _customerResolver = customerResolver;
         _specificationResolver = specificationResolver;
+        _billRepository = billRepository;
         _logger = logger;
     }
 
@@ -324,7 +327,27 @@ public class ScanService : IScanService
         snapshot.Items = scannedItems;
         snapshot.CompletedAt = DateTimeOffset.UtcNow;
 
-        if (scannedItems.Count == 0 || hasIssues)
+        if (existingOrder != null && existingOrder.Status == OrderStatus.Locked)
+        {
+            // Locked orders remain Locked!
+            order.Status = OrderStatus.Locked;
+
+            // Check if filesystem changed after lock
+            if (_billRepository != null)
+            {
+                var lockedBill = await _billRepository.GetBillByOrderIdAsync(order.Id, cancellationToken);
+                if (lockedBill != null && lockedBill.Status == OrderStatus.Locked)
+                {
+                    bool changed = HasFilesystemChangedFromLockedBill(lockedBill, scannedItems);
+                    order.FilesystemChangedAfterLock = changed;
+                    if (changed)
+                    {
+                        _logger?.LogWarning("Filesystem changed after lock detected for order {OrderId} ({Folder})", order.Id, order.OriginalFolderName);
+                    }
+                }
+            }
+        }
+        else if (scannedItems.Count == 0 || hasIssues)
         {
             order.Status = OrderStatus.NeedsReview;
         }
@@ -339,6 +362,30 @@ public class ScanService : IScanService
         }
 
         return order;
+    }
+
+    private static bool HasFilesystemChangedFromLockedBill(Bill lockedBill, List<OrderItemScan> currentItems)
+    {
+        if (lockedBill.Lines.Count != currentItems.Count)
+        {
+            return true;
+        }
+
+        foreach (var line in lockedBill.Lines)
+        {
+            var matchingItem = currentItems.FirstOrDefault(i => i.PrintSpecificationId == line.PrintSpecificationId);
+            if (matchingItem == null)
+            {
+                return true;
+            }
+
+            if (matchingItem.SourceCount != line.SourceCount || matchingItem.PrintCount != line.PrintCount)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<OrderItemScan> ScanSpecificationInternalAsync(

@@ -83,6 +83,13 @@
                         <TextBlock Text="{Binding ReadyCount}" FontWeight="Bold" Foreground="#16A34A"/>
                     </StackPanel>
                 </Border>
+
+                <Border Background="White" CornerRadius="6" Padding="16,8" Margin="0,0,12,0" BorderBrush="#BFDBFE" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Đã khóa: " Foreground="#1D4ED8" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding LockedCount}" FontWeight="Bold" Foreground="#1D4ED8"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Border>
 
@@ -98,7 +105,8 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <RadioButton Content="Tất cả" IsChecked="{Binding CurrentFilter, ConverterParameter=All, Mode=OneWay}" Click="FilterAll_Click" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <RadioButton Content="Cần xử lý (!)" IsChecked="{Binding CurrentFilter, ConverterParameter=NeedsReview, Mode=OneWay}" Click="FilterNeedsReview_Click" Foreground="#EA580C" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <RadioButton Content="Sẵn sàng (✓)" IsChecked="{Binding CurrentFilter, ConverterParameter=Ready, Mode=OneWay}" Click="FilterReady_Click" Foreground="#16A34A" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <RadioButton Content="Sẵn sàng (✓)" IsChecked="{Binding CurrentFilter, ConverterParameter=Ready, Mode=OneWay}" Click="FilterReady_Click" Foreground="#16A34A" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                    <RadioButton Content="Đã khóa (🔒)" IsChecked="{Binding CurrentFilter, ConverterParameter=Locked, Mode=OneWay}" Click="FilterLocked_Click" Foreground="#1D4ED8" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Search Box -->
@@ -152,15 +160,41 @@
                                     <!-- Summary Totals -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
                                         <TextBlock Text="Gốc: " Foreground="#64748B"/>
-                                        <TextBlock Text="{Binding TotalSourceCount}" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,12,0"/>
+                                        <TextBlock Text="{Binding TotalSourceCount}" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,10,0"/>
                                         <TextBlock Text="In: " Foreground="#64748B"/>
-                                        <TextBlock Text="{Binding TotalPrintCount}" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,12,0"/>
+                                        <TextBlock Text="{Binding TotalPrintCount}" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,10,0"/>
                                         <TextBlock Text="Tính tiền: " Foreground="#64748B"/>
-                                        <TextBlock Text="{Binding TotalBillQuantity}" FontWeight="Bold" Foreground="#0284C7"/>
+                                        <TextBlock Text="{Binding TotalBillQuantity}" FontWeight="Bold" Foreground="#0284C7" Margin="0,0,10,0"/>
+                                        <TextBlock Text="Thành tiền: " Foreground="#64748B"/>
+                                        <TextBlock Text="{Binding FormattedTotalAmount}" FontWeight="Bold" Foreground="#16A34A"/>
                                     </StackPanel>
 
                                     <!-- Order Actions -->
                                     <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <Button Content="Khóa đơn" Height="28" Padding="10,0" Margin="0,0,6,0" Background="#16A34A" Foreground="White" BorderThickness="0" Click="LockOrder_Click" Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button Content="Mở khóa" Height="28" Padding="10,0" Margin="0,0,6,0" Background="#DC2626" Foreground="White" BorderThickness="0" Click="ReopenOrder_Click" Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLocked}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
                                         <Button Content="Mở thư mục" Height="28" Padding="10,0" Margin="0,0,6,0" Background="#F1F5F9" BorderBrush="#CBD5E1" Click="OpenOrderFolder_Click" Cursor="Hand"/>
                                         <Button Content="Quét lại đơn" Height="28" Padding="10,0" Background="#F1F5F9" BorderBrush="#CBD5E1" Click="RescanOrder_Click" Cursor="Hand"/>
                                     </StackPanel>
@@ -181,10 +215,12 @@
                                                         <!-- Row info -->
                                                         <Grid Grid.Row="0">
                                                             <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="220"/> <!-- Spec Name -->
-                                                                <ColumnDefinition Width="100"/> <!-- Source Count -->
-                                                                <ColumnDefinition Width="100"/> <!-- Print Count -->
-                                                                <ColumnDefinition Width="110"/> <!-- Difference -->
+                                                                <ColumnDefinition Width="190"/> <!-- Spec Name -->
+                                                                <ColumnDefinition Width="80"/>  <!-- Source Count -->
+                                                                <ColumnDefinition Width="80"/>  <!-- Print Count -->
+                                                                <ColumnDefinition Width="90"/>  <!-- Difference -->
+                                                                <ColumnDefinition Width="90"/>  <!-- Unit Price -->
+                                                                <ColumnDefinition Width="100"/> <!-- Line Total -->
                                                                 <ColumnDefinition Width="*"/>   <!-- Status & Resolution -->
                                                                 <ColumnDefinition Width="Auto"/> <!-- Item Actions -->
                                                             </Grid.ColumnDefinitions>
@@ -206,11 +242,17 @@
                                                                 <TextBlock Text="{Binding MismatchText}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                                                             </Border>
 
+                                                            <!-- Unit Price -->
+                                                            <TextBlock Grid.Column="4" Text="{Binding FormattedUnitPrice}" VerticalAlignment="Center" Foreground="#64748B" FontSize="11"/>
+
+                                                            <!-- Line Total -->
+                                                            <TextBlock Grid.Column="5" Text="{Binding FormattedLineTotal}" VerticalAlignment="Center" FontWeight="Bold" Foreground="#16A34A" FontSize="11"/>
+
                                                             <!-- Status & Resolution -->
-                                                            <TextBlock Grid.Column="4" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="#475569" Margin="10,0"/>
+                                                            <TextBlock Grid.Column="6" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="#475569" Margin="6,0"/>
 
                                                             <!-- Spec actions -->
-                                                            <StackPanel Grid.Column="5" Orientation="Horizontal">
+                                                            <StackPanel Grid.Column="7" Orientation="Horizontal">
                                                                 <Button Content="Mở gốc" Height="26" Padding="8,0" Margin="0,0,4,0" Background="White" BorderBrush="#CBD5E1" Click="OpenSourceFolder_Click" Cursor="Hand"/>
                                                                 <Button Content="Mở in" Height="26" Padding="8,0" Margin="0,0,4,0" Background="White" BorderBrush="#CBD5E1" Click="OpenPrintFolder_Click" IsEnabled="{Binding SelectedPrintFolderRelativePath, TargetNullValue=false}" Cursor="Hand"/>
                                                                 <Button Content="Quét lại" Height="26" Padding="8,0" Background="White" BorderBrush="#CBD5E1" Click="RescanSpec_Click" Cursor="Hand"/>

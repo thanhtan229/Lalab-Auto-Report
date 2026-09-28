@@ -209,6 +209,9 @@ public class DatabaseMigrator : IDatabaseMigrator
 
                 INSERT INTO print_specifications (canonical_name, unit_price, is_active, created_at, updated_at)
                 VALUES ('40x60 TG', 80000, 1, datetime('now'), datetime('now'));
+            "),
+            (2, "AddPostLockWarningField", @"
+                ALTER TABLE orders ADD COLUMN filesystem_changed_after_lock INTEGER NOT NULL DEFAULT 0;
             ")
         };
     }

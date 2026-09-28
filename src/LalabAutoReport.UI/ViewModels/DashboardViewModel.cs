@@ -18,6 +18,7 @@ public partial class DashboardViewModel : ObservableObject
     private readonly ISettingsRepository _settingsRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly IFileSystemAdapter _fileSystem;
+    private readonly ILockingService _lockingService;
 
     private CancellationTokenSource? _scanCts;
 
@@ -63,16 +64,21 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty]
     private int _readyCount;
 
+    [ObservableProperty]
+    private int _lockedCount;
+
     public DashboardViewModel(
         IScanService scanService,
         ISettingsRepository settingsRepository,
         IOrderRepository orderRepository,
-        IFileSystemAdapter fileSystem)
+        IFileSystemAdapter fileSystem,
+        ILockingService lockingService)
     {
         _scanService = scanService;
         _settingsRepository = settingsRepository;
         _orderRepository = orderRepository;
         _fileSystem = fileSystem;
+        _lockingService = lockingService;
 
         SelectedDate = DateTime.Today;
         FormattedDateString = SelectedDate.ToString("yyyy-MM-dd");
@@ -276,6 +282,68 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task VerifyAndLockOrderAsync(OrderDisplayModel? orderDisplay)
+    {
+        if (orderDisplay == null || IsScanning) return;
+
+        try
+        {
+            StatusMessage = $"Đang xác minh & khóa đơn {orderDisplay.OriginalFolderName}...";
+            var lockedBill = await _lockingService.VerifyAndLockOrderAsync(orderDisplay.Id);
+
+            var updated = await _orderRepository.GetOrderByIdAsync(orderDisplay.Id);
+            if (updated != null)
+            {
+                int index = AllOrders.IndexOf(orderDisplay);
+                var newDisplay = new OrderDisplayModel(updated);
+                if (index >= 0)
+                {
+                    AllOrders[index] = newDisplay;
+                }
+                ApplyFilter();
+                UpdateSummary();
+            }
+
+            StatusMessage = $"Đã khóa đơn '{orderDisplay.OriginalFolderName}' thành công! Tổng tiền: {lockedBill.Subtotal:N0} đ.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Không thể khóa đơn: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ReopenOrderAsync(OrderDisplayModel? orderDisplay)
+    {
+        if (orderDisplay == null || IsScanning) return;
+
+        try
+        {
+            StatusMessage = $"Đang mở khóa đơn {orderDisplay.OriginalFolderName}...";
+            await _lockingService.ReopenOrderAsync(orderDisplay.Id, "Mở lại từ Dashboard");
+
+            var updated = await _orderRepository.GetOrderByIdAsync(orderDisplay.Id);
+            if (updated != null)
+            {
+                int index = AllOrders.IndexOf(orderDisplay);
+                var newDisplay = new OrderDisplayModel(updated);
+                if (index >= 0)
+                {
+                    AllOrders[index] = newDisplay;
+                }
+                ApplyFilter();
+                UpdateSummary();
+            }
+
+            StatusMessage = $"Đã mở lại đơn '{orderDisplay.OriginalFolderName}'.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi mở khóa đơn: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private async Task RescanSpecificationAsync(OrderItemDisplayModel? itemDisplay)
     {
         if (itemDisplay == null || IsScanning) return;
@@ -402,6 +470,10 @@ public partial class DashboardViewModel : ObservableObject
         {
             filtered = filtered.Where(o => o.Status == OrderStatus.Ready);
         }
+        else if (CurrentFilter == "Locked")
+        {
+            filtered = filtered.Where(o => o.Status == OrderStatus.Locked);
+        }
 
         FilteredOrders.Clear();
         foreach (var order in filtered)
@@ -416,5 +488,6 @@ public partial class DashboardViewModel : ObservableObject
         TotalCustomers = AllOrders.Select(o => o.OriginalFolderName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         NeedsReviewCount = AllOrders.Count(o => o.HasIssues);
         ReadyCount = AllOrders.Count(o => o.Status == OrderStatus.Ready);
+        LockedCount = AllOrders.Count(o => o.Status == OrderStatus.Locked);
     }
 }

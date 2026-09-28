@@ -20,40 +20,66 @@ public partial class OrderDisplayModel : ObservableObject
     private OrderStatus _status;
 
     [ObservableProperty]
+    private bool _filesystemChangedAfterLock;
+
+    [ObservableProperty]
     private ObservableCollection<OrderItemDisplayModel> _items = new();
 
     public int TotalSourceCount => Items.Sum(i => i.SourceCount);
     public int TotalPrintCount => Items.Sum(i => i.PrintCount ?? 0);
     public int TotalBillQuantity => Items.Sum(i => i.BillQuantity ?? 0);
+    public long TotalAmount => Items.Sum(i => i.LineTotal ?? 0);
+    public string FormattedTotalAmount => TotalAmount > 0 ? $"{TotalAmount:N0} đ" : "-";
 
-    public bool HasIssues => Status == OrderStatus.NeedsReview || Status == OrderStatus.Error;
+    public bool HasIssues => Status == OrderStatus.NeedsReview || Status == OrderStatus.Error || FilesystemChangedAfterLock;
+    public bool IsLocked => Status == OrderStatus.Locked;
+    public bool CanLock => (Status == OrderStatus.Ready || Status == OrderStatus.Billed) && !HasIssues;
 
-    public string StatusText => Status switch
+    public string StatusText
     {
-        OrderStatus.Unscanned => "Chưa quét",
-        OrderStatus.Scanning => "Đang quét...",
-        OrderStatus.Scanned => "Đã quét",
-        OrderStatus.NeedsReview => "Cần xử lý",
-        OrderStatus.Ready => "Sẵn sàng",
-        OrderStatus.Billed => "Đã tạo bill",
-        OrderStatus.Locked => "Đã khóa",
-        OrderStatus.Error => "Lỗi",
-        _ => Status.ToString()
-    };
+        get
+        {
+            if (FilesystemChangedAfterLock)
+                return "Đã khóa (File thay đổi!)";
 
-    public string StatusBadgeColor => Status switch
+            return Status switch
+            {
+                OrderStatus.Unscanned => "Chưa quét",
+                OrderStatus.Scanning => "Đang quét...",
+                OrderStatus.Scanned => "Đã quét",
+                OrderStatus.NeedsReview => "Cần xử lý",
+                OrderStatus.Ready => "Sẵn sàng",
+                OrderStatus.Billed => "Đã tạo bill",
+                OrderStatus.Locked => "Đã khóa",
+                OrderStatus.Error => "Lỗi",
+                _ => Status.ToString()
+            };
+        }
+    }
+
+    public string StatusBadgeColor
     {
-        OrderStatus.Ready => "#2E7D32",        // Green
-        OrderStatus.NeedsReview => "#ED6C02",  // Amber / Warning
-        OrderStatus.Locked => "#1565C0",       // Blue
-        OrderStatus.Error => "#D32F2F",        // Red
-        _ => "#757575"                         // Gray
-    };
+        get
+        {
+            if (FilesystemChangedAfterLock)
+                return "#D32F2F"; // Red warning
+
+            return Status switch
+            {
+                OrderStatus.Ready => "#2E7D32",        // Green
+                OrderStatus.NeedsReview => "#ED6C02",  // Amber / Warning
+                OrderStatus.Locked => "#1565C0",       // Blue
+                OrderStatus.Error => "#D32F2F",        // Red
+                _ => "#757575"                         // Gray
+            };
+        }
+    }
 
     public OrderDisplayModel(Order order)
     {
         Order = order;
         _status = order.Status;
+        _filesystemChangedAfterLock = order.FilesystemChangedAfterLock;
         foreach (var item in order.Items)
         {
             _items.Add(new OrderItemDisplayModel(item, this));
@@ -65,7 +91,11 @@ public partial class OrderDisplayModel : ObservableObject
         OnPropertyChanged(nameof(TotalSourceCount));
         OnPropertyChanged(nameof(TotalPrintCount));
         OnPropertyChanged(nameof(TotalBillQuantity));
+        OnPropertyChanged(nameof(TotalAmount));
+        OnPropertyChanged(nameof(FormattedTotalAmount));
         OnPropertyChanged(nameof(HasIssues));
+        OnPropertyChanged(nameof(IsLocked));
+        OnPropertyChanged(nameof(CanLock));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(StatusBadgeColor));
     }
@@ -105,6 +135,11 @@ public partial class OrderItemDisplayModel : ObservableObject
     public bool IsAmbiguous => PrintFolderStatus == PrintFolderResolutionStatus.AmbiguousPrintFolder;
     public bool HasMismatch => MismatchCount.HasValue && MismatchCount.Value != 0;
     public IReadOnlyList<string> CandidateFolders => Item.CandidatePrintFolderRelativePaths;
+
+    public long? UnitPrice => Item.PrintSpecification?.UnitPrice;
+    public string FormattedUnitPrice => UnitPrice.HasValue ? $"{UnitPrice.Value:N0} đ" : "--";
+    public long? LineTotal => BillQuantity.HasValue && UnitPrice.HasValue ? (long)BillQuantity.Value * UnitPrice.Value : null;
+    public string FormattedLineTotal => LineTotal.HasValue ? $"{LineTotal.Value:N0} đ" : "--";
 
     public string MismatchText
     {
@@ -171,6 +206,8 @@ public partial class OrderItemDisplayModel : ObservableObject
         BillQuantity = quantity;
         ResolutionMode = mode;
         ResolutionNote = note;
+        OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(FormattedLineTotal));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(StatusBadgeColor));
         ParentOrder.NotifyTotalsChanged();
@@ -192,6 +229,8 @@ public partial class OrderItemDisplayModel : ObservableObject
             BillQuantity = null;
             ResolutionMode = null;
         }
+        OnPropertyChanged(nameof(LineTotal));
+        OnPropertyChanged(nameof(FormattedLineTotal));
         OnPropertyChanged(nameof(IsAmbiguous));
         OnPropertyChanged(nameof(MismatchText));
         OnPropertyChanged(nameof(StatusText));

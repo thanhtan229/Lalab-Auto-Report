@@ -52,6 +52,7 @@ public class Order
     public string OriginalFolderName { get; set; } = string.Empty;
     public string RelativePath { get; set; } = string.Empty; // e.g. "2026-09-28\Văn An"
     public OrderStatus Status { get; set; } = OrderStatus.Unscanned;
+    public bool FilesystemChangedAfterLock { get; set; } = false;
     public DateTimeOffset? LastScanAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

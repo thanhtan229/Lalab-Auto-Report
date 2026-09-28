@@ -182,6 +182,7 @@ public interface ISettingsRepository
 /// </summary>
 public interface IOrderRepository
 {
+    Task<Order?> GetOrderByIdAsync(long id, CancellationToken cancellationToken = default);
     Task<Order?> GetOrderByRelativePathAsync(string relativePath, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetOrdersByDateAsync(string date, CancellationToken cancellationToken = default);
     Task SaveOrderAsync(Order order, ScanSnapshot snapshot, CancellationToken cancellationToken = default);
@@ -189,6 +190,8 @@ public interface IOrderRepository
     Task UpdateOrderItemResolutionAsync(long orderItemId, int billQuantity, QuantityResolutionMode mode, string? note, CancellationToken cancellationToken = default);
     Task UpdateOrderItemPrintFolderAsync(long orderItemId, string printFolderRelativePath, int printCount, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ScanSnapshot>> GetScanSnapshotsForOrderAsync(long orderId, CancellationToken cancellationToken = default);
+    Task UpdateOrderStatusAsync(long orderId, OrderStatus status, CancellationToken cancellationToken = default);
+    Task SetFilesystemChangedAfterLockAsync(long orderId, bool changed, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -226,5 +229,61 @@ public interface IPrintSpecificationRepository
     Task UpdateSpecificationAsync(PrintSpecification spec, CancellationToken cancellationToken = default);
     Task AddAliasAsync(long specId, string aliasText, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PrintSpecificationAlias>> GetAllAliasesAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Daily customer aggregation grouping multiple physical orders
+/// </summary>
+public record CustomerDailyAggregation(
+    long? CustomerId,
+    string DisplayName,
+    string WorkDate,
+    IReadOnlyList<Order> Orders,
+    IReadOnlyList<Bill> Bills,
+    int TotalBillQuantity,
+    long TotalAmount,
+    bool HasUnresolvedIssues
+);
+
+/// <summary>
+/// Core billing calculation and aggregation service
+/// </summary>
+public interface IBillingService
+{
+    Task<Bill> CalculateBillForOrderAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerDailyAggregation>> GetDailyCustomerAggregationAsync(string date, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Bill and bill lines repository interface
+/// </summary>
+public interface IBillRepository
+{
+    Task<Bill?> GetBillByOrderIdAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Bill>> GetBillsByDateAsync(string date, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Bill>> GetBillsByMonthAsync(string yearMonth, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Bill>> GetBillsByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
+    Task SaveBillAsync(Bill bill, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Pre-lock verification result for an order
+/// </summary>
+public record VerificationResult(
+    bool CanLock,
+    IReadOnlyList<string> BlockingReasons,
+    Bill? PreviewBill,
+    Order Order
+);
+
+/// <summary>
+/// Bill verification, locking, and post-lock change management service
+/// </summary>
+public interface ILockingService
+{
+    Task<VerificationResult> VerifyOrderForLockAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<Bill> VerifyAndLockOrderAsync(long orderId, CancellationToken cancellationToken = default);
+    Task ReopenOrderAsync(long orderId, string reason, CancellationToken cancellationToken = default);
+    Task<bool> CheckFilesystemChangedAfterLockAsync(long orderId, CancellationToken cancellationToken = default);
 }
 

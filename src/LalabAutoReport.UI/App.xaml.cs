@@ -76,6 +76,9 @@ public partial class App : Application
         services.AddSingleton<ICustomerResolver, CustomerResolver>();
         services.AddSingleton<IPrintSpecificationResolver, PrintSpecificationResolver>();
         services.AddSingleton<IScanService, ScanService>();
+        services.AddSingleton<IBillRepository, SqliteBillRepository>();
+        services.AddSingleton<IBillingService, BillingService>();
+        services.AddSingleton<ILockingService, LockingService>();
 
         // ViewModels
         services.AddSingleton<DashboardViewModel>();

@@ -29,6 +29,45 @@ public partial class DashboardView : UserControl
         if (ViewModel != null) ViewModel.CurrentFilter = "Ready";
     }
 
+    private void FilterLocked_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null) ViewModel.CurrentFilter = "Locked";
+    }
+
+    private void LockOrder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
+        {
+            var res = MessageBox.Show(
+                $"Xác nhận quét kiểm tra và khóa đơn hàng '{order.OriginalFolderName}'?\n\nĐơn hàng sau khi khóa sẽ được lưu thành hóa đơn lịch sử.",
+                "Khóa đơn hàng",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                ViewModel.VerifyAndLockOrderCommand.Execute(order);
+            }
+        }
+    }
+
+    private void ReopenOrder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
+        {
+            var res = MessageBox.Show(
+                $"Bạn có chắc chắn muốn mở khóa đơn hàng '{order.OriginalFolderName}'?\n\nThao tác này sẽ mở khóa đơn hàng để chỉnh sửa lại.",
+                "Mở lại đơn hàng",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                ViewModel.ReopenOrderCommand.Execute(order);
+            }
+        }
+    }
+
     private void OpenOrderFolder_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
