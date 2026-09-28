@@ -110,7 +110,24 @@ tests/
 
 ---
 
-## 5. Hướng Dẫn Biên Dịch & Đóng Gói (Build & Packaging)
+## 5. Quy Trình Phát Triển & Các Script Tự Động (Development Workflow)
+
+Theo quy định tại `DEVELOPMENT_WORKFLOW.md`:
+* **Vòng lặp nhanh**: `Understand → Code → Validate → Build when needed → Restart → Health Check → Ready for User Test`.
+* **Không package `.exe` sau mỗi lần code**: Trong quá trình phát triển, chỉ build Debug và chạy từ source để vòng lặp test diễn ra trong 1-2 giây. Chỉ đóng gói `.exe` khi cần phát hành (release).
+
+Dự án cung cấp sẵn 4 script Windows để thao tác nhanh:
+
+| Script | Chức năng | Mô tả chi tiết |
+|:---|:---|:---|
+| **`RESTART.bat`** | **Khởi động lại nhanh** | Dừng instance cũ đang chạy, build Debug, khởi động lại app và tự động Health Check để sẵn sàng kiểm thử. |
+| **`DEV_START.bat`** | **Bắt đầu làm việc** | Kiểm tra trùng lặp instance, build và mở ứng dụng. |
+| **`DEV_STOP.bat`** | **Dừng ứng dụng** | Dừng sạch sẽ toàn bộ tiến trình app/dotnet dev đang chạy để giải phóng tài nguyên. |
+| **`TEST.bat`** | **Chạy kiểm thử** | Chạy toàn bộ 52 test cases tự động và báo cáo kết quả tức thì. |
+
+---
+
+## 6. Hướng Dẫn Biên Dịch & Đóng Gói Phát Hành (Release Packaging)
 
 ### Yêu Cầu Môi Trường
 - Windows 10/11 x64
@@ -121,10 +138,11 @@ Toàn bộ 52 test cases (từ bộ nhận diện thư mục, giải quyết xun
 
 ```powershell
 dotnet test
+# Hoặc nhấp đúp file TEST.bat
 ```
 
 ### Đóng Gói Bản Thực Thi Độc Lập (Self-Contained Single File)
-Chạy lệnh sau để xuất bản file `.exe` duy nhất, không yêu cầu máy người dùng phải cài trước .NET:
+Chỉ thực hiện khi chuẩn bị phát hành phiên bản mới (Release). Chạy lệnh:
 
 ```powershell
 dotnet publish src/LalabAutoReport.UI/LalabAutoReport.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
