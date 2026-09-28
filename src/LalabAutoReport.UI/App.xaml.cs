@@ -79,9 +79,11 @@ public partial class App : Application
         services.AddSingleton<IBillRepository, SqliteBillRepository>();
         services.AddSingleton<IBillingService, BillingService>();
         services.AddSingleton<ILockingService, LockingService>();
+        services.AddSingleton<IReportService, ReportService>();
 
         // ViewModels
         services.AddSingleton<DashboardViewModel>();
+        services.AddSingleton<ReportsViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<CustomersViewModel>();
         services.AddSingleton<PriceListViewModel>();

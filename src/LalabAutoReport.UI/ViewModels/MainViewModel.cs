@@ -24,18 +24,21 @@ public partial class MainViewModel : ObservableObject
     private string _rootFolderText = string.Empty;
 
     public DashboardViewModel DashboardVM { get; }
+    public ReportsViewModel ReportsVM { get; }
     public SettingsViewModel SettingsVM { get; }
     public CustomersViewModel CustomersVM { get; }
     public PriceListViewModel PriceListVM { get; }
 
     public MainViewModel(
         DashboardViewModel dashboardVM,
+        ReportsViewModel reportsVM,
         SettingsViewModel settingsVM,
         CustomersViewModel customersVM,
         PriceListViewModel priceListVM,
         ISettingsRepository settingsRepository)
     {
         DashboardVM = dashboardVM;
+        ReportsVM = reportsVM;
         SettingsVM = settingsVM;
         CustomersVM = customersVM;
         PriceListVM = priceListVM;
@@ -71,6 +74,14 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = DashboardVM;
         ActiveTab = "Dashboard";
+    }
+
+    [RelayCommand]
+    private async Task NavigateToReportsAsync()
+    {
+        CurrentView = ReportsVM;
+        ActiveTab = "Reports";
+        await ReportsVM.LoadReportAsync();
     }
 
     [RelayCommand]

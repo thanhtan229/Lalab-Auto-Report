@@ -185,6 +185,7 @@ public interface IOrderRepository
     Task<Order?> GetOrderByIdAsync(long id, CancellationToken cancellationToken = default);
     Task<Order?> GetOrderByRelativePathAsync(string relativePath, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetOrdersByDateAsync(string date, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Order>> GetOrdersByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
     Task SaveOrderAsync(Order order, ScanSnapshot snapshot, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<string>> GetScannedDatesInMonthAsync(string yearMonth, CancellationToken cancellationToken = default);
     Task UpdateOrderItemResolutionAsync(long orderItemId, int billQuantity, QuantityResolutionMode mode, string? note, CancellationToken cancellationToken = default);
@@ -285,5 +286,98 @@ public interface ILockingService
     Task<Bill> VerifyAndLockOrderAsync(long orderId, CancellationToken cancellationToken = default);
     Task ReopenOrderAsync(long orderId, string reason, CancellationToken cancellationToken = default);
     Task<bool> CheckFilesystemChangedAfterLockAsync(long orderId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Summary of quantities and revenue for a print specification
+/// </summary>
+public record SpecificationSummary(
+    long PrintSpecificationId,
+    string SpecificationName,
+    int TotalBillQuantity,
+    long TotalAmount
+);
+
+/// <summary>
+/// Summary of daily operational activity
+/// </summary>
+public record DailySummary(
+    string Date,
+    int TotalOrders,
+    int TotalBillQuantity,
+    long TotalAmount,
+    bool HasUnresolvedIssues
+);
+
+/// <summary>
+/// Summary of customer activity across a month or date range
+/// </summary>
+public record CustomerMonthlySummary(
+    long? CustomerId,
+    string DisplayName,
+    int TotalOrders,
+    int TotalBillQuantity,
+    long TotalAmount,
+    bool HasUnresolvedIssues
+);
+
+/// <summary>
+/// Authoritative daily report
+/// </summary>
+public record DailyReport(
+    string Date,
+    int TotalOrders,
+    int TotalCustomers,
+    int TotalBillQuantity,
+    long TotalAmount,
+    int UnresolvedOrdersCount,
+    int LockedOrdersCount,
+    IReadOnlyList<CustomerDailyAggregation> Customers,
+    IReadOnlyList<SpecificationSummary> Specifications
+);
+
+/// <summary>
+/// Authoritative monthly report loaded from SQLite
+/// </summary>
+public record MonthlyReport(
+    int Year,
+    int Month,
+    int TotalOrders,
+    int TotalCustomers,
+    int TotalBillQuantity,
+    long TotalAmount,
+    int UnresolvedOrdersCount,
+    int LockedOrdersCount,
+    IReadOnlyList<string> MissingScanDays,
+    IReadOnlyList<DailySummary> DailySummaries,
+    IReadOnlyList<CustomerMonthlySummary> CustomerSummaries,
+    IReadOnlyList<SpecificationSummary> SpecificationSummaries
+);
+
+/// <summary>
+/// Authoritative date range report loaded from SQLite
+/// </summary>
+public record DateRangeReport(
+    string StartDate,
+    string EndDate,
+    int TotalOrders,
+    int TotalCustomers,
+    int TotalBillQuantity,
+    long TotalAmount,
+    int UnresolvedOrdersCount,
+    int LockedOrdersCount,
+    IReadOnlyList<DailySummary> DailySummaries,
+    IReadOnlyList<CustomerMonthlySummary> CustomerSummaries,
+    IReadOnlyList<SpecificationSummary> SpecificationSummaries
+);
+
+/// <summary>
+/// Database-only reporting service (never touches raw image trees during report generation)
+/// </summary>
+public interface IReportService
+{
+    Task<DailyReport> GetDailyReportAsync(string date, CancellationToken cancellationToken = default);
+    Task<MonthlyReport> GetMonthlyReportAsync(int year, int month, CancellationToken cancellationToken = default);
+    Task<DateRangeReport> GetDateRangeReportAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
 }
 

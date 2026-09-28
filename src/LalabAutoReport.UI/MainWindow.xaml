@@ -16,6 +16,9 @@
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
             <views:DashboardView/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ReportsViewModel}">
+            <views:ReportsView/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:CustomersViewModel}">
             <views:CustomersView/>
         </DataTemplate>
@@ -54,6 +57,13 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="📋 " FontSize="14"/>
                             <TextBlock Text="Quét &amp; Đơn hàng" Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding NavigateToReportsCommand}" Height="40" Margin="0,0,0,6" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" Padding="14,0" Cursor="Hand">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📊 " FontSize="14"/>
+                            <TextBlock Text="Báo cáo doanh thu" Foreground="White" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 

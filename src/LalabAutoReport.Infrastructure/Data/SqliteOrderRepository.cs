@@ -99,6 +99,35 @@ public class SqliteOrderRepository : IOrderRepository
         return orders;
     }
 
+    public async Task<IReadOnlyList<Order>> GetOrdersByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+
+        var orderDtos = await connection.QueryAsync<OrderDto>(
+            "SELECT * FROM orders WHERE work_date >= @StartDate AND work_date <= @EndDate ORDER BY work_date, original_folder_name",
+            new { StartDate = startDate, EndDate = endDate }
+        );
+
+        var orders = new List<Order>();
+        foreach (var dto in orderDtos)
+        {
+            var order = MapOrder(dto);
+
+            var items = await connection.QueryAsync<OrderItemDto>(@"
+                SELECT i.*, ps.canonical_name AS spec_canonical_name, ps.unit_price AS unit_price 
+                FROM order_item_scans i
+                LEFT JOIN print_specifications ps ON i.print_specification_id = ps.id
+                WHERE i.order_id = @OrderId
+                AND i.scan_snapshot_id = (SELECT MAX(id) FROM scan_snapshots WHERE order_id = @OrderId)
+            ", new { OrderId = order.Id });
+
+            order.Items = items.Select(MapOrderItem).ToList();
+            orders.Add(order);
+        }
+
+        return orders;
+    }
+
     public async Task SaveOrderAsync(Order order, ScanSnapshot snapshot, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
