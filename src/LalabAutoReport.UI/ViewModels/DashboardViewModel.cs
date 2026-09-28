@@ -191,6 +191,53 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ScanMissingDaysAsync()
+    {
+        if (IsScanning) return;
+
+        var settings = await _settingsRepository.GetSettingsAsync();
+        if (string.IsNullOrWhiteSpace(settings.RootFolder) || !_fileSystem.DirectoryExists(settings.RootFolder))
+        {
+            StatusMessage = "Vui lòng chọn Thư Mục Gốc trong Cài Đặt trước!";
+            return;
+        }
+
+        IsScanning = true;
+        ScanProgressText = $"Đang tìm các ngày chưa quét trong tháng {SelectedDate:MM/yyyy}...";
+        ScanProgressPercent = 0;
+        StatusMessage = string.Empty;
+
+        _scanCts = new CancellationTokenSource();
+        var progress = new Progress<ScanProgress>(p =>
+        {
+            ScanProgressText = p.CurrentStep;
+            ScanProgressPercent = p.TotalItems > 0 ? (int)((double)p.CompletedItems / p.TotalItems * 100) : 0;
+        });
+
+        try
+        {
+            var scanned = await _scanService.ScanMissingDaysAsync(SelectedDate.Year, SelectedDate.Month, progress, _scanCts.Token);
+            await LoadOrdersForSelectedDateAsync();
+            StatusMessage = scanned.Count > 0
+                ? $"Đã quét bổ sung {scanned.Count} đơn hàng từ các ngày còn thiếu."
+                : $"Tất cả các ngày trong tháng {SelectedDate:MM/yyyy} đã được quét đầy đủ!";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Đã hủy thao tác quét ngày thiếu.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi khi quét ngày thiếu: {ex.Message}";
+        }
+        finally
+        {
+            IsScanning = false;
+            ScanProgressText = string.Empty;
+        }
+    }
+
+    [RelayCommand]
     private void CancelScan()
     {
         _scanCts?.Cancel();

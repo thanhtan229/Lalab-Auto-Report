@@ -157,6 +157,94 @@ public class ScanService : IScanService
         return missing;
     }
 
+    public async Task<IReadOnlyList<Order>> ScanDateRangeAsync(
+        string startDateString,
+        string endDateString,
+        IProgress<ScanProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
+        string rootFolder = settings.RootFolder;
+
+        if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+        {
+            throw new DirectoryNotFoundException($"Root folder '{rootFolder}' does not exist or is not configured.");
+        }
+
+        var allDates = _structureParser.DiscoverDateFolders(rootFolder);
+        var inRangeDates = allDates
+            .Where(d => string.Compare(d, startDateString, StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        string.Compare(d, endDateString, StringComparison.OrdinalIgnoreCase) <= 0)
+            .OrderBy(d => d)
+            .ToList();
+
+        var orders = new List<Order>();
+        int totalDates = inRangeDates.Count;
+        int completedDates = 0;
+
+        foreach (var date in inRangeDates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            progress?.Report(new ScanProgress(
+                CurrentStep: $"Quét ngày {date} ({completedDates + 1}/{totalDates})",
+                CompletedItems: completedDates,
+                TotalItems: totalDates,
+                CurrentItemName: date
+            ));
+
+            var dateOrders = await ScanDateAsync(date, null, cancellationToken);
+            orders.AddRange(dateOrders);
+
+            completedDates++;
+            progress?.Report(new ScanProgress(
+                CurrentStep: $"Hoàn thành ngày {date}",
+                CompletedItems: completedDates,
+                TotalItems: totalDates,
+                CurrentItemName: date
+            ));
+        }
+
+        return orders;
+    }
+
+    public async Task<IReadOnlyList<Order>> ScanMissingDaysAsync(
+        int year,
+        int month,
+        IProgress<ScanProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var missingDays = await GetMissingScanDaysAsync(year, month, cancellationToken);
+        var orders = new List<Order>();
+        int total = missingDays.Count;
+        int completed = 0;
+
+        foreach (var date in missingDays)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            progress?.Report(new ScanProgress(
+                CurrentStep: $"Quét ngày thiếu: {date} ({completed + 1}/{total})",
+                CompletedItems: completed,
+                TotalItems: total,
+                CurrentItemName: date
+            ));
+
+            var dateOrders = await ScanDateAsync(date, null, cancellationToken);
+            orders.AddRange(dateOrders);
+
+            completed++;
+            progress?.Report(new ScanProgress(
+                CurrentStep: $"Đã quét ngày thiếu: {date}",
+                CompletedItems: completed,
+                TotalItems: total,
+                CurrentItemName: date
+            ));
+        }
+
+        return orders;
+    }
+
     private async Task<Order> ProcessDiscoveredOrderAsync(
         string rootFolder,
         DiscoveredOrder discOrder,

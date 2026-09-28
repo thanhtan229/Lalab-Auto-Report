@@ -39,6 +39,7 @@
 
                 <!-- Action buttons -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding ScanMissingDaysCommand}" Content="Quét ngày còn thiếu" Height="34" Padding="14,0" Margin="0,0,10,0" Background="#F1F5F9" BorderBrush="#CBD5E1" Cursor="Hand"/>
                     <Button Command="{Binding OpenDateFolderCommand}" Content="Mở thư mục ngày" Height="34" Padding="14,0" Margin="0,0,10,0" Background="#F1F5F9" BorderBrush="#CBD5E1" Cursor="Hand"/>
                     
                     <Button Command="{Binding ScanDateCommand}" Height="36" Padding="20,0" Background="#0284C7" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand">

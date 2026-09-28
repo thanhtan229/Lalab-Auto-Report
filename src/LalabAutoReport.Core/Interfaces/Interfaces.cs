@@ -152,6 +152,20 @@ public interface IScanService
         int month,
         CancellationToken cancellationToken = default
     );
+
+    Task<IReadOnlyList<Order>> ScanDateRangeAsync(
+        string startDateString,
+        string endDateString,
+        IProgress<ScanProgress>? progress = null,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<IReadOnlyList<Order>> ScanMissingDaysAsync(
+        int year,
+        int month,
+        IProgress<ScanProgress>? progress = null,
+        CancellationToken cancellationToken = default
+    );
 }
 
 /// <summary>
@@ -174,6 +188,7 @@ public interface IOrderRepository
     Task<IReadOnlyList<string>> GetScannedDatesInMonthAsync(string yearMonth, CancellationToken cancellationToken = default);
     Task UpdateOrderItemResolutionAsync(long orderItemId, int billQuantity, QuantityResolutionMode mode, string? note, CancellationToken cancellationToken = default);
     Task UpdateOrderItemPrintFolderAsync(long orderItemId, string printFolderRelativePath, int printCount, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ScanSnapshot>> GetScanSnapshotsForOrderAsync(long orderId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

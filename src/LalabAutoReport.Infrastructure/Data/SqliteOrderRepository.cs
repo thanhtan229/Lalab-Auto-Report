@@ -232,6 +232,50 @@ public class SqliteOrderRepository : IOrderRepository
         });
     }
 
+    public async Task<IReadOnlyList<ScanSnapshot>> GetScanSnapshotsForOrderAsync(long orderId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+
+        var snapshotDtos = await connection.QueryAsync<ScanSnapshotDto>(
+            "SELECT * FROM scan_snapshots WHERE order_id = @OrderId ORDER BY started_at DESC",
+            new { OrderId = orderId });
+
+        var snapshots = new List<ScanSnapshot>();
+        foreach (var dto in snapshotDtos)
+        {
+            var items = await connection.QueryAsync<OrderItemDto>(
+                "SELECT * FROM order_item_scans WHERE scan_snapshot_id = @SnapshotId",
+                new { SnapshotId = dto.id });
+
+            snapshots.Add(new ScanSnapshot
+            {
+                Id = dto.id,
+                OrderId = dto.order_id,
+                StartedAt = DateTimeOffset.Parse(dto.started_at),
+                CompletedAt = !string.IsNullOrEmpty(dto.completed_at) ? DateTimeOffset.Parse(dto.completed_at) : null,
+                Scope = Enum.TryParse<ScanScope>(dto.scan_scope, out var s) ? s : ScanScope.Date,
+                Status = Enum.TryParse<ScanStatus>(dto.status, out var st) ? st : ScanStatus.Pending,
+                ErrorMessage = dto.error_message,
+                AppVersion = dto.app_version,
+                Items = items.Select(MapOrderItem).ToList()
+            });
+        }
+
+        return snapshots;
+    }
+
+    private class ScanSnapshotDto
+    {
+        public long id { get; set; }
+        public long order_id { get; set; }
+        public string started_at { get; set; } = string.Empty;
+        public string? completed_at { get; set; }
+        public string scan_scope { get; set; } = string.Empty;
+        public string status { get; set; } = string.Empty;
+        public string? error_message { get; set; }
+        public string app_version { get; set; } = string.Empty;
+    }
+
     private static Order MapOrder(OrderDto dto)
     {
         return new Order
