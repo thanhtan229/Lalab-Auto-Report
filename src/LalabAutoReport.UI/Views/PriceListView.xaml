@@ -1,0 +1,113 @@
+<UserControl x:Class="LalabAutoReport.UI.Views.PriceListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:domain="clr-namespace:LalabAutoReport.Core.Domain;assembly=LalabAutoReport.Core"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900">
+    <Grid Background="#F8FAFC" Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="BẢNG GIÁ QUY CÁCH IN" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,16"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: Specifications Table & Add Form -->
+            <Border Grid.Column="0" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,16,0" Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Specs List -->
+                    <ListBox Grid.Row="0" ItemsSource="{Binding Specifications}" SelectedItem="{Binding SelectedSpec}" BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type domain:PrintSpecification}">
+                                <Grid Margin="0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding CanonicalName}" FontWeight="Bold" Foreground="#0F172A" FontSize="14"/>
+                                        <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias: {0}'}" FontSize="11" Foreground="#64748B"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding UnitPrice, StringFormat='{}{0:N0} đ'}" FontWeight="Bold" Foreground="#0284C7" FontSize="14" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Add Specification -->
+                    <StackPanel Grid.Row="1" Margin="0,16,0,0">
+                        <TextBlock Text="Thêm quy cách in mới:" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding NewSpecName, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" VerticalContentAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBox Grid.Column="1" Text="{Binding NewSpecPrice, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" VerticalContentAlignment="Center"/>
+                        </Grid>
+                        <Button Command="{Binding CreateSpecificationCommand}" Content="Thêm Quy Cách" Height="34" Background="#0284C7" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT: Aliases & Edit -->
+            <Border Grid.Column="1" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                        <TextBlock Text="Quy cách được chọn:" FontSize="12" Foreground="#64748B"/>
+                        <TextBlock Text="{Binding SelectedSpec.CanonicalName}" FontSize="18" FontWeight="Bold" Foreground="#0F172A" Margin="0,2,0,4"/>
+                        <TextBlock Text="{Binding SelectedSpec.UnitPrice, StringFormat='{}Đơn giá hiện tại: {0:N0} đ'}" FontSize="14" FontWeight="SemiBold" Foreground="#0284C7"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Text="Danh sách Alias thư mục map vào quy cách này:" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,8"/>
+
+                    <ListBox Grid.Row="2" ItemsSource="{Binding SelectedSpec.Aliases}" BorderBrush="#E2E8F0" Margin="0,0,0,12">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type domain:PrintSpecificationAlias}">
+                                <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="#1E293B" Padding="4"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Add Spec Alias -->
+                    <StackPanel Grid.Row="3" Margin="0,0,0,12">
+                        <TextBlock Text="Thêm alias cho quy cách này (ví dụ: '13x18' map vào '13x18 in'):" FontSize="12" Foreground="#64748B" Margin="0,0,0,4"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding NewSpecAlias, UpdateSourceTrigger=PropertyChanged}" Height="34" Padding="8,4" VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Padding="14,0" Background="#0F172A" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Status -->
+                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="#16A34A" FontWeight="SemiBold"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

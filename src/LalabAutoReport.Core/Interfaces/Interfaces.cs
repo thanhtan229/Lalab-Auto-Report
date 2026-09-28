@@ -183,3 +183,33 @@ public interface IDatabaseMigrator
 {
     Task MigrateAsync(CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Customer and alias repository interface
+/// </summary>
+public interface ICustomerRepository
+{
+    Task<Customer?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<Customer?> FindExactMatchAsync(string normalizedName, CancellationToken cancellationToken = default);
+    Task<Customer> CreateCustomerAsync(Customer customer, string? initialAlias = null, CancellationToken cancellationToken = default);
+    Task UpdateCustomerAsync(Customer customer, CancellationToken cancellationToken = default);
+    Task AddAliasAsync(long customerId, string aliasText, CancellationToken cancellationToken = default);
+    Task RemoveAliasAsync(long aliasId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerAlias>> GetAllAliasesAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Print specification and pricing repository interface
+/// </summary>
+public interface IPrintSpecificationRepository
+{
+    Task<PrintSpecification?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PrintSpecification>> GetAllAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
+    Task<PrintSpecification?> FindExactMatchAsync(string normalizedName, CancellationToken cancellationToken = default);
+    Task<PrintSpecification> CreateSpecificationAsync(PrintSpecification spec, string? initialAlias = null, CancellationToken cancellationToken = default);
+    Task UpdateSpecificationAsync(PrintSpecification spec, CancellationToken cancellationToken = default);
+    Task AddAliasAsync(long specId, string aliasText, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PrintSpecificationAlias>> GetAllAliasesAsync(CancellationToken cancellationToken = default);
+}
+

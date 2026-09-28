@@ -1,0 +1,116 @@
+<UserControl x:Class="LalabAutoReport.UI.Views.CustomersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:domain="clr-namespace:LalabAutoReport.Core.Domain;assembly=LalabAutoReport.Core"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900">
+    <Grid Background="#F8FAFC" Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="QUẢN LÝ KHÁCH HÀNG &amp; ALIAS" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,16"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: Customer List & Search -->
+            <Border Grid.Column="0" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,16,0" Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Search -->
+                    <TextBox Grid.Row="0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" Padding="8,4" VerticalContentAlignment="Center" Margin="0,0,0,12"/>
+
+                    <!-- List -->
+                    <ListBox Grid.Row="1" ItemsSource="{Binding FilteredCustomers}" SelectedItem="{Binding SelectedCustomer}" BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type domain:Customer}">
+                                <StackPanel Margin="0,4">
+                                    <TextBlock Text="{Binding CanonicalName}" FontWeight="Bold" Foreground="#0F172A" FontSize="13"/>
+                                    <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias: {0}'}" FontSize="11" Foreground="#64748B"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Add Customer -->
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                        <TextBlock Text="Thêm khách hàng mới:" FontSize="12" Foreground="#64748B" Margin="0,0,0,4"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding NewCustomerName, UpdateSourceTrigger=PropertyChanged}" Height="32" Padding="6,2" VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="1" Command="{Binding CreateCustomerCommand}" Content="Thêm" Margin="6,0,0,0" Padding="12,0" Background="#0284C7" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT: Customer Detail & Aliases -->
+            <Border Grid.Column="1" Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                        <TextBlock Text="Tên Khách Hàng Chuẩn (Canonical):" FontSize="12" Foreground="#64748B"/>
+                        <TextBlock Text="{Binding SelectedCustomer.CanonicalName}" FontSize="18" FontWeight="Bold" Foreground="#0F172A" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Text="Danh sách Alias (tên thư mục tự động map vào khách hàng này):" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,8"/>
+
+                    <!-- Aliases List -->
+                    <ListBox Grid.Row="2" ItemsSource="{Binding SelectedCustomer.Aliases}" BorderBrush="#E2E8F0" Margin="0,0,0,12">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type domain:CustomerAlias}">
+                                <Grid Margin="4,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="Xóa" Padding="8,2" Background="#FEE2E2" Foreground="#B91C1C" BorderThickness="0" Click="RemoveAlias_Click" Cursor="Hand"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Add Alias -->
+                    <StackPanel Grid.Row="3" Margin="0,0,0,12">
+                        <TextBlock Text="Thêm alias mới cho khách này:" FontSize="12" Foreground="#64748B" Margin="0,0,0,4"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding NewAliasText, UpdateSourceTrigger=PropertyChanged}" Height="34" Padding="8,4" VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Padding="14,0" Background="#0F172A" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Status -->
+                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="#16A34A" FontWeight="SemiBold"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

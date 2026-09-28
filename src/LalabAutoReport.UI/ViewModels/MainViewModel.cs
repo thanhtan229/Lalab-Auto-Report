@@ -25,14 +25,20 @@ public partial class MainViewModel : ObservableObject
 
     public DashboardViewModel DashboardVM { get; }
     public SettingsViewModel SettingsVM { get; }
+    public CustomersViewModel CustomersVM { get; }
+    public PriceListViewModel PriceListVM { get; }
 
     public MainViewModel(
         DashboardViewModel dashboardVM,
         SettingsViewModel settingsVM,
+        CustomersViewModel customersVM,
+        PriceListViewModel priceListVM,
         ISettingsRepository settingsRepository)
     {
         DashboardVM = dashboardVM;
         SettingsVM = settingsVM;
+        CustomersVM = customersVM;
+        PriceListVM = priceListVM;
         _settingsRepository = settingsRepository;
 
         _currentView = DashboardVM;
@@ -65,6 +71,22 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = DashboardVM;
         ActiveTab = "Dashboard";
+    }
+
+    [RelayCommand]
+    private async Task NavigateToCustomersAsync()
+    {
+        CurrentView = CustomersVM;
+        ActiveTab = "Customers";
+        await CustomersVM.LoadCustomersAsync();
+    }
+
+    [RelayCommand]
+    private async Task NavigateToPriceListAsync()
+    {
+        CurrentView = PriceListVM;
+        ActiveTab = "PriceList";
+        await PriceListVM.LoadSpecificationsAsync();
     }
 
     [RelayCommand]

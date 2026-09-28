@@ -69,13 +69,19 @@ public partial class App : Application
         services.AddSingleton<IDatabaseMigrator, DatabaseMigrator>();
         services.AddSingleton<ISettingsRepository, SqliteSettingsRepository>();
         services.AddSingleton<IOrderRepository, SqliteOrderRepository>();
+        services.AddSingleton<ICustomerRepository, SqliteCustomerRepository>();
+        services.AddSingleton<IPrintSpecificationRepository, SqlitePrintSpecificationRepository>();
         services.AddSingleton<IFolderStructureParser, FolderStructureParser>();
         services.AddSingleton<IPrintFolderResolver, PrintFolderResolver>();
+        services.AddSingleton<ICustomerResolver, CustomerResolver>();
+        services.AddSingleton<IPrintSpecificationResolver, PrintSpecificationResolver>();
         services.AddSingleton<IScanService, ScanService>();
 
         // ViewModels
         services.AddSingleton<DashboardViewModel>();
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<CustomersViewModel>();
+        services.AddSingleton<PriceListViewModel>();
         services.AddSingleton<MainViewModel>();
 
         // Views

@@ -18,6 +18,8 @@ public class ScanService : IScanService
     private readonly IPrintFolderResolver _printFolderResolver;
     private readonly ISettingsRepository _settingsRepository;
     private readonly IOrderRepository? _orderRepository;
+    private readonly ICustomerResolver? _customerResolver;
+    private readonly IPrintSpecificationResolver? _specificationResolver;
     private readonly ILogger<ScanService>? _logger;
 
     public ScanService(
@@ -26,6 +28,8 @@ public class ScanService : IScanService
         IPrintFolderResolver printFolderResolver,
         ISettingsRepository settingsRepository,
         IOrderRepository? orderRepository = null,
+        ICustomerResolver? customerResolver = null,
+        IPrintSpecificationResolver? specificationResolver = null,
         ILogger<ScanService>? logger = null)
     {
         _fileSystem = fileSystem;
@@ -33,6 +37,8 @@ public class ScanService : IScanService
         _printFolderResolver = printFolderResolver;
         _settingsRepository = settingsRepository;
         _orderRepository = orderRepository;
+        _customerResolver = customerResolver;
+        _specificationResolver = specificationResolver;
         _logger = logger;
     }
 
@@ -118,7 +124,7 @@ public class ScanService : IScanService
         }
 
         var supportedExts = new HashSet<string>(settings.SupportedExtensions, StringComparer.OrdinalIgnoreCase);
-        return ScanSpecificationInternal(rootFolder, discSpec, supportedExts);
+        return await ScanSpecificationInternalAsync(rootFolder, discSpec, supportedExts, null, cancellationToken);
     }
 
     public async Task<IReadOnlyList<string>> GetMissingScanDaysAsync(
@@ -176,6 +182,27 @@ public class ScanService : IScanService
         order.LastScanAt = DateTimeOffset.UtcNow;
         order.UpdatedAt = DateTimeOffset.UtcNow;
 
+        bool hasIssues = false;
+
+        // Resolve Customer Identity
+        if (_customerResolver != null && order.CustomerId == null)
+        {
+            var custResult = await _customerResolver.ResolveCustomerAsync(discOrder.OriginalCustomerFolderName, cancellationToken);
+            if (custResult.Status == CustomerResolutionStatus.ExactMatch || custResult.Status == CustomerResolutionStatus.NormalizedMatch)
+            {
+                order.CustomerId = custResult.ResolvedCustomer?.Id;
+                order.Customer = custResult.ResolvedCustomer;
+            }
+            else
+            {
+                hasIssues = true; // Unknown customer or collision
+            }
+        }
+        else if (order.CustomerId == null)
+        {
+            // No customer resolver configured
+        }
+
         var snapshot = new ScanSnapshot
         {
             OrderId = order.Id,
@@ -185,7 +212,6 @@ public class ScanService : IScanService
         };
 
         var scannedItems = new List<OrderItemScan>();
-        bool hasIssues = false;
 
         foreach (var discSpec in discOrder.Specifications)
         {
@@ -194,12 +220,13 @@ public class ScanService : IScanService
                 .FirstOrDefault(i => string.Equals(i.SpecificationRelativePath, discSpec.RelativePath, StringComparison.OrdinalIgnoreCase))
                 ?.SelectedPrintFolderRelativePath;
 
-            var itemScan = ScanSpecificationInternal(rootFolder, discSpec, supportedExts, previouslySelectedPrintFolder);
+            var itemScan = await ScanSpecificationInternalAsync(rootFolder, discSpec, supportedExts, previouslySelectedPrintFolder, cancellationToken);
             scannedItems.Add(itemScan);
 
             if (itemScan.PrintFolderStatus != PrintFolderResolutionStatus.Resolved ||
                 itemScan.MismatchCount != 0 ||
-                itemScan.ScanStatus != ScanStatus.Success)
+                itemScan.ScanStatus != ScanStatus.Success ||
+                (_specificationResolver != null && itemScan.PrintSpecificationId == null))
             {
                 hasIssues = true;
             }
@@ -209,11 +236,7 @@ public class ScanService : IScanService
         snapshot.Items = scannedItems;
         snapshot.CompletedAt = DateTimeOffset.UtcNow;
 
-        if (scannedItems.Count == 0)
-        {
-            order.Status = OrderStatus.NeedsReview;
-        }
-        else if (hasIssues)
+        if (scannedItems.Count == 0 || hasIssues)
         {
             order.Status = OrderStatus.NeedsReview;
         }
@@ -230,11 +253,12 @@ public class ScanService : IScanService
         return order;
     }
 
-    private OrderItemScan ScanSpecificationInternal(
+    private async Task<OrderItemScan> ScanSpecificationInternalAsync(
         string rootFolder,
         DiscoveredSpecification discSpec,
         HashSet<string> supportedExts,
-        string? previouslySelectedPrintFolder = null)
+        string? previouslySelectedPrintFolder = null,
+        CancellationToken cancellationToken = default)
     {
         var itemScan = new OrderItemScan
         {
@@ -245,6 +269,23 @@ public class ScanService : IScanService
 
         try
         {
+            // Resolve Print Specification
+            if (_specificationResolver != null)
+            {
+                var specResult = await _specificationResolver.ResolveSpecificationAsync(discSpec.FolderName, cancellationToken);
+                if (specResult.Status == PrintSpecificationResolutionStatus.Resolved)
+                {
+                    itemScan.PrintSpecificationId = specResult.ResolvedSpecification?.Id;
+                    itemScan.PrintSpecification = specResult.ResolvedSpecification;
+                }
+                else
+                {
+                    itemScan.PrintSpecificationId = null;
+                    itemScan.ScanStatus = ScanStatus.Warning;
+                    itemScan.ErrorMessage = specResult.ErrorMessage ?? "Chưa nhận diện quy cách";
+                }
+            }
+
             // 1. Source count directly inside the specification folder (non-recursive!)
             int sourceCount = 0;
             foreach (var file in _fileSystem.EnumerateFiles(discSpec.FullPath))
@@ -269,7 +310,11 @@ public class ScanService : IScanService
             itemScan.SelectedPrintFolderRelativePath = printResult.SelectedPrintFolderRelativePath;
             itemScan.PrintCount = printResult.PrintCount;
             itemScan.CandidatePrintFolderRelativePaths = printResult.CandidatePrintFolderRelativePaths.ToList();
-            itemScan.ErrorMessage = printResult.ErrorMessage;
+
+            if (!string.IsNullOrEmpty(printResult.ErrorMessage))
+            {
+                itemScan.ErrorMessage = printResult.ErrorMessage;
+            }
 
             // 3. Evaluate mismatch
             if (printResult.Status == PrintFolderResolutionStatus.Resolved && printResult.PrintCount.HasValue)
