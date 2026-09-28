@@ -66,6 +66,7 @@ public partial class App : Application
         // Core & Infrastructure Services
         services.AddSingleton<IFileSystemAdapter, PhysicalFileSystemAdapter>();
         services.AddSingleton<ISqliteConnectionFactory, SqliteConnectionFactory>();
+        services.AddSingleton<IDatabaseBackupService, DatabaseBackupService>();
         services.AddSingleton<IDatabaseMigrator, DatabaseMigrator>();
         services.AddSingleton<ISettingsRepository, SqliteSettingsRepository>();
         services.AddSingleton<IOrderRepository, SqliteOrderRepository>();

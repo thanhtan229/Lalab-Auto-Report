@@ -77,8 +77,30 @@ public class ScanService : IScanService
                 CurrentItemName: discOrder.OriginalCustomerFolderName
             ));
 
-            var order = await ProcessDiscoveredOrderAsync(rootFolder, discOrder, supportedExts, ScanScope.Date, cancellationToken);
-            resultOrders.Add(order);
+            try
+            {
+                var order = await ProcessDiscoveredOrderAsync(rootFolder, discOrder, supportedExts, ScanScope.Date, cancellationToken);
+                resultOrders.Add(order);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error processing customer folder '{Folder}' at '{Path}'", discOrder.OriginalCustomerFolderName, discOrder.RelativePath);
+                var failedOrder = new Order
+                {
+                    WorkDate = discOrder.Date,
+                    OriginalFolderName = discOrder.OriginalCustomerFolderName,
+                    RelativePath = discOrder.RelativePath,
+                    Status = OrderStatus.Error,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow,
+                    LastScanAt = DateTimeOffset.UtcNow
+                };
+                resultOrders.Add(failedOrder);
+            }
 
             completed++;
             progress?.Report(new ScanProgress(
@@ -109,7 +131,28 @@ public class ScanService : IScanService
         }
 
         var supportedExts = new HashSet<string>(settings.SupportedExtensions, StringComparer.OrdinalIgnoreCase);
-        return await ProcessDiscoveredOrderAsync(rootFolder, discOrder, supportedExts, ScanScope.Order, cancellationToken);
+        try
+        {
+            return await ProcessDiscoveredOrderAsync(rootFolder, discOrder, supportedExts, ScanScope.Order, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error processing order at '{Path}'", orderRelativePath);
+            return new Order
+            {
+                WorkDate = discOrder.Date,
+                OriginalFolderName = discOrder.OriginalCustomerFolderName,
+                RelativePath = discOrder.RelativePath,
+                Status = OrderStatus.Error,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+                LastScanAt = DateTimeOffset.UtcNow
+            };
+        }
     }
 
     public async Task<OrderItemScan?> ScanSpecificationAsync(
@@ -401,6 +444,8 @@ public class ScanService : IScanService
             SpecificationRelativePath = discSpec.RelativePath,
             ScanStatus = ScanStatus.Success
         };
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {

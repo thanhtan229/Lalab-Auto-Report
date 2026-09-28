@@ -2,24 +2,119 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using LalabAutoReport.Core.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace LalabAutoReport.Infrastructure.FileSystem;
 
 public class PhysicalFileSystemAdapter : IFileSystemAdapter
 {
-    public bool DirectoryExists(string path) => Directory.Exists(path);
+    private readonly ILogger<PhysicalFileSystemAdapter>? _logger;
 
-    public bool FileExists(string path) => File.Exists(path);
+    public PhysicalFileSystemAdapter(ILogger<PhysicalFileSystemAdapter>? logger = null)
+    {
+        _logger = logger;
+    }
+
+    public bool DirectoryExists(string path)
+    {
+        try
+        {
+            return Directory.Exists(path);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error checking directory existence for '{Path}'", path);
+            return false;
+        }
+    }
+
+    public bool FileExists(string path)
+    {
+        try
+        {
+            return File.Exists(path);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error checking file existence for '{Path}'", path);
+            return false;
+        }
+    }
 
     public IEnumerable<string> EnumerateDirectories(string path)
     {
-        return Directory.EnumerateDirectories(path);
+        try
+        {
+            if (!Directory.Exists(path))
+            {
+                return Array.Empty<string>();
+            }
+            return Directory.EnumerateDirectories(path).ToList();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger?.LogWarning(ex, "Access denied while enumerating directories in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            _logger?.LogWarning(ex, "Directory not found while enumerating directories in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (PathTooLongException ex)
+        {
+            _logger?.LogWarning(ex, "Path too long while enumerating directories in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (IOException ex)
+        {
+            _logger?.LogWarning(ex, "I/O error while enumerating directories in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Unexpected error enumerating directories in '{Path}'", path);
+            return Array.Empty<string>();
+        }
     }
 
     public IEnumerable<string> EnumerateFiles(string path)
     {
-        return Directory.EnumerateFiles(path);
+        try
+        {
+            if (!Directory.Exists(path))
+            {
+                return Array.Empty<string>();
+            }
+            return Directory.EnumerateFiles(path).ToList();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger?.LogWarning(ex, "Access denied while enumerating files in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            _logger?.LogWarning(ex, "Directory not found while enumerating files in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (PathTooLongException ex)
+        {
+            _logger?.LogWarning(ex, "Path too long while enumerating files in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (IOException ex)
+        {
+            _logger?.LogWarning(ex, "I/O error while enumerating files in '{Path}'", path);
+            return Array.Empty<string>();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Unexpected error enumerating files in '{Path}'", path);
+            return Array.Empty<string>();
+        }
     }
 
     public string GetRelativePath(string relativeTo, string path)

@@ -12,11 +12,16 @@ namespace LalabAutoReport.Infrastructure.Data;
 public class DatabaseMigrator : IDatabaseMigrator
 {
     private readonly ISqliteConnectionFactory _connectionFactory;
+    private readonly IDatabaseBackupService? _backupService;
     private readonly ILogger<DatabaseMigrator>? _logger;
 
-    public DatabaseMigrator(ISqliteConnectionFactory connectionFactory, ILogger<DatabaseMigrator>? logger = null)
+    public DatabaseMigrator(
+        ISqliteConnectionFactory connectionFactory,
+        IDatabaseBackupService? backupService = null,
+        ILogger<DatabaseMigrator>? logger = null)
     {
         _connectionFactory = connectionFactory;
+        _backupService = backupService;
         _logger = logger;
     }
 
@@ -37,12 +42,24 @@ public class DatabaseMigrator : IDatabaseMigrator
 
         // List of all migrations in order
         var migrations = GetMigrations();
+        var pendingMigrations = migrations.Where(m => !appliedMigrations.Contains(m.Version)).ToList();
 
-        foreach (var migration in migrations)
+        if (pendingMigrations.Count > 0 && _backupService != null)
         {
-            if (!appliedMigrations.Contains(migration.Version))
+            try
             {
-                _logger?.LogInformation("Applying migration {Version}: {Name}", migration.Version, migration.Name);
+                _logger?.LogInformation("Creating automatic database backup before running {Count} pending migration(s)...", pendingMigrations.Count);
+                await _backupService.CreateBackupAsync(cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to create pre-migration backup; proceeding with caution");
+            }
+        }
+
+        foreach (var migration in pendingMigrations)
+        {
+            _logger?.LogInformation("Applying migration {Version}: {Name}", migration.Version, migration.Name);
 
                 using var transaction = connection.BeginTransaction();
                 try
@@ -69,7 +86,6 @@ public class DatabaseMigrator : IDatabaseMigrator
                 }
             }
         }
-    }
 
     private static IReadOnlyList<(int Version, string Name, string Sql)> GetMigrations()
     {

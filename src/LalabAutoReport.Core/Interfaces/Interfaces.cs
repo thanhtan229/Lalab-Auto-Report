@@ -381,3 +381,24 @@ public interface IReportService
     Task<DateRangeReport> GetDateRangeReportAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Information about a database backup file
+/// </summary>
+public record DatabaseBackupInfo(
+    string BackupPath,
+    string FileName,
+    long FileSizeBytes,
+    DateTime CreatedAtUtc
+);
+
+/// <summary>
+/// Database backup and restore service
+/// </summary>
+public interface IDatabaseBackupService
+{
+    Task<DatabaseBackupInfo> CreateBackupAsync(string? customDestinationPath = null, CancellationToken cancellationToken = default);
+    Task RestoreBackupAsync(string backupFilePath, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DatabaseBackupInfo>> GetBackupsAsync(CancellationToken cancellationToken = default);
+    string GetDatabasePath();
+}
+
