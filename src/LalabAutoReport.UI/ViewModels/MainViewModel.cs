@@ -10,6 +10,7 @@ namespace LalabAutoReport.UI.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly ISettingsRepository _settingsRepository;
+    private readonly IUpdateService? _updateService;
 
     [ObservableProperty]
     private object? _currentView;
@@ -100,7 +101,8 @@ public partial class MainViewModel : ObservableObject
         SettingsViewModel settingsVM,
         CustomersViewModel customersVM,
         PriceListViewModel priceListVM,
-        ISettingsRepository settingsRepository)
+        ISettingsRepository settingsRepository,
+        IUpdateService? updateService = null)
     {
         DashboardVM = dashboardVM;
         ReportsVM = reportsVM;
@@ -108,6 +110,7 @@ public partial class MainViewModel : ObservableObject
         CustomersVM = customersVM;
         PriceListVM = priceListVM;
         _settingsRepository = settingsRepository;
+        _updateService = updateService;
 
         _currentView = DashboardVM;
         _activeTab = "Dashboard";
@@ -126,6 +129,34 @@ public partial class MainViewModel : ObservableObject
         await CheckRootFolderAsync();
         if (DashboardVM != null)
             await DashboardVM.LoadOrdersForSelectedDateAsync();
+
+        _ = CheckForUpdateOnStartupAsync();
+    }
+
+    private async Task CheckForUpdateOnStartupAsync()
+    {
+        if (_updateService == null) return;
+        try
+        {
+            var updateInfo = await _updateService.CheckForUpdateAsync();
+            if (updateInfo.IsUpdateAvailable)
+            {
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    var updateVm = new UpdateViewModel(_updateService);
+                    updateVm.Initialize(updateInfo);
+                    var dialog = new Views.UpdateDialog(updateVm)
+                    {
+                        Owner = System.Windows.Application.Current.MainWindow
+                    };
+                    dialog.ShowDialog();
+                });
+            }
+        }
+        catch
+        {
+            // Silently ignore update check errors on background startup
+        }
     }
 
     private void OnSettingsSaved()

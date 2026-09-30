@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run Tests
+        run: dotnet test -c Release --nologo
+
+      - name: Publish Standalone Executable
+        run: dotnet publish src/LalabAutoReport.UI/LalabAutoReport.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+
+      - name: Rename Executable for Release
+        shell: pwsh
+        run: |
+          Move-Item -Path "publish/LalabAutoReport.UI.exe" -Destination "publish/LalabAutoReport.exe" -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/LalabAutoReport.exe
+          name: Lalab Auto Report ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true

@@ -374,6 +374,7 @@ public partial class App : Application
         services.AddSingleton<IFolderFingerprintService, FolderFingerprintService>();
         services.AddSingleton<IIdleDetectionService, WindowsIdleDetector>();
         services.AddSingleton<IAutoScanCoordinator, AutoScanCoordinator>();
+        services.AddSingleton<IUpdateService, LalabAutoReport.Infrastructure.Services.GitHubUpdateService>();
 
         // ViewModels
         services.AddSingleton<DashboardViewModel>();
@@ -382,9 +383,11 @@ public partial class App : Application
         services.AddSingleton<CustomersViewModel>();
         services.AddSingleton<PriceListViewModel>();
         services.AddSingleton<MainViewModel>();
+        services.AddTransient<UpdateViewModel>();
 
         // Views
         services.AddSingleton<MainWindow>();
+        services.AddTransient<Views.UpdateDialog>();
     }
 
     protected override void OnExit(ExitEventArgs e)

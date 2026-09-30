@@ -20,6 +20,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IDatabaseBackupService _backupService;
     private readonly IContextMenuIntegrationService _contextMenuService;
     private readonly IDatabaseResetService? _resetService;
+    private readonly IUpdateService? _updateService;
 
     [ObservableProperty]
     private string _rootFolder = string.Empty;
@@ -71,6 +72,12 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _appVersion = "1.0.0";
 
+    [ObservableProperty]
+    private bool _isCheckingUpdate;
+
+    [ObservableProperty]
+    private string _updateStatusMessage = string.Empty;
+
     private bool _isLoadingSettings;
 
     public ObservableCollection<DatabaseBackupInfo> RecentBackups { get; } = new();
@@ -82,12 +89,14 @@ public partial class SettingsViewModel : ObservableObject
         ISettingsRepository settingsRepository,
         IDatabaseBackupService backupService,
         IContextMenuIntegrationService contextMenuService,
-        IDatabaseResetService? resetService = null)
+        IDatabaseResetService? resetService = null,
+        IUpdateService? updateService = null)
     {
         _settingsRepository = settingsRepository;
         _backupService = backupService;
         _contextMenuService = contextMenuService;
         _resetService = resetService;
+        _updateService = updateService;
 
         DatabasePath = _backupService.GetDatabasePath();
 
@@ -441,6 +450,47 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             MessageBox.Show($"Lỗi xuất file .reg: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public async Task CheckForUpdateAsync()
+    {
+        if (_updateService == null)
+        {
+            UpdateStatusMessage = "Chức năng cập nhật chưa được khởi tạo.";
+            return;
+        }
+
+        IsCheckingUpdate = true;
+        UpdateStatusMessage = "Đang kiểm tra bản cập nhật mới trên GitHub...";
+
+        try
+        {
+            var updateInfo = await _updateService.CheckForUpdateAsync();
+            if (updateInfo.IsUpdateAvailable)
+            {
+                UpdateStatusMessage = $"Đã có bản cập nhật mới: {updateInfo.LatestVersion}!";
+                var updateVm = new UpdateViewModel(_updateService);
+                updateVm.Initialize(updateInfo);
+                var dialog = new Views.UpdateDialog(updateVm)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+                dialog.ShowDialog();
+            }
+            else
+            {
+                UpdateStatusMessage = $"Hệ thống đang ở phiên bản mới nhất ({updateInfo.CurrentVersion}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusMessage = $"Lỗi kiểm tra cập nhật: {ex.Message}";
+        }
+        finally
+        {
+            IsCheckingUpdate = false;
         }
     }
 }

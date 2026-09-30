@@ -180,6 +180,19 @@
                         <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0" FontSize="13"/>
                     </StackPanel>
 
+                    <!-- Application Update Section -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Cập Nhật Hệ Thống (Auto-Update)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Tự động kiểm tra và đồng bộ phiên bản mới nhất từ kho phát hành GitHub để toàn bộ các máy in luôn hoạt động đồng nhất." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <Button Command="{Binding CheckForUpdateCommand}" Content="🔍 Kiểm Tra Cập Nhật Ngay" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="18,0"/>
+                                <TextBlock Text="{Binding UpdateStatusMessage}" Foreground="{StaticResource Tinix.Color.Info}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="14,0,0,0" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Application Info -->
                     <Border BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
                         <TextBlock Text="{Binding AppVersion, StringFormat='Lalab Auto Report v{0} • Tinix UX/UI Standard • Windows Local-First • SQLite WAL'}" Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="12"/>
