@@ -23,6 +23,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\LalabAutoReport.Core\LalabAutoReport.Core.csproj" />
     <ProjectReference Include="..\..\src\LalabAutoReport.Infrastructure\LalabAutoReport.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\LalabAutoReport.UI\LalabAutoReport.UI.csproj" />
