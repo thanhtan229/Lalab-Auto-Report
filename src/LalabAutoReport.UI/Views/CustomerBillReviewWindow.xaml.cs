@@ -1,0 +1,14 @@
+using System.Windows;
+using LalabAutoReport.UI.ViewModels;
+
+namespace LalabAutoReport.UI.Views;
+
+public partial class CustomerBillReviewWindow : Window
+{
+    public CustomerBillReviewWindow(CustomerBillReviewViewModel viewModel)
+    {
+        InitializeComponent();
+        DataContext = viewModel;
+        viewModel.RequestClose += () => Close();
+    }
+}

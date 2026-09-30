@@ -169,11 +169,17 @@ public class SqliteBillRepository : IBillRepository
                 INSERT INTO bill_lines (
                     bill_id, print_specification_id, source_count, print_count,
                     bill_quantity, quantity_resolution_mode, quantity_resolution_note,
-                    unit_price, line_total, source_scan_snapshot_id
+                    unit_price, line_total, source_scan_snapshot_id,
+                    product_name_snapshot, billing_method_snapshot, sheet_count, included_sheets_snapshot,
+                    extra_sheet_count, base_price_snapshot, extra_sheet_price_snapshot, final_print_folder_path,
+                    folder_resolution_mode_snapshot
                 ) VALUES (
                     @BillId, @PrintSpecificationId, @SourceCount, @PrintCount,
                     @BillQuantity, @QuantityResolutionMode, @QuantityResolutionNote,
-                    @UnitPrice, @LineTotal, @SourceScanSnapshotId
+                    @UnitPrice, @LineTotal, @SourceScanSnapshotId,
+                    @ProductNameSnapshot, @BillingMethodSnapshot, @SheetCount, @IncludedSheetsSnapshot,
+                    @ExtraSheetCount, @BasePriceSnapshot, @ExtraSheetPriceSnapshot, @FinalPrintFolderPath,
+                    @FolderResolutionModeSnapshot
                 );
                 SELECT last_insert_rowid();
             ", new
@@ -187,7 +193,16 @@ public class SqliteBillRepository : IBillRepository
                 QuantityResolutionNote = line.QuantityResolutionNote,
                 UnitPrice = line.UnitPrice,
                 LineTotal = line.LineTotal,
-                SourceScanSnapshotId = line.SourceScanSnapshotId
+                SourceScanSnapshotId = line.SourceScanSnapshotId,
+                ProductNameSnapshot = line.ProductNameSnapshot,
+                BillingMethodSnapshot = line.BillingMethodSnapshot?.ToString(),
+                SheetCount = line.SheetCount,
+                IncludedSheetsSnapshot = line.IncludedSheetsSnapshot,
+                ExtraSheetCount = line.ExtraSheetCount,
+                BasePriceSnapshot = line.BasePriceSnapshot,
+                ExtraSheetPriceSnapshot = line.ExtraSheetPriceSnapshot,
+                FinalPrintFolderPath = line.FinalPrintFolderPath,
+                FolderResolutionModeSnapshot = line.FolderResolutionModeSnapshot.ToString()
             }, transaction: transaction);
 
             line.Id = lineId;
@@ -213,8 +228,17 @@ public class SqliteBillRepository : IBillRepository
         Id = dto.id,
         BillId = dto.bill_id,
         PrintSpecificationId = dto.print_specification_id,
+        ProductNameSnapshot = dto.product_name_snapshot,
+        BillingMethodSnapshot = Enum.TryParse<BillingMethod>(dto.billing_method_snapshot, out var bm) ? bm : null,
         SourceCount = (int)dto.source_count,
         PrintCount = (int?)dto.print_count,
+        SheetCount = (int?)dto.sheet_count,
+        IncludedSheetsSnapshot = (int?)dto.included_sheets_snapshot,
+        ExtraSheetCount = (int?)dto.extra_sheet_count,
+        BasePriceSnapshot = dto.base_price_snapshot,
+        ExtraSheetPriceSnapshot = dto.extra_sheet_price_snapshot,
+        FinalPrintFolderPath = dto.final_print_folder_path,
+        FolderResolutionModeSnapshot = !string.IsNullOrEmpty(dto.folder_resolution_mode_snapshot) && Enum.TryParse<BillingFolderResolutionMode>(dto.folder_resolution_mode_snapshot, out var bfm) ? bfm : BillingFolderResolutionMode.AutoResolved,
         BillQuantity = (int)dto.bill_quantity,
         QuantityResolutionMode = Enum.TryParse<QuantityResolutionMode>(dto.quantity_resolution_mode, out var qrm) ? qrm : QuantityResolutionMode.AutoMatch,
         QuantityResolutionNote = dto.quantity_resolution_note,
@@ -240,8 +264,17 @@ public class SqliteBillRepository : IBillRepository
         public long id { get; set; }
         public long bill_id { get; set; }
         public long print_specification_id { get; set; }
+        public string? product_name_snapshot { get; set; }
+        public string? billing_method_snapshot { get; set; }
         public long source_count { get; set; }
         public long? print_count { get; set; }
+        public long? sheet_count { get; set; }
+        public long? included_sheets_snapshot { get; set; }
+        public long? extra_sheet_count { get; set; }
+        public long? base_price_snapshot { get; set; }
+        public long? extra_sheet_price_snapshot { get; set; }
+        public string? final_print_folder_path { get; set; }
+        public string? folder_resolution_mode_snapshot { get; set; }
         public long bill_quantity { get; set; }
         public string quantity_resolution_mode { get; set; } = string.Empty;
         public string? quantity_resolution_note { get; set; }
@@ -250,3 +283,4 @@ public class SqliteBillRepository : IBillRepository
         public long source_scan_snapshot_id { get; set; }
     }
 }
+

@@ -1,17 +1,26 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LalabAutoReport.Core.Domain;
 using LalabAutoReport.Core.Interfaces;
+using LalabAutoReport.UI.Views;
 
 namespace LalabAutoReport.UI.ViewModels;
 
 public partial class CustomersViewModel : ObservableObject
 {
     private readonly ICustomerRepository _customerRepository;
+    private readonly ICustomerBillingService _customerBillingService;
+    private readonly ICustomerBillRepository _customerBillRepository;
+    private readonly IJpegBillExporter _jpegBillExporter;
+    private readonly IExcelBillExporter? _excelBillExporter;
+    private readonly ISettingsRepository _settingsRepository;
 
     [ObservableProperty]
     private ObservableCollection<Customer> _allCustomers = new();
@@ -34,27 +43,204 @@ public partial class CustomersViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
-    public CustomersViewModel(ICustomerRepository customerRepository)
+    [ObservableProperty]
+    private string _editCustomerName = string.Empty;
+
+    [ObservableProperty]
+    private string _editCustomerPhone = string.Empty;
+
+    [ObservableProperty]
+    private string _editCustomerNote = string.Empty;
+
+    [ObservableProperty]
+    private CustomerUnbilledSummary? _unbilledSummary;
+
+    [ObservableProperty]
+    private bool _hasUnbilledOrders;
+
+    [ObservableProperty]
+    private bool _isLoadingBilling;
+
+    [ObservableProperty]
+    private bool _isGuestSelected;
+
+    public Customer GuestCustomerItem { get; } = new Customer
+    {
+        Id = -1,
+        CanonicalName = "⚡ Khách Lẻ (Quick Bill)",
+        Note = "Khách vãng lai, in gấp, không tạo hồ sơ đại lý dài hạn."
+    };
+
+    public ObservableCollection<CustomerBill> CustomerBills { get; } = new();
+
+    public CustomersViewModel(
+        ICustomerRepository customerRepository,
+        ICustomerBillingService customerBillingService,
+        ICustomerBillRepository customerBillRepository,
+        IJpegBillExporter jpegBillExporter,
+        ISettingsRepository settingsRepository,
+        IExcelBillExporter? excelBillExporter = null)
     {
         _customerRepository = customerRepository;
+        _customerBillingService = customerBillingService;
+        _customerBillRepository = customerBillRepository;
+        _jpegBillExporter = jpegBillExporter;
+        _excelBillExporter = excelBillExporter;
+        _settingsRepository = settingsRepository;
     }
 
     public async Task LoadCustomersAsync()
     {
         var customers = await _customerRepository.GetAllAsync();
+        var settings = await _settingsRepository.GetSettingsAsync();
+
+        // Populate aliases for GuestCustomerItem from settings
+        GuestCustomerItem.Aliases = settings.GuestAliases
+            .Select(a => new CustomerAlias { Id = 0, CustomerId = -1, AliasText = a, NormalizedAlias = a.Trim().ToLowerInvariant() })
+            .ToList();
+
         AllCustomers.Clear();
         foreach (var c in customers)
         {
             AllCustomers.Add(c);
         }
+
         ApplyFilter();
+
         if (SelectedCustomer != null)
         {
-            SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == SelectedCustomer.Id) ?? AllCustomers.FirstOrDefault();
+            if (SelectedCustomer.Id == -1)
+            {
+                SelectedCustomer = GuestCustomerItem;
+            }
+            else
+            {
+                SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == SelectedCustomer.Id) ?? AllCustomers.FirstOrDefault() ?? GuestCustomerItem;
+            }
         }
         else
         {
-            SelectedCustomer = AllCustomers.FirstOrDefault();
+            SelectedCustomer = AllCustomers.FirstOrDefault() ?? GuestCustomerItem;
+        }
+    }
+
+    partial void OnSelectedCustomerChanged(Customer? value)
+    {
+        IsGuestSelected = value != null && value.Id == -1;
+
+        if (value != null && !IsGuestSelected)
+        {
+            EditCustomerName = value.CanonicalName;
+            EditCustomerPhone = value.Phone ?? string.Empty;
+            EditCustomerNote = value.Note ?? string.Empty;
+        }
+        else if (IsGuestSelected)
+        {
+            EditCustomerName = "Khách Lẻ (Quick Bill)";
+            EditCustomerPhone = "(Tùy biến từng đơn)";
+            EditCustomerNote = value?.Note ?? string.Empty;
+        }
+        else
+        {
+            EditCustomerName = string.Empty;
+            EditCustomerPhone = string.Empty;
+            EditCustomerNote = string.Empty;
+        }
+
+        _ = LoadCustomerBillingInfoAsync(value);
+    }
+
+    [RelayCommand]
+    public async Task SaveCustomerInfoAsync()
+    {
+        if (SelectedCustomer == null)
+        {
+            StatusMessage = "Vui lòng chọn khách hàng!";
+            return;
+        }
+
+        if (IsGuestSelected)
+        {
+            StatusMessage = "Mục Khách Lẻ cố định không cần sửa thông tin. Tên và SĐT sẽ nhập khi lập bill.";
+            return;
+        }
+
+        string trimmedName = EditCustomerName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            StatusMessage = "Tên khách hàng không được để trống!";
+            return;
+        }
+
+        string oldName = SelectedCustomer.CanonicalName;
+        string? trimmedPhone = string.IsNullOrWhiteSpace(EditCustomerPhone) ? null : EditCustomerPhone.Trim();
+        string? trimmedNote = string.IsNullOrWhiteSpace(EditCustomerNote) ? null : EditCustomerNote.Trim();
+
+        try
+        {
+            SelectedCustomer.CanonicalName = trimmedName;
+            SelectedCustomer.Phone = trimmedPhone;
+            SelectedCustomer.Note = trimmedNote;
+
+            await _customerRepository.UpdateCustomerAsync(SelectedCustomer);
+
+            // Tự động lưu tên cũ làm alias nếu tên thay đổi và chưa có trong danh sách
+            if (!string.IsNullOrWhiteSpace(oldName) && !string.Equals(oldName, trimmedName, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!SelectedCustomer.Aliases.Any(a => string.Equals(a.AliasText, oldName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    await _customerRepository.AddAliasAsync(SelectedCustomer.Id, oldName);
+                }
+            }
+
+            StatusMessage = $"Đã cập nhật thông tin cho khách hàng '{trimmedName}'";
+            long currentId = SelectedCustomer.Id;
+            await LoadCustomersAsync();
+            SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == currentId);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi cập nhật khách hàng: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public async Task<bool> DeleteCustomerAsync()
+    {
+        if (SelectedCustomer == null)
+        {
+            StatusMessage = "Vui lòng chọn khách hàng cần xóa!";
+            return false;
+        }
+
+        if (IsGuestSelected)
+        {
+            StatusMessage = "Không thể xóa mục Khách lẻ cố định của hệ thống.";
+            return false;
+        }
+
+        string customerName = SelectedCustomer.CanonicalName;
+        long customerId = SelectedCustomer.Id;
+
+        try
+        {
+            bool hasHistory = await _customerRepository.HasCustomerHistoryAsync(customerId);
+            if (hasHistory)
+            {
+                StatusMessage = $"Không thể xóa khách hàng '{customerName}' vì đã có lịch sử đơn hàng hoặc hóa đơn trong hệ thống.";
+                return false;
+            }
+
+            await _customerRepository.DeleteCustomerAsync(customerId);
+            StatusMessage = $"Đã xóa khách hàng '{customerName}' thành công.";
+            SelectedCustomer = null;
+            await LoadCustomersAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi xóa khách hàng: {ex.Message}";
+            return false;
         }
     }
 
@@ -65,6 +251,23 @@ public partial class CustomersViewModel : ObservableObject
 
     private void ApplyFilter()
     {
+        FilteredCustomers.Clear();
+
+        bool guestMatches = true;
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            string s = SearchText.Trim().ToLowerInvariant();
+            guestMatches = "khách lẻ".Contains(s) ||
+                           "khach le".Contains(s) ||
+                           "quick bill".Contains(s) ||
+                           GuestCustomerItem.Aliases.Any(a => a.AliasText.ToLowerInvariant().Contains(s));
+        }
+
+        if (guestMatches)
+        {
+            FilteredCustomers.Add(GuestCustomerItem);
+        }
+
         var filtered = AllCustomers.AsEnumerable();
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
@@ -74,8 +277,7 @@ public partial class CustomersViewModel : ObservableObject
                 c.Aliases.Any(a => a.AliasText.ToLowerInvariant().Contains(s)));
         }
 
-        FilteredCustomers.Clear();
-        foreach (var c in filtered)
+        foreach (var c in filtered.OrderBy(c => c.CanonicalName))
         {
             FilteredCustomers.Add(c);
         }
@@ -117,19 +319,417 @@ public partial class CustomersViewModel : ObservableObject
             return;
         }
 
-        await _customerRepository.AddAliasAsync(SelectedCustomer.Id, NewAliasText.Trim());
-        StatusMessage = $"Đã thêm alias '{NewAliasText.Trim()}' cho {SelectedCustomer.CanonicalName}";
+        string trimmed = NewAliasText.Trim();
+
+        if (IsGuestSelected)
+        {
+            var settings = await _settingsRepository.GetSettingsAsync();
+            if (!settings.GuestAliases.Any(a => string.Equals(a, trimmed, StringComparison.OrdinalIgnoreCase)))
+            {
+                settings.GuestAliases.Add(trimmed);
+                await _settingsRepository.SaveSettingsAsync(settings);
+            }
+            StatusMessage = $"Đã thêm alias '{trimmed}' cho Khách Lẻ";
+            NewAliasText = string.Empty;
+            await LoadCustomersAsync();
+            SelectedCustomer = GuestCustomerItem;
+            return;
+        }
+
+        await _customerRepository.AddAliasAsync(SelectedCustomer.Id, trimmed);
+        StatusMessage = $"Đã thêm alias '{trimmed}' cho {SelectedCustomer.CanonicalName}";
         NewAliasText = string.Empty;
+        long currentId = SelectedCustomer.Id;
         await LoadCustomersAsync();
+        SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == currentId);
     }
 
     [RelayCommand]
-    private async Task RemoveAliasAsync(CustomerAlias? alias)
+    public async Task UpdateAliasAsync(object? param)
+    {
+        if (param is (CustomerAlias alias, string newAliasText))
+        {
+            await UpdateCustomerAliasAsync(alias, newAliasText);
+        }
+    }
+
+    public async Task<bool> UpdateCustomerAliasAsync(CustomerAlias alias, string newAliasText)
+    {
+        if (alias == null || SelectedCustomer == null)
+        {
+            StatusMessage = "Vui lòng chọn khách hàng và alias!";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(newAliasText))
+        {
+            StatusMessage = "Vui lòng nhập tên alias!";
+            return false;
+        }
+
+        string trimmed = newAliasText.Trim();
+        if (string.Equals(alias.AliasText, trimmed, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        try
+        {
+            if (IsGuestSelected)
+            {
+                var settings = await _settingsRepository.GetSettingsAsync();
+                int idx = settings.GuestAliases.FindIndex(a => string.Equals(a, alias.AliasText, StringComparison.OrdinalIgnoreCase));
+                if (idx >= 0)
+                {
+                    settings.GuestAliases[idx] = trimmed;
+                }
+                else
+                {
+                    settings.GuestAliases.Add(trimmed);
+                }
+                await _settingsRepository.SaveSettingsAsync(settings);
+                StatusMessage = $"Đã cập nhật alias '{alias.AliasText}' thành '{trimmed}' cho Khách Lẻ";
+                await LoadCustomersAsync();
+                SelectedCustomer = GuestCustomerItem;
+                return true;
+            }
+
+            await _customerRepository.UpdateAliasAsync(alias.Id, trimmed);
+            StatusMessage = $"Đã cập nhật alias '{alias.AliasText}' thành '{trimmed}'";
+            long currentId = SelectedCustomer.Id;
+            await LoadCustomersAsync();
+            SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == currentId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi cập nhật alias: {ex.Message}";
+            return false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task RemoveAliasAsync(CustomerAlias? alias)
     {
         if (alias == null || SelectedCustomer == null) return;
 
-        await _customerRepository.RemoveAliasAsync(alias.Id);
-        StatusMessage = $"Đã xóa alias '{alias.AliasText}'";
-        await LoadCustomersAsync();
+        try
+        {
+            if (IsGuestSelected)
+            {
+                var settings = await _settingsRepository.GetSettingsAsync();
+                settings.GuestAliases.RemoveAll(a => string.Equals(a, alias.AliasText, StringComparison.OrdinalIgnoreCase));
+                await _settingsRepository.SaveSettingsAsync(settings);
+                StatusMessage = $"Đã xóa alias '{alias.AliasText}' của Khách Lẻ";
+                await LoadCustomersAsync();
+                SelectedCustomer = GuestCustomerItem;
+                return;
+            }
+
+            await _customerRepository.RemoveAliasAsync(alias.Id);
+            StatusMessage = $"Đã xóa alias '{alias.AliasText}'";
+            long currentId = SelectedCustomer.Id;
+            await LoadCustomersAsync();
+            SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == currentId);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi xóa alias: {ex.Message}";
+        }
+    }
+
+    public async Task RefreshBillsAsync()
+    {
+        try
+        {
+            IsLoadingBilling = true;
+            CustomerBills.Clear();
+
+            IReadOnlyList<CustomerBill> bills;
+            if (IsGuestSelected)
+            {
+                bills = await _customerBillRepository.GetAllBillsAsync(BillType.Guest);
+            }
+            else if (SelectedCustomer != null && SelectedCustomer.Id > 0)
+            {
+                bills = await _customerBillRepository.GetBillsByCustomerIdAsync(SelectedCustomer.Id);
+            }
+            else
+            {
+                bills = Array.Empty<CustomerBill>();
+            }
+
+            foreach (var b in bills)
+            {
+                CustomerBills.Add(b);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi tải lịch sử hóa đơn: {ex.Message}";
+        }
+        finally
+        {
+            IsLoadingBilling = false;
+        }
+    }
+
+    public async Task LoadCustomerBillingInfoAsync(Customer? customer)
+    {
+        if (customer == null)
+        {
+            UnbilledSummary = null;
+            HasUnbilledOrders = false;
+            await RefreshBillsAsync();
+            return;
+        }
+
+        try
+        {
+            IsLoadingBilling = true;
+            if (IsGuestSelected)
+            {
+                UnbilledSummary = null;
+                HasUnbilledOrders = true; // Cho phép bấm nút Lập Bill Khách Lẻ
+                await RefreshBillsAsync();
+                return;
+            }
+
+            var summary = await _customerBillingService.GetCustomerUnbilledSummaryAsync(customer.Id);
+            UnbilledSummary = summary;
+            HasUnbilledOrders = summary.UnbilledOrderCount > 0;
+
+            await RefreshBillsAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi tải thông tin hóa đơn: {ex.Message}";
+        }
+        finally
+        {
+            IsLoadingBilling = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenQuickBill()
+    {
+        var vm = new QuickBillSetupViewModel(
+            _customerBillingService,
+            _customerBillRepository,
+            _jpegBillExporter,
+            _settingsRepository,
+            _excelBillExporter
+        );
+
+        var win = new QuickBillSetupWindow(vm)
+        {
+            Owner = Application.Current?.MainWindow
+        };
+
+        win.ShowDialog();
+
+        if (SelectedCustomer != null)
+        {
+            _ = LoadCustomerBillingInfoAsync(SelectedCustomer);
+        }
+        else
+        {
+            _ = RefreshBillsAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ComputeBillAsync()
+    {
+        if (SelectedCustomer == null)
+        {
+            StatusMessage = "Vui lòng chọn khách hàng!";
+            return;
+        }
+
+        if (IsGuestSelected)
+        {
+            OpenQuickBill();
+            return;
+        }
+
+        try
+        {
+            IsLoadingBilling = true;
+            StatusMessage = $"Đang quét và tính bill cho {SelectedCustomer.CanonicalName}...";
+            var result = await _customerBillingService.BuildOrRefreshDraftAsync(SelectedCustomer.Id, forceRescan: true);
+
+            var vm = new CustomerBillReviewViewModel(
+                result.Draft,
+                _customerBillingService,
+                _jpegBillExporter,
+                _excelBillExporter,
+                result.Warnings,
+                result.BlockingIssues
+            );
+
+            var win = new CustomerBillReviewWindow(vm)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+
+            win.ShowDialog();
+
+            // Refresh billing info after dialog closes
+            await LoadCustomerBillingInfoAsync(SelectedCustomer);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi tính bill: {ex.Message}";
+            MessageBox.Show($"Lỗi tính bill: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoadingBilling = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenBillAsync(CustomerBill? bill)
+    {
+        if (bill == null) return;
+
+        try
+        {
+            var fullBill = await _customerBillRepository.GetByIdAsync(bill.Id);
+            if (fullBill == null) return;
+
+            var vm = new CustomerBillReviewViewModel(
+                fullBill,
+                _customerBillingService,
+                _jpegBillExporter,
+                _excelBillExporter
+            );
+
+            var win = new CustomerBillReviewWindow(vm)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+
+            win.ShowDialog();
+
+            if (SelectedCustomer != null)
+            {
+                await LoadCustomerBillingInfoAsync(SelectedCustomer);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi mở bill: {ex.Message}";
+            MessageBox.Show($"Lỗi mở bill: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ReExportJpegAsync(CustomerBill? bill)
+    {
+        if (bill == null) return;
+
+        try
+        {
+            IsLoadingBilling = true;
+            StatusMessage = $"Đang xuất lại bill {bill.BillNumber} (JPEG + Excel)...";
+            var fullBill = await _customerBillRepository.GetByIdAsync(bill.Id);
+            if (fullBill == null) return;
+
+            string path = await _jpegBillExporter.ExportBillToJpegAsync(fullBill);
+
+            string? excelError = null;
+            if (_excelBillExporter != null)
+            {
+                try
+                {
+                    await _excelBillExporter.ExportBillToExcelAsync(fullBill);
+                }
+                catch (Exception ex)
+                {
+                    excelError = ex.Message;
+                }
+            }
+
+            StatusMessage = $"Đã xuất bill thành công: {path}";
+
+            // Tự động mở DUY NHẤT file Jpeg vừa xuất (không mở file Excel)
+            if (File.Exists(path))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = path,
+                        UseShellExecute = true
+                    });
+                }
+                catch { }
+            }
+
+            if (excelError != null)
+            {
+                MessageBox.Show($"Đã xuất file JPEG thành công:\n{path}\n\nTuy nhiên lỗi ghi file Excel (.xlsx):\n{excelError}", "Cảnh Báo Xuất Excel", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                MessageBox.Show($"Đã xuất lại bill thành công (JPEG + Excel):\n\n• Ảnh: {path}\n• Excel: {Path.ChangeExtension(path, ".xlsx")}", "Xuất Bill Thành Công", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
+            if (SelectedCustomer != null)
+            {
+                await LoadCustomerBillingInfoAsync(SelectedCustomer);
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi xuất lại bill: {ex.Message}";
+            MessageBox.Show($"Lỗi xuất lại bill: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoadingBilling = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenFile(CustomerBill? bill)
+    {
+        if (bill == null || string.IsNullOrWhiteSpace(bill.ExportFilePath) || !File.Exists(bill.ExportFilePath))
+        {
+            MessageBox.Show("Tệp hóa đơn JPEG chưa được tạo hoặc không tồn tại.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = bill.ExportFilePath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Không thể mở tệp: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenFolder(CustomerBill? bill)
+    {
+        if (bill == null || string.IsNullOrWhiteSpace(bill.ExportFilePath)) return;
+        string? dir = Path.GetDirectoryName(bill.ExportFilePath);
+        if (Directory.Exists(dir))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = dir,
+                UseShellExecute = true,
+                Verb = "open"
+            });
+        }
     }
 }

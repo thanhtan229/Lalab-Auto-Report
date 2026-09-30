@@ -70,13 +70,18 @@
     <Color x:Key="TinixColorInfoRaw">#15295A</Color>
     <Color x:Key="TinixColorInfoBgRaw">#CAEBFF</Color>
     <Color x:Key="TinixColorInfoBorderRaw">#A6DCFF</Color>
+    <Color x:Key="TinixColorInfoHoverBgRaw">#B8E2FC</Color>
+    <Color x:Key="TinixColorInfoActiveBgRaw">#96D4FA</Color>
     <SolidColorBrush x:Key="Tinix.Color.Info" Color="{StaticResource TinixColorInfoRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Info.Bg" Color="{StaticResource TinixColorInfoBgRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Info.Border" Color="{StaticResource TinixColorInfoBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Info.Hover" Color="{StaticResource TinixColorInfoHoverBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Info.Active" Color="{StaticResource TinixColorInfoActiveBgRaw}"/>
 
     <!-- TYPOGRAPHY -->
     <FontFamily x:Key="Tinix.Font.Display">Georgia, Times New Roman, Serif</FontFamily>
     <FontFamily x:Key="Tinix.Font.UI">Segoe UI, Helvetica Neue, Sans-Serif</FontFamily>
+    <FontFamily x:Key="Tinix.Font.Mono">Consolas, Cascadia Code, Courier New, Monospace</FontFamily>
 
     <sys:Double x:Key="Tinix.FontSize.Display">28</sys:Double>
     <sys:Double x:Key="Tinix.FontSize.Section">20</sys:Double>

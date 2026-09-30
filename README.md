@@ -4,42 +4,43 @@
 
 ---
 
-## 1. Nguyên Tắc Cốt Lõi (Core Principles)
+## 1. Nguyên Tắc Cốt Lõi V2 (Core Principles V2)
 
 1. **Tính chính xác của hóa đơn đặt lên hàng đầu**: Không bao giờ tự động suy đoán khi cấu trúc thư mục mơ hồ.
 2. **Bảo toàn nguồn gốc đơn hàng (Provenance)**: Mỗi thư mục khách hàng vật lý dưới một ngày là **một Đơn hàng riêng biệt**. Nếu một khách hàng có nhiều thư mục con trong ngày (`Văn An`, `Anh An`, `A.An`), cả 3 vẫn là 3 Đơn hàng riêng biệt, chỉ được tổng hợp định danh trên báo cáo.
-3. **1 File ảnh = 1 Bản in**: Trong phiên bản V1, mỗi file ảnh hỗ trợ trực tiếp được tính là số lượng 1.
-4. **Không đọc giải mã pixel ảnh**: Quá trình quét chỉ đọc metadata thư mục và file hệ thống, không render thumbnail hay giải mã nội dung ảnh, đảm bảo tốc độ cực nhanh và tiêu hao tài nguyên CPU/RAM tối thiểu.
+3. **Thư mục in cuối cùng là nguồn số lượng duy nhất (V2 Rule)**: Số lượng tính tiền cho mọi sản phẩm được lấy trực tiếp từ thư mục in cuối cùng (Final Print Folder). Không đối soát số lượng gốc (Source), không cảnh báo lệch gốc/in. 1 file ảnh in = 1 bản in ảnh hoặc 1 tờ album (không trừ file bìa).
+4. **Hỗ trợ đa dạng danh mục sản phẩm**: Hỗ trợ Ảnh in (`PhotoPrint` tính theo số file in) và Album (`Album` tính theo giá gói chuẩn + tờ phát sinh thêm).
 5. **Smart Scan thủ công - Không quét ngầm liên tục**: Ứng dụng ở trạng thái tĩnh hoàn toàn (0% CPU/Disk) khi không có thao tác quét của người dùng. Mở báo cáo tháng đọc trực tiếp từ SQLite chứ không quét lại toàn bộ cây thư mục ảnh.
 6. **Lịch sử bất biến khi đã Khóa**: Hóa đơn sau khi khóa trở thành một bản snapshot lịch sử. Quét lại thư mục sau này nếu có thay đổi file trên ổ cứng sẽ cảnh báo `FilesystemChangedAfterLock` chứ không âm thầm làm sai lệch số tiền đã khóa.
 7. **Tiền tệ VND là số nguyên**: Toàn bộ số tiền và đơn giá được lưu trữ và tính toán dưới dạng số nguyên (long), tuyệt đối không dùng số thực dấu phẩy động.
 
 ---
 
-## 2. Quy Ước Cấu Trúc Thư Mục (Folder Structure)
+## 2. Quy Ước Cấu Trúc Thư Mục V2 (Folder Structure V2)
 
 ```text
 RootFolder/
-└── 2026-09-28/                         <-- Thư mục ngày (YYYY-MM-DD)
-    ├── Văn An/                         <-- Thư mục khách hàng = 1 Đơn hàng
-    │   ├── 13x18 in/                   <-- Quy cách in (Specification)
-    │   │   ├── photo01.jpg             <-- Source files (chỉ đếm trực tiếp)
-    │   │   ├── photo02.jpg
-    │   │   └── in/                     <-- Thư mục in (lá sâu nhất chứa ảnh)
-    │   │       ├── photo01_retouch.jpg
-    │   │       └── photo02_retouch.jpg
-    │   └── 40x60 TG/
-    │       └── in/
-    └── Anh An/                         <-- Cùng khách Văn An, nhưng là Đơn hàng số 2
-        └── 20x30/
+└── 2026-09-29/                         <-- Thư mục ngày (YYYY-MM-DD)
+    ├── Văn An/                         <-- Khách hàng A (Legacy: sản phẩm trực tiếp)
+    │   ├── 13x18 in/                   <-- Sản phẩm ảnh in
+    │   │   ├── photo01.jpg             <-- Nếu không có thư mục con, tính trực tiếp
+    │   │   └── in/                     <-- Hoặc thư mục lá sâu nhất chứa ảnh
+    │   │       ├── p01.jpg
+    │   │       └── p02.jpg
+    │   └── Album 20x20/                <-- Sản phẩm Album (1 thư mục = 1 album)
+    │       └── in/                     <-- 12 file ảnh = 12 tờ (10 tờ chuẩn + 2 tờ thêm)
+    │           ├── sheet_01.jpg
+    │           └── ...
+    └── Anh An/                         <-- Khách hàng B (Explicit: có các đơn con)
+        ├── Don 01/                     <-- Đơn hàng 1
+        │   └── 13x18 in/
+        └── Don 02/                     <-- Đơn hàng 2
+            └── Album 25x25/
 ```
 
-- **SourceCount**: Số lượng file ảnh hỗ trợ nằm **trực tiếp** trong thư mục quy cách (không đệ quy).
-- **PrintFolder**: Thư mục lá sâu nhất chứa ảnh in hợp lệ. Nếu phân nhánh tạo ra nhiều thư mục lá chứa ảnh (`edit-a`, `edit-b`), ứng dụng gắn cờ `AmbiguousPrintFolder` và yêu cầu người dùng chọn thư mục in chính thức.
-- **Mismatch**: Nếu `SourceCount == PrintCount`, số lượng tính tiền được tự động khớp. Nếu khác nhau, người dùng phải xác nhận chọn một trong ba chế độ:
-  - `USE_PRINT`: Tính theo số lượng thư mục in.
-  - `USE_SOURCE`: Tính theo số lượng file gốc.
-  - `CUSTOM`: Nhập số lượng chỉ định thủ công.
+- **Thư mục in cuối cùng (Final Print Folder)**: Thư mục lá sâu nhất chứa ảnh in hợp lệ, hoặc chính thư mục sản phẩm nếu nó chứa file ảnh trực tiếp và không có thư mục con chứa ảnh.
+- **AmbiguousPrintFolder**: Nếu phân nhánh tạo ra nhiều thư mục lá chứa ảnh (`edit-a`, `edit-b`), ứng dụng gắn cờ yêu cầu người dùng chọn thư mục in chính thức.
+- **Tính tiền V2**: Toàn bộ số lượng tính tiền được lấy từ thư mục in cuối cùng. PhotoPrint tính theo số file x đơn giá; Album tính theo gói chuẩn + số tờ vượt. Không so sánh với file gốc.
 
 ---
 
@@ -116,14 +117,19 @@ Theo quy định tại `DEVELOPMENT_WORKFLOW.md`:
 * **Vòng lặp nhanh**: `Understand → Code → Validate → Build when needed → Restart → Health Check → Ready for User Test`.
 * **Không package `.exe` sau mỗi lần code**: Trong quá trình phát triển, chỉ build Debug và chạy từ source để vòng lặp test diễn ra trong 1-2 giây. Chỉ đóng gói `.exe` khi cần phát hành (release).
 
-Dự án cung cấp sẵn 4 script Windows để thao tác nhanh:
+Dự án cung cấp sẵn các script Windows tiện lợi:
 
 | Script | Chức năng | Mô tả chi tiết |
 |:---|:---|:---|
-| **`RESTART.bat`** | **Khởi động lại nhanh** | Dừng instance cũ đang chạy, build Debug, khởi động lại app và tự động Health Check để sẵn sàng kiểm thử. |
+| **`RESTART.bat`** / **`DEV_RESTART.bat`** | **Khởi động lại nhanh** | Dừng instance cũ đang chạy, build Debug, khởi động lại app và tự động Health Check để sẵn sàng kiểm thử. |
 | **`DEV_START.bat`** | **Bắt đầu làm việc** | Kiểm tra trùng lặp instance, build và mở ứng dụng. |
 | **`DEV_STOP.bat`** | **Dừng ứng dụng** | Dừng sạch sẽ toàn bộ tiến trình app/dotnet dev đang chạy để giải phóng tài nguyên. |
+| **`DEV_STATUS.bat`** | **Kiểm tra trạng thái** | Health check hiển thị PID, RAM, thời gian chạy, database SQLite và log mới nhất. |
 | **`TEST.bat`** | **Chạy kiểm thử** | Chạy toàn bộ 52 test cases tự động và báo cáo kết quả tức thì. |
+| **`PACKAGE.bat`** | **Đóng gói phát hành** | Tự động chạy test và đóng gói ứng dụng thành file exe độc lập (Single-File Release). |
+| **`tao_thu_muc_test_mau.ps1`** | **Tạo dữ liệu test** | Tự động sinh trọn bộ cây thư mục mẫu cho 17 kịch bản kiểm thử thực hành. |
+
+> 📖 **Xem hướng dẫn chi tiết kiểm thử thực hành:** Đọc file [HUONG_DAN_THUC_HANH_TEST_APP.md](HUONG_DAN_THUC_HANH_TEST_APP.md) để thực hành từng bước từ Happy Path, Nhận diện Alias, Album V2, Thư mục mơ hồ, Khóa đơn bất biến, đến Báo cáo.
 
 ---
 

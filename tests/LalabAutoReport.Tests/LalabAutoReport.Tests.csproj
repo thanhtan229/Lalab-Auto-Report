@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -24,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\LalabAutoReport.Core\LalabAutoReport.Core.csproj" />
     <ProjectReference Include="..\..\src\LalabAutoReport.Infrastructure\LalabAutoReport.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\LalabAutoReport.UI\LalabAutoReport.UI.csproj" />
   </ItemGroup>
 
 </Project>

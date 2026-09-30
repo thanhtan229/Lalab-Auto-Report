@@ -72,16 +72,16 @@ public class BillingEngineTests
         line.SourceCount.Should().Be(100);
         line.PrintCount.Should().Be(100);
         line.BillQuantity.Should().Be(100);
-        line.QuantityResolutionMode.Should().Be(QuantityResolutionMode.AutoMatch);
+        line.QuantityResolutionMode.Should().Be(QuantityResolutionMode.UsePrint);
         line.UnitPrice.Should().Be(5000);
         line.LineTotal.Should().Be(500000);
     }
 
     [Fact]
-    public async Task Billing_UnresolvedMismatch_MustThrowException()
+    public async Task Billing_V2_Calculates_From_PrintFolder_RegardlessOfSourceCount()
     {
         using var fixture = new TestFileSystemFixture();
-        string dbPath = Path.Combine(fixture.RootPath, "bill_unresolved.db");
+        string dbPath = Path.Combine(fixture.RootPath, "bill_v2_direct.db");
         var connFactory = new SqliteConnectionFactory(dbPath);
         var migrator = new DatabaseMigrator(connFactory);
         await migrator.MigrateAsync();
@@ -93,7 +93,7 @@ public class BillingEngineTests
 
         await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Studio Minh" });
 
-        // Source = 100, Print = 98 (mismatch)
+        // Source = 100, Print = 98 (In V2, only print folder counts!)
         for (int i = 1; i <= 100; i++) fixture.CreateFile($@"2026-09-28\Studio Minh\13x18 in\s{i}.jpg");
         for (int i = 1; i <= 98; i++) fixture.CreateFile($@"2026-09-28\Studio Minh\13x18 in\retouch\p{i}.jpg");
 
@@ -108,11 +108,46 @@ public class BillingEngineTests
         var order = orders[0];
 
         var billing = new BillingService(orderRepo, billRepo, specRepo, custRepo);
+        var bill = await billing.CalculateBillForOrderAsync(order.Id);
 
-        // Attempting to calculate bill when mismatch is unresolved must throw!
+        bill.Should().NotBeNull();
+        bill.Subtotal.Should().Be(98 * 5000);
+        bill.Lines[0].BillQuantity.Should().Be(98);
+    }
+
+    [Fact]
+    public async Task Billing_AlbumWithZeroPrints_MustThrowException()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "bill_album_zero.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var orderRepo = new SqliteOrderRepository(connFactory);
+        var billRepo = new SqliteBillRepository(connFactory);
+        var specRepo = new SqlitePrintSpecificationRepository(connFactory);
+        var custRepo = new SqliteCustomerRepository(connFactory);
+
+        await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khach Hang A" });
+
+        // Album folder with no image files (only text file) -> PrintCount = 0
+        fixture.CreateFile(@"2026-09-28\Khach Hang A\Album 20x20\readme.txt");
+
+        var parser = new FolderStructureParser(_fileSystem);
+        var printResolver = new PrintFolderResolver(_fileSystem);
+        var custResolver = new CustomerResolver(custRepo);
+        var specResolver = new PrintSpecificationResolver(specRepo);
+        var settingsRepo = new TestSettingsRepo(fixture.RootPath);
+
+        var scanner = new ScanService(_fileSystem, parser, printResolver, settingsRepo, orderRepo, custResolver, specResolver);
+        var orders = await scanner.ScanDateAsync("2026-09-28");
+        var order = orders[0];
+
+        var billing = new BillingService(orderRepo, billRepo, specRepo, custRepo);
+
         var act = async () => await billing.CalculateBillForOrderAsync(order.Id);
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*lệch số lượng*");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]

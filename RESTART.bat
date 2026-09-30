@@ -21,11 +21,16 @@ if errorlevel 1 (
 
 :: 3. Khoi dong ung dung tu development build
 echo [3/4] Dang khoi dong Lalab Auto Report UI...
-start "" dotnet run --project src\LalabAutoReport.UI -c Debug --no-build
+set "EXE_PATH=%~dp0src\LalabAutoReport.UI\bin\Debug\net8.0-windows\LalabAutoReport.UI.exe"
+if exist "%EXE_PATH%" (
+    start "" "%EXE_PATH%"
+) else (
+    start "" dotnet run --project "%~dp0src\LalabAutoReport.UI" -c Debug --no-build
+)
 
 :: 4. Health Check xac nhan ung dung dang hoat dong
 echo [4/4] Dang kiem tra trang thai ung dung (Health Check)...
-ping -n 4 127.0.0.1 >nul
+ping -n 3 127.0.0.1 >nul
 
 powershell -NoProfile -Command ^
     "$proc = Get-Process -Name 'LalabAutoReport.UI' -ErrorAction SilentlyContinue; " ^

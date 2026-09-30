@@ -27,14 +27,56 @@
                         <Button Grid.Column="1" Command="{Binding BrowseRootFolderCommand}" Content="Chọn thư mục..." Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Secondary}" Height="36" Padding="16,0"/>
                     </Grid>
 
+                    <!-- Bill Export Folder -->
+                    <TextBlock Text="Thư mục xuất Bill (Bill Export Folder)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
+                    <TextBlock Text="Thư mục lưu file hóa đơn JPEG &amp; Excel (nếu để trống, mặc định lưu tại [Root]/_BILLS hoặc AppData)" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding BillExportFolder, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13"/>
+                        <Button Grid.Column="1" Command="{Binding BrowseBillExportFolderCommand}" Content="Chọn thư mục..." Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Secondary}" Height="36" Padding="16,0"/>
+                    </Grid>
+
                     <!-- Supported Extensions -->
                     <TextBlock Text="Định dạng file ảnh hỗ trợ (phân cách bằng dấu phẩy)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
                     <TextBox Text="{Binding SupportedExtensions, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13" Margin="0,0,0,18"/>
 
-                    <!-- Scan behavior options -->
-                    <TextBlock Text="Tùy chọn khởi động" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,8" FontSize="13"/>
-                    <CheckBox Content="Tự động quét thư mục ngày hôm nay khi mở ứng dụng" IsChecked="{Binding AutoScanStartup}" Margin="0,0,0,8" FontSize="13"/>
-                    <CheckBox Content="Quét thêm ngày hôm qua nếu bật tùy chọn trên" IsChecked="{Binding StartupIncludeYesterday}" IsEnabled="{Binding AutoScanStartup}" Margin="20,0,0,18" FontSize="13"/>
+                    <!-- Tự Động Quét Thích Ứng (Idle Smart Scan) -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Tự Động Quét Thích Ứng Khi Máy Nghỉ (Idle Smart Scan)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Chỉ quét ngầm khi máy nghỉ (không có phím/chuột) để tránh ảnh hưởng khi bạn đang thao tác. Mỗi phiên máy nghỉ chỉ chạy đúng 1 lần duy nhất và chỉ rescan những đơn hàng thực sự có file/thư mục thay đổi." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <!-- Enable Idle Scan checkbox -->
+                            <CheckBox Content="Bật tự động quét khi máy nghỉ (Idle Smart Scan — Khuyên dùng)" IsChecked="{Binding EnableIdleScan}" FontWeight="SemiBold" Margin="0,0,0,12" FontSize="13"/>
+
+                            <!-- Idle settings details -->
+                            <Grid Margin="24,0,0,14" IsEnabled="{Binding EnableIdleScan}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="70"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Thời gian chờ máy nghỉ:" VerticalAlignment="Center" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,0"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding IdleThresholdOptions}" SelectedItem="{Binding IdleThresholdMinutes}" Height="34" FontSize="13" VerticalContentAlignment="Center"/>
+
+                                <TextBlock Grid.Column="3" Text="Phạm vi ngày kiểm tra (ngày gần nhất):" VerticalAlignment="Center" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,0"/>
+                                <TextBox Grid.Column="4" Text="{Binding IdleScanWindowDays, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13" TextAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Startup quick check -->
+                            <TextBlock Text="Kiểm tra khi khởi động ứng dụng:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,8" FontSize="13"/>
+                            <CheckBox Content="Tự động kiểm tra nhanh Ngày hôm nay khi mở ứng dụng" IsChecked="{Binding AutoScanStartup}" Margin="0,0,0,8" FontSize="13"/>
+                            <CheckBox Content="Kiểm tra thêm Ngày hôm qua" IsChecked="{Binding StartupIncludeYesterday}" IsEnabled="{Binding AutoScanStartup}" Margin="24,0,0,8" FontSize="13"/>
+
+                            <TextBlock Text="* Hệ thống tự động bỏ qua 100% các đơn hàng đã xuất bill / đã chốt để bảo toàn tính bất biến." Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="11" FontStyle="Italic" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Database info -->
                     <TextBlock Text="Cơ sở dữ liệu SQLite cục bộ (Local-first)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
@@ -85,6 +127,50 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Context Menu Integration Section -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Tích Hợp Windows File Explorer (Menu Chuột Phải)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Thêm nút '⚡ QUICK BILL (Lalab)' khi click chuột phải vào bất kỳ thư mục nào hoặc khoảng trống trong thư mục trên Windows Explorer để tính và xuất bill khách lẻ ngay lập tức." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <!-- Status display -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                <TextBlock Text="Trạng thái: " FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                <TextBlock Text="Đã Kích Hoạt" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="Bold" FontSize="13" Visibility="{Binding IsContextMenuRegistered, Converter={StaticResource BoolToVis}}"/>
+                                <TextBlock Text="Chưa Kích Hoạt" Foreground="{StaticResource Tinix.Color.Warning}" FontWeight="Bold" FontSize="13" Visibility="{Binding IsContextMenuRegistered, Converter={StaticResource InverseBoolConverter}}"/>
+                            </StackPanel>
+
+                            <CheckBox IsChecked="{Binding AutoRegisterContextMenu}" 
+                                      Content="Mặc định luôn bật tích hợp trong Menu chuột phải (Khuyên dùng)" 
+                                      FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,14"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Button Command="{Binding RegisterContextMenuCommand}" Content="⚡ Kích Hoạt Lại / Cập Nhật Đường Dẫn" Height="36" Style="{StaticResource Tinix.Button.Primary}" Padding="18,0"/>
+                                <Button Command="{Binding UnregisterContextMenuCommand}" Content="❌ Gỡ Bỏ" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="16,0" Margin="8,0,0,0" IsEnabled="{Binding IsContextMenuRegistered}"/>
+                                <Button Command="{Binding ExportRegFileCommand}" Content="📄 Xuất File .REG Cho Máy Khác..." Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="16,0" Margin="8,0,0,0"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding ContextMenuStatusMessage}" Foreground="{StaticResource Tinix.Color.Info}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                            <TextBlock Text="* Mặc định hệ thống luôn tự động kích hoạt menu chuột phải trong HKCU — Không yêu cầu quyền Administrator." Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="11" FontStyle="Italic"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Danger Zone Section -->
+                    <Border Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="⚠️" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Vùng Nguy Hiểm: Thiết Lập Lại Dữ Liệu (Reset Data)" FontSize="14" FontWeight="Bold" Foreground="#B91C1C" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <TextBlock Text="Dùng khi kết thúc quá trình chạy thử nghiệm hoặc muốn dọn sạch dữ liệu để đưa phần mềm về trạng thái ban đầu. Hệ thống luôn tự động tạo một bản sao lưu an toàn trước khi xóa." Foreground="#7F1D1D" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Command="{Binding ResetDataCommand}" Content="🗑️ Đặt Lại Dữ Liệu..." Height="36" Style="{StaticResource Tinix.Button.Danger}" Padding="18,0"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

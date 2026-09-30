@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,6 +54,53 @@ public class SqliteSettingsRepository : ISettingsRepository
             settings.StartupIncludeYesterday = parsedYest;
         }
 
+        if (dict.TryGetValue("AutoRegisterContextMenu", out var autoMenu) && bool.TryParse(autoMenu, out var parsedMenu))
+        {
+            settings.AutoRegisterContextMenu = parsedMenu;
+        }
+        else
+        {
+            settings.AutoRegisterContextMenu = true; // Default always enabled
+        }
+
+        if (dict.TryGetValue("EnableIdleScan", out var idleScan) && bool.TryParse(idleScan, out var parsedIdle))
+        {
+            settings.EnableIdleScan = parsedIdle;
+        }
+
+        if (dict.TryGetValue("IdleThresholdMinutes", out var idleThresh) && int.TryParse(idleThresh, out var parsedThresh))
+        {
+            settings.IdleThresholdMinutes = parsedThresh;
+        }
+
+        if (dict.TryGetValue("IdleScanWindowDays", out var idleDays) && int.TryParse(idleDays, out var parsedDays))
+        {
+            settings.IdleScanWindowDays = parsedDays;
+        }
+
+        if (dict.TryGetValue("GuestAliases", out var gAliases) && !string.IsNullOrWhiteSpace(gAliases))
+        {
+            settings.GuestAliases = gAliases
+                .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(a => a.Trim())
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        if (dict.TryGetValue("BillExportFolder", out var exportFolder) && !string.IsNullOrWhiteSpace(exportFolder))
+        {
+            settings.BillExportFolder = exportFolder;
+        }
+        else if (!string.IsNullOrWhiteSpace(settings.RootFolder))
+        {
+            settings.BillExportFolder = Path.Combine(settings.RootFolder, "Bills");
+        }
+        else
+        {
+            settings.BillExportFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LalabReports", "Bills");
+        }
+
         return settings;
     }
 
@@ -67,6 +115,9 @@ public class SqliteSettingsRepository : ISettingsRepository
             INSERT INTO app_settings (key, value) VALUES ('RootFolder', @RootFolder)
             ON CONFLICT(key) DO UPDATE SET value = excluded.value;
 
+            INSERT INTO app_settings (key, value) VALUES ('BillExportFolder', @BillExportFolder)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
             INSERT INTO app_settings (key, value) VALUES ('SupportedExtensions', @SupportedExtensions)
             ON CONFLICT(key) DO UPDATE SET value = excluded.value;
 
@@ -75,12 +126,33 @@ public class SqliteSettingsRepository : ISettingsRepository
 
             INSERT INTO app_settings (key, value) VALUES ('StartupIncludeYesterday', @StartupIncludeYesterday)
             ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('AutoRegisterContextMenu', @AutoRegisterContextMenu)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('EnableIdleScan', @EnableIdleScan)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('IdleThresholdMinutes', @IdleThresholdMinutes)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('IdleScanWindowDays', @IdleScanWindowDays)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('GuestAliases', @GuestAliases)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
         ", new
         {
             RootFolder = settings.RootFolder,
+            BillExportFolder = settings.BillExportFolder,
             SupportedExtensions = extString,
             AutoScanStartup = settings.AutoScanStartup.ToString(),
-            StartupIncludeYesterday = settings.StartupIncludeYesterday.ToString()
+            StartupIncludeYesterday = settings.StartupIncludeYesterday.ToString(),
+            AutoRegisterContextMenu = settings.AutoRegisterContextMenu.ToString(),
+            EnableIdleScan = settings.EnableIdleScan.ToString(),
+            IdleThresholdMinutes = settings.IdleThresholdMinutes.ToString(),
+            IdleScanWindowDays = settings.IdleScanWindowDays.ToString(),
+            GuestAliases = string.Join(";", settings.GuestAliases)
         }, transaction: transaction);
 
         transaction.Commit();

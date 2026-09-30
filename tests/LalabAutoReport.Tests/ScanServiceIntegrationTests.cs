@@ -72,14 +72,15 @@ public class ScanServiceIntegrationTests
         item.PrintCount.Should().Be(3);
         item.MismatchCount.Should().Be(0);
         item.BillQuantity.Should().Be(3);
-        item.QuantityResolutionMode.Should().Be(QuantityResolutionMode.AutoMatch);
+        item.QuantityResolutionMode.Should().Be(QuantityResolutionMode.UsePrint);
     }
 
     [Fact]
-    public async Task ScanDate_ScenarioB_Mismatch_ShouldRequireReview()
+    public async Task ScanDate_ScenarioB_V2_OnlyPrintCountUsedForBilling()
     {
         using var fixture = new TestFileSystemFixture();
-        // 13x18 in: 3 source images, retouch: 2 print images -> mismatch
+        // In V2: 13x18 in: 3 source images, retouch: 2 print images
+        // V2 rule: only final print folder is counted, source is ignored for billing
         fixture.CreateFile(@"2026-09-28\Van An\13x18 in\s1.jpg");
         fixture.CreateFile(@"2026-09-28\Van An\13x18 in\s2.jpg");
         fixture.CreateFile(@"2026-09-28\Van An\13x18 in\s3.jpg");
@@ -96,14 +97,13 @@ public class ScanServiceIntegrationTests
 
         orders.Should().HaveCount(1);
         var order = orders[0];
-        order.Status.Should().Be(OrderStatus.NeedsReview);
+        order.Status.Should().Be(OrderStatus.Ready);
 
         var item = order.Items[0];
         item.SourceCount.Should().Be(3);
         item.PrintCount.Should().Be(2);
-        item.MismatchCount.Should().Be(-1);
-        item.BillQuantity.Should().BeNull();
-        item.QuantityResolutionMode.Should().BeNull();
+        item.BillQuantity.Should().Be(2);
+        item.QuantityResolutionMode.Should().Be(QuantityResolutionMode.UsePrint);
     }
 
     [Fact]

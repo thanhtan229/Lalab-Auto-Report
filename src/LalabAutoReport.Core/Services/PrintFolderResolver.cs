@@ -38,25 +38,6 @@ public class PrintFolderResolver : IPrintFolderResolver
             );
         }
 
-        // Check if there is a previously selected print folder that still exists
-        if (!string.IsNullOrWhiteSpace(previouslySelectedRelativePath))
-        {
-            string candidateFullPath = _fileSystem.Combine(rootFolderFullPath, previouslySelectedRelativePath);
-            if (_fileSystem.DirectoryExists(candidateFullPath))
-            {
-                int count = CountImagesDirectlyInFolder(candidateFullPath, supportedExtensions);
-                return new PrintFolderResolutionResult(
-                    Status: PrintFolderResolutionStatus.Resolved,
-                    SelectedPrintFolderFullPath: candidateFullPath,
-                    SelectedPrintFolderRelativePath: previouslySelectedRelativePath,
-                    PrintCount: count,
-                    CandidatePrintFolderFullPaths: new[] { candidateFullPath },
-                    CandidatePrintFolderRelativePaths: new[] { previouslySelectedRelativePath }
-                );
-            }
-            _logger?.LogWarning("Previously selected print folder '{Path}' no longer exists; rescanning hierarchy.", previouslySelectedRelativePath);
-        }
-
         // 1. Traverse all descendant directories
         var allDescendants = new List<string>();
         try
@@ -73,13 +54,28 @@ public class PrintFolderResolver : IPrintFolderResolver
                 PrintCount: null,
                 CandidatePrintFolderFullPaths: Array.Empty<string>(),
                 CandidatePrintFolderRelativePaths: Array.Empty<string>(),
-                ErrorMessage: $"Error traversing directory: {ex.Message}"
+                ErrorMessage: $"Error traversing directory: {ex.Message}",
+                ResolutionMode: BillingFolderResolutionMode.AutoResolved
             );
         }
 
         // 2. Identify folders directly containing supported image files
         // Map from normalized folder path to image count
         var imageBearingFolders = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        // Include specFolderFullPath itself: if direct images exist and no descendant has images, specFolder itself is final
+        try
+        {
+            int directCount = CountImagesDirectlyInFolder(specFolderFullPath, supportedExtensions);
+            if (directCount > 0)
+            {
+                imageBearingFolders[specFolderFullPath] = directCount;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Cannot access product folder '{Dir}'", specFolderFullPath);
+        }
 
         foreach (var dir in allDescendants)
         {
@@ -128,7 +124,8 @@ public class PrintFolderResolver : IPrintFolderResolver
                 SelectedPrintFolderRelativePath: relativePath,
                 PrintCount: printCount,
                 CandidatePrintFolderFullPaths: new[] { singleLeaf },
-                CandidatePrintFolderRelativePaths: new[] { relativePath }
+                CandidatePrintFolderRelativePaths: new[] { relativePath },
+                ResolutionMode: BillingFolderResolutionMode.AutoResolved
             );
         }
 
@@ -143,6 +140,29 @@ public class PrintFolderResolver : IPrintFolderResolver
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            // Check if there is a previously manually selected print folder that is still one of the valid leaf folders and has images
+            if (!string.IsNullOrWhiteSpace(previouslySelectedRelativePath))
+            {
+                string candidateFullPath = _fileSystem.Combine(rootFolderFullPath, previouslySelectedRelativePath);
+                var matchedLeaf = leafFolders.FirstOrDefault(f =>
+                    string.Equals(f, candidateFullPath, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(_fileSystem.GetRelativePath(rootFolderFullPath, f), previouslySelectedRelativePath, StringComparison.OrdinalIgnoreCase));
+
+                if (matchedLeaf != null && imageBearingFolders.TryGetValue(matchedLeaf, out int count) && count > 0)
+                {
+                    string matchedRelative = _fileSystem.GetRelativePath(rootFolderFullPath, matchedLeaf);
+                    return new PrintFolderResolutionResult(
+                        Status: PrintFolderResolutionStatus.Resolved,
+                        SelectedPrintFolderFullPath: matchedLeaf,
+                        SelectedPrintFolderRelativePath: matchedRelative,
+                        PrintCount: count,
+                        CandidatePrintFolderFullPaths: candidateFulls,
+                        CandidatePrintFolderRelativePaths: candidateRelatives,
+                        ResolutionMode: BillingFolderResolutionMode.ManuallySelected
+                    );
+                }
+            }
+
             return new PrintFolderResolutionResult(
                 Status: PrintFolderResolutionStatus.AmbiguousPrintFolder,
                 SelectedPrintFolderFullPath: null,
@@ -150,7 +170,8 @@ public class PrintFolderResolver : IPrintFolderResolver
                 PrintCount: null,
                 CandidatePrintFolderFullPaths: candidateFulls,
                 CandidatePrintFolderRelativePaths: candidateRelatives,
-                ErrorMessage: $"Multiple ({leafFolders.Count}) image-bearing leaf folders found."
+                ErrorMessage: $"Multiple ({leafFolders.Count}) image-bearing leaf folders found.",
+                ResolutionMode: BillingFolderResolutionMode.AutoResolved
             );
         }
 
@@ -162,7 +183,8 @@ public class PrintFolderResolver : IPrintFolderResolver
             PrintCount: null,
             CandidatePrintFolderFullPaths: Array.Empty<string>(),
             CandidatePrintFolderRelativePaths: Array.Empty<string>(),
-            ErrorMessage: "No print folder found under specification."
+            ErrorMessage: "No print folder found under specification.",
+            ResolutionMode: BillingFolderResolutionMode.AutoResolved
         );
     }
 

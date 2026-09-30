@@ -24,7 +24,7 @@ public interface IFileSystemAdapter
 }
 
 /// <summary>
-/// Result of resolving print folder candidate in a print-spec folder
+/// Result of resolving the Effective Billing Folder in a product job folder
 /// </summary>
 public record PrintFolderResolutionResult(
     PrintFolderResolutionStatus Status,
@@ -33,11 +33,18 @@ public record PrintFolderResolutionResult(
     int? PrintCount,
     IReadOnlyList<string> CandidatePrintFolderFullPaths,
     IReadOnlyList<string> CandidatePrintFolderRelativePaths,
-    string? ErrorMessage = null
-);
+    string? ErrorMessage = null,
+    BillingFolderResolutionMode ResolutionMode = BillingFolderResolutionMode.AutoResolved
+)
+{
+    // Semantic aliases for Effective Billing Folder (Section 1)
+    public string? EffectiveBillingFolderFullPath => SelectedPrintFolderFullPath;
+    public string? EffectiveBillingFolderRelativePath => SelectedPrintFolderRelativePath;
+    public int? EffectiveBillingCount => PrintCount;
+}
 
 /// <summary>
-/// Analyzes folder hierarchies under a print specification to find leaf image folders
+/// Analyzes folder hierarchies under a product job to resolve the Effective Billing Folder
 /// </summary>
 public interface IPrintFolderResolver
 {
@@ -45,8 +52,18 @@ public interface IPrintFolderResolver
         string specFolderFullPath,
         string rootFolderFullPath,
         IReadOnlySet<string> supportedExtensions,
-        string? previouslySelectedRelativePath = null
+        string? manualSelectedRelativePath = null
     );
+
+    /// <summary>
+    /// Semantic alias method for resolving the Effective Billing Folder
+    /// </summary>
+    PrintFolderResolutionResult ResolveEffectiveBillingFolder(
+        string specFolderFullPath,
+        string rootFolderFullPath,
+        IReadOnlySet<string> supportedExtensions,
+        string? manualSelectedRelativePath = null
+    ) => ResolvePrintFolder(specFolderFullPath, rootFolderFullPath, supportedExtensions, manualSelectedRelativePath);
 }
 
 /// <summary>
@@ -66,8 +83,11 @@ public record DiscoveredOrder(
     string OriginalCustomerFolderName,
     string FullPath,
     string RelativePath,
-    IReadOnlyList<DiscoveredSpecification> Specifications
+    IReadOnlyList<DiscoveredSpecification> Specifications,
+    OrderKind Kind = OrderKind.Implicit,
+    string? OrderName = null
 );
+
 
 /// <summary>
 /// Parses date and customer folder structures
@@ -76,6 +96,7 @@ public interface IFolderStructureParser
 {
     IReadOnlyList<string> DiscoverDateFolders(string rootFolder);
     IReadOnlyList<DiscoveredOrder> DiscoverOrdersForDate(string rootFolder, string dateString);
+    IReadOnlyList<DiscoveredOrder> DiscoverOrdersInFolder(string rootFolder, string folderPath, string? dateString = null);
     DiscoveredOrder? DiscoverSingleOrder(string rootFolder, string orderRelativePath);
     DiscoveredSpecification? DiscoverSingleSpecification(string rootFolder, string specRelativePath);
 }
@@ -108,11 +129,31 @@ public record PrintSpecificationResolutionResult(
 );
 
 /// <summary>
+/// Result of product / variant resolution in V2
+/// </summary>
+public record ProductResolutionResult(
+    PrintSpecificationResolutionStatus Status,
+    ProductVariant? ResolvedVariant,
+    ProductFamily? ResolvedFamily,
+    string? CanonicalSize,
+    IReadOnlyList<ProductVariant> Candidates,
+    string? ErrorMessage = null
+);
+
+/// <summary>
 /// Print specification resolution service
 /// </summary>
 public interface IPrintSpecificationResolver
 {
     Task<PrintSpecificationResolutionResult> ResolveSpecificationAsync(string folderName, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Product Family and Variant resolution service in V2
+/// </summary>
+public interface IProductResolver : IPrintSpecificationResolver
+{
+    Task<ProductResolutionResult> ResolveProductAsync(string folderName, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -183,9 +224,12 @@ public interface ISettingsRepository
 public interface IOrderRepository
 {
     Task<Order?> GetOrderByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<Order?> GetOrderByCodeAsync(string orderCode, CancellationToken cancellationToken = default);
+    Task<int> GetMaxOrderSequenceForDateAsync(string workDate, CancellationToken cancellationToken = default);
     Task<Order?> GetOrderByRelativePathAsync(string relativePath, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetOrdersByDateAsync(string date, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetOrdersByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Order>> GetOrdersByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
     Task SaveOrderAsync(Order order, ScanSnapshot snapshot, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<string>> GetScannedDatesInMonthAsync(string yearMonth, CancellationToken cancellationToken = default);
     Task UpdateOrderItemResolutionAsync(long orderItemId, int billQuantity, QuantityResolutionMode mode, string? note, CancellationToken cancellationToken = default);
@@ -193,6 +237,12 @@ public interface IOrderRepository
     Task<IReadOnlyList<ScanSnapshot>> GetScanSnapshotsForOrderAsync(long orderId, CancellationToken cancellationToken = default);
     Task UpdateOrderStatusAsync(long orderId, OrderStatus status, CancellationToken cancellationToken = default);
     Task SetFilesystemChangedAfterLockAsync(long orderId, bool changed, CancellationToken cancellationToken = default);
+    Task SetCustomerBillIdForItemsAsync(IEnumerable<long> orderItemIds, long? customerBillId, CancellationToken cancellationToken = default);
+    Task UpdateOrderCustomerIdAsync(long orderId, long customerId, CancellationToken cancellationToken = default);
+    Task UpdateFolderCustomerIdAsync(string workDate, string originalFolderName, long? customerId, string? orderName = null, CancellationToken cancellationToken = default);
+    Task UpdateOrderPrintedStatusAsync(long orderId, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default);
+    Task UpdateOrderPrintedStatusByRelativePathAsync(string relativePath, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default);
+    Task DeleteOrderAsync(long orderId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -214,8 +264,13 @@ public interface ICustomerRepository
     Task<Customer> CreateCustomerAsync(Customer customer, string? initialAlias = null, CancellationToken cancellationToken = default);
     Task UpdateCustomerAsync(Customer customer, CancellationToken cancellationToken = default);
     Task AddAliasAsync(long customerId, string aliasText, CancellationToken cancellationToken = default);
+    Task UpdateAliasAsync(long aliasId, string newAliasText, CancellationToken cancellationToken = default);
     Task RemoveAliasAsync(long aliasId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CustomerAlias>> GetAllAliasesAsync(CancellationToken cancellationToken = default);
+    Task<CustomerAlias?> FindAliasByTextAsync(string aliasText, CancellationToken cancellationToken = default);
+    Task ReassignAliasAsync(long aliasId, long newCustomerId, CancellationToken cancellationToken = default);
+    Task<bool> HasCustomerHistoryAsync(long customerId, CancellationToken cancellationToken = default);
+    Task DeleteCustomerAsync(long customerId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -228,8 +283,46 @@ public interface IPrintSpecificationRepository
     Task<PrintSpecification?> FindExactMatchAsync(string normalizedName, CancellationToken cancellationToken = default);
     Task<PrintSpecification> CreateSpecificationAsync(PrintSpecification spec, string? initialAlias = null, CancellationToken cancellationToken = default);
     Task UpdateSpecificationAsync(PrintSpecification spec, CancellationToken cancellationToken = default);
+    Task DeleteSpecificationAsync(long specId, CancellationToken cancellationToken = default);
     Task AddAliasAsync(long specId, string aliasText, CancellationToken cancellationToken = default);
+    Task UpdateAliasAsync(long aliasId, string newAliasText, CancellationToken cancellationToken = default);
+    Task RemoveAliasAsync(long aliasId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PrintSpecificationAlias>> GetAllAliasesAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Product Family and Variant repository interface for V2
+/// </summary>
+public interface IProductRepository : IPrintSpecificationRepository
+{
+    // Families
+    Task<ProductFamily?> GetFamilyByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<ProductFamily?> GetFamilyByNameAsync(string name, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductFamily>> GetAllFamiliesAsync(CancellationToken cancellationToken = default);
+    Task<ProductFamily> CreateFamilyAsync(ProductFamily family, IEnumerable<string>? initialAliases = null, CancellationToken cancellationToken = default);
+    Task UpdateFamilyAsync(ProductFamily family, CancellationToken cancellationToken = default);
+    Task DeleteFamilyAsync(long familyId, CancellationToken cancellationToken = default);
+    Task AddFamilyAliasAsync(long familyId, string aliasText, CancellationToken cancellationToken = default);
+    Task RemoveFamilyAliasAsync(long aliasId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductFamilyAlias>> GetAllFamilyAliasesAsync(CancellationToken cancellationToken = default);
+
+    // Variants
+    Task<ProductVariant?> GetVariantByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductVariant>> GetAllVariantsAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductVariant>> GetVariantsByFamilyIdAsync(long familyId, bool includeInactive = false, CancellationToken cancellationToken = default);
+    Task<ProductVariant> CreateVariantAsync(ProductVariant variant, string? initialAlias = null, CancellationToken cancellationToken = default);
+    Task UpdateVariantAsync(ProductVariant variant, CancellationToken cancellationToken = default);
+    Task DeleteVariantAsync(long variantId, CancellationToken cancellationToken = default);
+
+    // Specific Aliases
+    Task AddSpecificAliasAsync(long variantId, string aliasText, CancellationToken cancellationToken = default);
+    Task UpdateSpecificAliasAsync(long aliasId, string newAliasText, CancellationToken cancellationToken = default);
+    Task RemoveSpecificAliasAsync(long aliasId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductSpecificAlias>> GetAllSpecificAliasesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProductVariant>> FindVariantsBySpecificAliasAsync(string normalizedAlias, CancellationToken cancellationToken = default);
+
+    // Collision detection
+    Task<bool> HasVariantCollisionAsync(long familyId, string canonicalSize, long? excludeVariantId = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -400,5 +493,111 @@ public interface IDatabaseBackupService
     Task RestoreBackupAsync(string backupFilePath, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DatabaseBackupInfo>> GetBackupsAsync(CancellationToken cancellationToken = default);
     string GetDatabasePath();
+}
+
+/// <summary>
+/// Database reset service for danger zone operations
+/// </summary>
+public interface IDatabaseResetService
+{
+    Task<DatabaseBackupInfo> ResetDataAsync(Domain.ResetDataScope scope, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Unbilled status overview for a customer
+/// </summary>
+public record CustomerUnbilledSummary(
+    long CustomerId,
+    string CustomerName,
+    int UnbilledOrderCount,
+    int UnbilledJobCount,
+    long EstimatedTotal,
+    string? LastBillDate,
+    string? LastBillNumber,
+    bool HasOrdersFromPreviousPeriod
+);
+
+/// <summary>
+/// <summary>
+/// Result of generating or refreshing a customer bill draft
+/// </summary>
+public record CustomerBillDraftResult(
+    CustomerBill Draft,
+    IReadOnlyList<string> Warnings,
+    IReadOnlyList<string> BlockingIssues,
+    Customer? SuggestedCustomer = null
+);
+
+/// <summary>
+/// Warning for a source folder previously billed in an exported or locked bill
+/// </summary>
+public record DuplicateFolderWarning(
+    string FolderPath,
+    string NormalizedFolderPath,
+    long PreviousBillId,
+    string PreviousBillNumber,
+    string PreviousBillDate,
+    long PreviousBillGrandTotal,
+    CustomerBillStatus PreviousBillStatus,
+    string? PreviousBillExportPath
+);
+
+/// <summary>
+/// Repository for customer-level aggregated bills and guest quick bills
+/// </summary>
+public interface ICustomerBillRepository
+{
+    Task<CustomerBill?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<CustomerBill?> GetByBillNumberAsync(string billNumber, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerBill>> GetAllBillsAsync(BillType? typeFilter = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerBill>> GetBillsByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
+    Task<CustomerBill?> GetLastLockedOrExportedBillByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
+    Task<CustomerBill?> GetLockedBillByOrderIdAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<CustomerBill?> GetActiveDraftByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerBill>> GetBillsBySourceFolderPathAsync(string normalizedFolderPath, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GuestBillSourceFolder>> GetSourceFoldersByBillIdAsync(long billId, CancellationToken cancellationToken = default);
+    Task SaveBillAsync(CustomerBill bill, CancellationToken cancellationToken = default);
+    Task LockCustomerBillAtomicAsync(CustomerBill bill, IReadOnlyList<long> productJobIds, IReadOnlyList<long> orderIds, CancellationToken cancellationToken = default);
+    Task ReopenCustomerBillAtomicAsync(CustomerBill bill, IReadOnlyList<long> productJobIds, IReadOnlyList<long> orderIds, CancellationToken cancellationToken = default);
+    Task DeleteDraftBillAsync(long billId, CancellationToken cancellationToken = default);
+    Task DeleteBillAsync(long billId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerBill>> GetBillsByDateAsync(string date, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerBill>> GetBillsByMonthAsync(string yearMonth, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerBill>> GetBillsByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
+    Task<string> GenerateNextBillNumberAsync(string date, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Domain service for customer billing and guest quick billing workflow
+/// </summary>
+public interface ICustomerBillingService
+{
+    Task<CustomerUnbilledSummary> GetCustomerUnbilledSummaryAsync(long customerId, CancellationToken cancellationToken = default);
+    Task<CustomerBillDraftResult> BuildOrRefreshDraftAsync(long customerId, bool forceRescan = true, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DuplicateFolderWarning>> CheckDuplicateSourceFoldersAsync(IEnumerable<string> folderPaths, CancellationToken cancellationToken = default);
+    Task<CustomerBillDraftResult> BuildGuestBillDraftAsync(IReadOnlyList<string> sourceFolderPaths, string? customGuestName = null, long? existingDraftId = null, CancellationToken cancellationToken = default);
+    Task<Customer> ConvertGuestBillToCustomerAsync(long billId, string customerCanonicalName, CancellationToken cancellationToken = default);
+    CustomerBill RecalculateTotals(CustomerBill bill);
+    Task<CustomerBill> LockBillAsync(CustomerBill draft, CancellationToken cancellationToken = default);
+    Task ReopenBillAsync(long billId, string reason, CancellationToken cancellationToken = default);
+    Task RecordBillExportedAsync(long billId, string exportFilePath, CancellationToken cancellationToken = default);
+    Task DetachOrderFromCustomerBillAsync(long orderId, CancellationToken cancellationToken = default);
+    Task SyncBillWithScannedOrderAsync(Order scannedOrder, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// JPEG Export Service for customer bills
+/// </summary>
+public interface IJpegBillExporter
+{
+    Task<string> ExportBillToJpegAsync(CustomerBill bill, string? destinationDirectory = null, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Excel Export Service for customer bills (.xlsx)
+/// </summary>
+public interface IExcelBillExporter
+{
+    Task<string> ExportBillToExcelAsync(CustomerBill bill, string? destinationDirectory = null, CancellationToken cancellationToken = default);
 }
 

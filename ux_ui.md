@@ -243,8 +243,8 @@ Document significant deviations here.
 | Rule / Area | Override | Reason |
 |---|---|---|
 | Order Grouping | Physical folder = Order. Never merge multiple customer folders into one physical order | Locked domain rule from PLAN_lalab.md (provenance preservation). |
-| Quantity Mismatch | Source vs Print mismatch requires explicit human choice (USE_PRINT, USE_SOURCE, CUSTOM) | Locked billing rule from PLAN_lalab.md (correctness over automation). |
-| Print Folder Resolution | Never silently pick among multiple leaf candidates; require manual selection | Locked ambiguity rule from PLAN_lalab.md. |
+| Billing Folder & Ambiguity | Effective Billing Folder resolves automatically for single linear leaves; multiple competing leaf folders require explicit human choice in Ambiguous Leaf Folders modal | Locked billing & ambiguity rule from PLAN_lalab_V2.md (correctness over automation). |
+| Print Folder Resolution | Never silently pick among multiple leaf candidates; require manual selection | Locked ambiguity rule from PLAN_lalab.md & V2. |
 | Typography Font Fallback | Display font uses "Georgia", UI font uses "Segoe UI" | Native Windows system fonts guarantee 100% crisp Vietnamese UTF-8 rendering without external asset overhead. |
 | Sidebar Theme | Warm Light Neutral Sidebar (`#EAE8E4` / `#F1EFEA`) with subtle border `#CFCCCB` | Aligns with Tinix Light mode default and serene photo-lab workflow. |
 

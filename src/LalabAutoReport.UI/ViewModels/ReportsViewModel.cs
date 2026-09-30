@@ -1,10 +1,16 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LalabAutoReport.Core.Domain;
 using LalabAutoReport.Core.Interfaces;
+using LalabAutoReport.UI.Views;
 
 namespace LalabAutoReport.UI.ViewModels;
 
@@ -12,6 +18,10 @@ public partial class ReportsViewModel : ObservableObject
 {
     private readonly IReportService _reportService;
     private readonly IScanService _scanService;
+    private readonly ICustomerBillRepository _customerBillRepository;
+    private readonly ICustomerBillingService _customerBillingService;
+    private readonly IJpegBillExporter _jpegBillExporter;
+    private readonly IExcelBillExporter? _excelBillExporter;
 
     [ObservableProperty]
     private string _reportMode = "Monthly"; // "Monthly", "Daily", "DateRange"
@@ -73,6 +83,38 @@ public partial class ReportsViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<DailySummary> _dailySummaries = new();
 
+    // Bills History in Report
+    [ObservableProperty]
+    private ObservableCollection<CustomerBill> _allReportBills = new();
+
+    [ObservableProperty]
+    private ObservableCollection<CustomerBill> _filteredReportBills = new();
+
+    [ObservableProperty]
+    private bool _billScopeAllTime = false; // false = Theo kỳ báo cáo (mặc định), true = Toàn bộ lịch sử
+
+    public bool BillScopeReportPeriod
+    {
+        get => !BillScopeAllTime;
+        set
+        {
+            if (value) BillScopeAllTime = false;
+        }
+    }
+
+    [ObservableProperty]
+    private string _billTypeFilter = "All"; // "All", "Customer", "Guest"
+
+    [ObservableProperty]
+    private string _billSearchText = string.Empty;
+
+    [ObservableProperty]
+    private long _totalReportBillsAmount;
+
+    public int TotalReportBillsCount => FilteredReportBills.Count;
+    public string FormattedReportBillsAmount => $"{TotalReportBillsAmount:N0} đ";
+    public bool HasNoBillsFound => FilteredReportBills.Count == 0;
+
     // Progress for scanning missing days
     [ObservableProperty]
     private bool _isScanning;
@@ -80,10 +122,20 @@ public partial class ReportsViewModel : ObservableObject
     [ObservableProperty]
     private string _scanProgressText = string.Empty;
 
-    public ReportsViewModel(IReportService reportService, IScanService scanService)
+    public ReportsViewModel(
+        IReportService reportService,
+        IScanService scanService,
+        ICustomerBillRepository customerBillRepository,
+        ICustomerBillingService customerBillingService,
+        IJpegBillExporter jpegBillExporter,
+        IExcelBillExporter? excelBillExporter = null)
     {
         _reportService = reportService;
         _scanService = scanService;
+        _customerBillRepository = customerBillRepository;
+        _customerBillingService = customerBillingService;
+        _jpegBillExporter = jpegBillExporter;
+        _excelBillExporter = excelBillExporter;
     }
 
     partial void OnReportModeChanged(string value)
@@ -104,6 +156,32 @@ public partial class ReportsViewModel : ObservableObject
     partial void OnSelectedDailyDateChanged(DateTime value)
     {
         if (ReportMode == "Daily") _ = LoadReportAsync();
+    }
+
+    partial void OnStartDateChanged(DateTime value)
+    {
+        if (ReportMode == "DateRange") _ = LoadReportAsync();
+    }
+
+    partial void OnEndDateChanged(DateTime value)
+    {
+        if (ReportMode == "DateRange") _ = LoadReportAsync();
+    }
+
+    partial void OnBillScopeAllTimeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(BillScopeReportPeriod));
+        _ = LoadReportBillsAsync();
+    }
+
+    partial void OnBillTypeFilterChanged(string value)
+    {
+        ApplyBillFilters();
+    }
+
+    partial void OnBillSearchTextChanged(string value)
+    {
+        ApplyBillFilters();
     }
 
     [RelayCommand]
@@ -134,6 +212,8 @@ public partial class ReportsViewModel : ObservableObject
                 var report = await _reportService.GetDateRangeReportAsync(start, end);
                 ApplyDateRangeReport(report);
             }
+
+            await LoadReportBillsAsync();
 
             StatusMessage = "Tải báo cáo hoàn tất.";
         }
@@ -323,6 +403,224 @@ public partial class ReportsViewModel : ObservableObject
         foreach (var d in report.DailySummaries)
         {
             DailySummaries.Add(d);
+        }
+    }
+
+    [RelayCommand]
+    public async Task LoadReportBillsAsync()
+    {
+        try
+        {
+            IReadOnlyList<CustomerBill> bills;
+            if (BillScopeAllTime)
+            {
+                var all = await _customerBillRepository.GetAllBillsAsync(null);
+                bills = all.Where(b => b.Status == CustomerBillStatus.Locked || b.Status == CustomerBillStatus.Exported).ToList();
+            }
+            else
+            {
+                if (ReportMode == "Monthly")
+                {
+                    string ym = $"{SelectedYear}-{SelectedMonth:D2}";
+                    bills = await _customerBillRepository.GetBillsByMonthAsync(ym);
+                }
+                else if (ReportMode == "Daily")
+                {
+                    string d = SelectedDailyDate.ToString("yyyy-MM-dd");
+                    bills = await _customerBillRepository.GetBillsByDateAsync(d);
+                }
+                else // DateRange
+                {
+                    string s = StartDate.ToString("yyyy-MM-dd");
+                    string e = EndDate.ToString("yyyy-MM-dd");
+                    bills = await _customerBillRepository.GetBillsByDateRangeAsync(s, e);
+                }
+            }
+
+            AllReportBills.Clear();
+            foreach (var b in bills.OrderByDescending(x => x.Id))
+            {
+                AllReportBills.Add(b);
+            }
+
+            ApplyBillFilters();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi tải danh sách hóa đơn: {ex.Message}";
+        }
+    }
+
+    private void ApplyBillFilters()
+    {
+        var query = AllReportBills.AsEnumerable();
+
+        if (BillTypeFilter == "Customer")
+        {
+            query = query.Where(b => b.BillType == BillType.Customer);
+        }
+        else if (BillTypeFilter == "Guest")
+        {
+            query = query.Where(b => b.BillType == BillType.Guest);
+        }
+
+        if (!string.IsNullOrWhiteSpace(BillSearchText))
+        {
+            string term = BillSearchText.Trim().ToLowerInvariant();
+            query = query.Where(b =>
+                (!string.IsNullOrEmpty(b.BillNumber) && b.BillNumber.ToLowerInvariant().Contains(term)) ||
+                (!string.IsNullOrEmpty(b.CustomerNameSnapshot) && b.CustomerNameSnapshot.ToLowerInvariant().Contains(term)) ||
+                (!string.IsNullOrEmpty(b.PhoneSnapshot) && b.PhoneSnapshot.Contains(term))
+            );
+        }
+
+        FilteredReportBills.Clear();
+        long totalAmt = 0;
+        foreach (var b in query)
+        {
+            FilteredReportBills.Add(b);
+            totalAmt += b.GrandTotal;
+        }
+
+        TotalReportBillsAmount = totalAmt;
+        OnPropertyChanged(nameof(TotalReportBillsCount));
+        OnPropertyChanged(nameof(FormattedReportBillsAmount));
+        OnPropertyChanged(nameof(HasNoBillsFound));
+    }
+
+    [RelayCommand]
+    private async Task OpenBillAsync(CustomerBill? bill)
+    {
+        if (bill == null) return;
+
+        try
+        {
+            var fullBill = await _customerBillRepository.GetByIdAsync(bill.Id);
+            if (fullBill == null) return;
+
+            var vm = new CustomerBillReviewViewModel(
+                fullBill,
+                _customerBillingService,
+                _jpegBillExporter,
+                _excelBillExporter
+            );
+
+            var win = new CustomerBillReviewWindow(vm)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+
+            win.ShowDialog();
+
+            await LoadReportAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi mở bill: {ex.Message}";
+            MessageBox.Show($"Lỗi mở bill: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ReExportJpegAsync(CustomerBill? bill)
+    {
+        if (bill == null) return;
+
+        try
+        {
+            IsLoading = true;
+            StatusMessage = $"Đang xuất lại bill {bill.BillNumber} (JPEG + Excel)...";
+            var fullBill = await _customerBillRepository.GetByIdAsync(bill.Id);
+            if (fullBill == null) return;
+
+            string path = await _jpegBillExporter.ExportBillToJpegAsync(fullBill);
+
+            string? excelError = null;
+            if (_excelBillExporter != null)
+            {
+                try
+                {
+                    await _excelBillExporter.ExportBillToExcelAsync(fullBill);
+                }
+                catch (Exception ex)
+                {
+                    excelError = ex.Message;
+                }
+            }
+
+            StatusMessage = $"Đã xuất bill thành công: {path}";
+
+            if (File.Exists(path))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = path,
+                        UseShellExecute = true
+                    });
+                }
+                catch { }
+            }
+
+            if (excelError != null)
+            {
+                MessageBox.Show($"Đã xuất file JPEG thành công:\n{path}\n\nTuy nhiên lỗi ghi file Excel (.xlsx):\n{excelError}", "Cảnh Báo Xuất Excel", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                MessageBox.Show($"Đã xuất lại bill thành công (JPEG + Excel):\n\n• Ảnh: {path}\n• Excel: {Path.ChangeExtension(path, ".xlsx")}", "Xuất Bill Thành Công", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
+            await LoadReportBillsAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi xuất lại bill: {ex.Message}";
+            MessageBox.Show($"Lỗi xuất lại bill: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenFile(CustomerBill? bill)
+    {
+        if (bill == null || string.IsNullOrWhiteSpace(bill.ExportFilePath) || !File.Exists(bill.ExportFilePath))
+        {
+            MessageBox.Show("Tệp hóa đơn JPEG chưa được tạo hoặc không tồn tại.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = bill.ExportFilePath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Không thể mở tệp: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenFolder(CustomerBill? bill)
+    {
+        if (bill == null || string.IsNullOrWhiteSpace(bill.ExportFilePath)) return;
+        string? dir = Path.GetDirectoryName(bill.ExportFilePath);
+        if (Directory.Exists(dir))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = dir,
+                UseShellExecute = true,
+                Verb = "open"
+            });
         }
     }
 }

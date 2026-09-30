@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Test data folders
+TEST_DATA_LALAB/
+
 # User-specific files
 *.rsuser
 *.suo
@@ -480,3 +483,18 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local temporary debug / preview files
+check_winsta.ps1
+inspect_pid.ps1
+launch_via_shell.ps1
+list_all_windows.ps1
+run_app.ps1
+run_daemon.ps1
+show_window.ps1
+start_task.ps1
+test_run.ps1
+create_shortcut.ps1
+branding_preview.html
+quick_bill_blue_preview.png
+quick_bill_preview.png

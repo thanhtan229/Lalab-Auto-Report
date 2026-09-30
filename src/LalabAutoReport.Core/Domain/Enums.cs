@@ -42,6 +42,15 @@ public enum PrintFolderResolutionStatus
 }
 
 /// <summary>
+/// Resolution mode for Effective Billing Folder (Auto vs Manual)
+/// </summary>
+public enum BillingFolderResolutionMode
+{
+    AutoResolved = 0,
+    ManuallySelected = 1
+}
+
+/// <summary>
 /// Status of resolving a customer from folder name
 /// </summary>
 public enum CustomerResolutionStatus
@@ -96,4 +105,121 @@ public enum ScanStatus
     Success = 1,
     Warning = 2,
     Failed = 3
+}
+
+/// <summary>
+/// Order kind: Implicit (legacy customer->product) or Explicit (customer->order->product)
+/// </summary>
+public enum OrderKind
+{
+    Implicit = 0,
+    Explicit = 1
+}
+
+/// <summary>
+/// Product category in V2
+/// </summary>
+public enum ProductCategory
+{
+    PhotoPrint = 0,
+    Album = 1,
+    Frame = 2,
+    Canvas = 3,
+    Photobook = 4,
+    Lamination = 5,
+    WoodMount = 6,
+    Other = 7
+}
+
+/// <summary>
+/// Billing strategy method
+/// </summary>
+public enum BillingMethod
+{
+    FileCount = 0,
+    AlbumBasePlusExtra = 1,
+    Manual = 2
+}
+
+/// <summary>
+/// Scan issue types for V2 validation
+/// </summary>
+public enum ScanIssueType
+{
+    None = 0,
+    UnresolvedCustomer = 1,
+    AmbiguousCustomerAlias = 2,
+    UnresolvedStructure = 3,
+    UnresolvedProduct = 4,
+    AmbiguousProductAlias = 5,
+    NoPrintableFiles = 6,
+    MultipleFinalPrintFolderCandidates = 7,
+    MissingFinalPrintFolder = 8,
+    AlbumBelowIncludedSheets = 9,
+    FilesystemAccessError = 10
+}
+
+/// <summary>
+/// Status of a customer bill in the customer billing workflow
+/// </summary>
+public enum CustomerBillStatus
+{
+    Draft = 0,
+    Locked = 1,
+    Exported = 2
+}
+
+/// <summary>
+/// Type of bill adjustment
+/// </summary>
+public enum AdjustmentType
+{
+    Shipping = 0,
+    Surcharge = 1,
+    Discount = 2,
+    Custom = 3
+}
+
+/// <summary>
+/// Direction of adjustment: Add (+) or Deduct (-)
+/// </summary>
+public enum AdjustmentDirection
+{
+    Add = 0,
+    Deduct = 1
+}
+
+/// <summary>
+/// Type of bill: Customer-centric or Guest (Quick Bill)
+/// </summary>
+public enum BillType
+{
+    Customer = 0,
+    Guest = 1
+}
+
+/// <summary>
+/// Status of printing in the photo workshop
+/// </summary>
+public enum PrintStatus
+{
+    NotPrinted = 0,
+    Printed = 1
+}
+
+/// <summary>
+/// Scope of database reset in danger zone
+/// </summary>
+public enum ResetDataScope
+{
+    /// <summary>
+    /// Deletes orders, scans, customer bills, adjustments, and print statuses.
+    /// Preserves customer master list, customer aliases, and product price configurations.
+    /// </summary>
+    OperationalOnly = 0,
+
+    /// <summary>
+    /// Resets entire database to fresh factory state, re-applying initial migration and seed data.
+    /// </summary>
+    FactoryReset = 1
 }

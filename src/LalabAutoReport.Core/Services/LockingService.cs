@@ -79,10 +79,10 @@ public class LockingService : ILockingService
                 blockingReasons.Add($"Quy cách '{item.SpecificationFolderName}' chưa được liên kết với bảng giá.");
             }
 
-            // Quantity mismatch check
-            if (item.MismatchCount.HasValue && item.MismatchCount.Value != 0 && !item.BillQuantity.HasValue)
+            // Empty album check
+            if (item.PrintSpecification?.BillingMethod == BillingMethod.AlbumBasePlusExtra && (item.PrintCount ?? 0) == 0)
             {
-                blockingReasons.Add($"Quy cách '{item.SpecificationFolderName}' bị lệch số lượng (Gốc: {item.SourceCount}, In: {item.PrintCount}) và chưa được chọn số lượng tính tiền.");
+                blockingReasons.Add($"Album '{item.SpecificationFolderName}' không có tệp in nào để tính tiền.");
             }
 
             // Scanner error check
@@ -91,6 +91,7 @@ public class LockingService : ILockingService
                 blockingReasons.Add($"Quy cách '{item.SpecificationFolderName}' gặp lỗi khi quét: {item.ErrorMessage}");
             }
         }
+
 
         if (blockingReasons.Count > 0)
         {
@@ -210,8 +211,7 @@ public class LockingService : ILockingService
         foreach (var line in bill.Lines)
         {
             var match = freshOrder.Items.FirstOrDefault(i => i.PrintSpecificationId == line.PrintSpecificationId);
-            if (match == null) return true;
-            if (match.SourceCount != line.SourceCount || match.PrintCount != line.PrintCount) return true;
+            if (match == null || match.PrintCount != line.PrintCount) return true;
         }
 
         return false;

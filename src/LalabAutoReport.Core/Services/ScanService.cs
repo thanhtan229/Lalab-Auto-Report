@@ -19,8 +19,12 @@ public class ScanService : IScanService
     private readonly ISettingsRepository _settingsRepository;
     private readonly IOrderRepository? _orderRepository;
     private readonly IBillRepository? _billRepository;
+    private readonly IBillingService? _billingService;
     private readonly ICustomerResolver? _customerResolver;
     private readonly IPrintSpecificationResolver? _specificationResolver;
+    private readonly ICustomerBillRepository? _customerBillRepository;
+    private readonly IFolderFingerprintService? _fingerprintService;
+    private readonly IPrintStatusService? _printStatusService;
     private readonly ILogger<ScanService>? _logger;
 
     public ScanService(
@@ -32,6 +36,10 @@ public class ScanService : IScanService
         ICustomerResolver? customerResolver = null,
         IPrintSpecificationResolver? specificationResolver = null,
         IBillRepository? billRepository = null,
+        IBillingService? billingService = null,
+        ICustomerBillRepository? customerBillRepository = null,
+        IFolderFingerprintService? fingerprintService = null,
+        IPrintStatusService? printStatusService = null,
         ILogger<ScanService>? logger = null)
     {
         _fileSystem = fileSystem;
@@ -42,6 +50,10 @@ public class ScanService : IScanService
         _customerResolver = customerResolver;
         _specificationResolver = specificationResolver;
         _billRepository = billRepository;
+        _billingService = billingService;
+        _customerBillRepository = customerBillRepository;
+        _fingerprintService = fingerprintService;
+        _printStatusService = printStatusService;
         _logger = logger;
     }
 
@@ -109,6 +121,46 @@ public class ScanService : IScanService
                 TotalItems: total,
                 CurrentItemName: discOrder.OriginalCustomerFolderName
             ));
+        }
+
+        // Reconcile and prune obsolete/orphaned unbilled orders for this date in DB
+        if (_orderRepository != null)
+        {
+            try
+            {
+                var discoveredPathSet = new HashSet<string>(
+                    discoveredOrders.Select(o => o.RelativePath),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var existingDbOrders = await _orderRepository.GetOrdersByDateAsync(dateString, cancellationToken);
+                foreach (var dbOrder in existingDbOrders)
+                {
+                    if (dbOrder.Status != OrderStatus.Locked && !discoveredPathSet.Contains(dbOrder.RelativePath))
+                    {
+                        bool hasLockedBill = false;
+                        if (_customerBillRepository != null)
+                        {
+                            var lockedBill = await _customerBillRepository.GetLockedBillByOrderIdAsync(dbOrder.Id, cancellationToken);
+                            if (lockedBill != null) hasLockedBill = true;
+                        }
+                        if (!hasLockedBill && _billRepository != null)
+                        {
+                            var lockedBill = await _billRepository.GetBillByOrderIdAsync(dbOrder.Id, cancellationToken);
+                            if (lockedBill != null && lockedBill.Status == OrderStatus.Locked) hasLockedBill = true;
+                        }
+
+                        if (!hasLockedBill)
+                        {
+                            _logger?.LogInformation("Pruning orphaned/invalid order {OrderId} ({RelativePath}) from database", dbOrder.Id, dbOrder.RelativePath);
+                            await _orderRepository.DeleteOrderAsync(dbOrder.Id, cancellationToken);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Error during pruning obsolete orders for date '{Date}'", dateString);
+            }
         }
 
         _logger?.LogInformation("Completed scan for date '{Date}': {Count} orders processed.", dateString, resultOrders.Count);
@@ -310,29 +362,60 @@ public class ScanService : IScanService
             WorkDate = discOrder.Date,
             OriginalFolderName = discOrder.OriginalCustomerFolderName,
             RelativePath = discOrder.RelativePath,
+            OrderKind = discOrder.Kind,
+            OrderName = discOrder.OrderName,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
+        order.OrderKind = discOrder.Kind;
+        order.OrderName = discOrder.OrderName;
+        if (existingOrder != null && !string.IsNullOrWhiteSpace(existingOrder.OrderCode))
+        {
+            order.OrderCode = existingOrder.OrderCode;
+        }
+        else if (string.IsNullOrWhiteSpace(order.OrderCode) && _orderRepository == null)
+        {
+            order.OrderCode = OrderCodeGenerator.Generate(discOrder.Date, 1);
+        }
         order.LastScanAt = DateTimeOffset.UtcNow;
         order.UpdatedAt = DateTimeOffset.UtcNow;
 
+        if (!order.IsPrinted && _printStatusService != null)
+        {
+            string fullOrderPath = _fileSystem.Combine(rootFolder, discOrder.RelativePath);
+            if (await _printStatusService.IsFolderPrintedAsync(fullOrderPath, cancellationToken))
+            {
+                order.IsPrinted = true;
+                order.PrintedAt ??= DateTimeOffset.UtcNow;
+            }
+        }
+
         bool hasIssues = false;
+        bool isGuest = order.IsGuest || Order.IsGuestFolderName(discOrder.OriginalCustomerFolderName, discOrder.OrderName);
 
         // Resolve Customer Identity
         if (_customerResolver != null && order.CustomerId == null)
         {
-            var custResult = await _customerResolver.ResolveCustomerAsync(discOrder.OriginalCustomerFolderName, cancellationToken);
-            if (custResult.Status == CustomerResolutionStatus.ExactMatch || custResult.Status == CustomerResolutionStatus.NormalizedMatch)
+            if (isGuest)
             {
-                order.CustomerId = custResult.ResolvedCustomer?.Id;
-                order.Customer = custResult.ResolvedCustomer;
+                // Guest / Khách lẻ orders do not require a Customer record in database.
+                // Do not mark hasIssues as true for guests.
             }
             else
             {
-                hasIssues = true; // Unknown customer or collision
+                var custResult = await _customerResolver.ResolveCustomerAsync(discOrder.OriginalCustomerFolderName, cancellationToken);
+                if (custResult.Status == CustomerResolutionStatus.ExactMatch || custResult.Status == CustomerResolutionStatus.NormalizedMatch)
+                {
+                    order.CustomerId = custResult.ResolvedCustomer?.Id;
+                    order.Customer = custResult.ResolvedCustomer;
+                }
+                else
+                {
+                    hasIssues = true; // Unknown customer or collision
+                }
             }
         }
-        else if (order.CustomerId == null)
+        else if (order.CustomerId == null && !isGuest)
         {
             // No customer resolver configured
         }
@@ -349,17 +432,20 @@ public class ScanService : IScanService
 
         foreach (var discSpec in discOrder.Specifications)
         {
-            // Check if there was a previously selected print folder for this spec
-            string? previouslySelectedPrintFolder = existingOrder?.Items
-                .FirstOrDefault(i => string.Equals(i.SpecificationRelativePath, discSpec.RelativePath, StringComparison.OrdinalIgnoreCase))
-                ?.SelectedPrintFolderRelativePath;
+            // Check if there was a previously manually selected print folder for this spec
+            var existingItem = existingOrder?.Items
+                .FirstOrDefault(i => string.Equals(i.SpecificationRelativePath, discSpec.RelativePath, StringComparison.OrdinalIgnoreCase));
+
+            string? previouslySelectedPrintFolder = existingItem?.FolderResolutionMode == BillingFolderResolutionMode.ManuallySelected
+                ? existingItem.SelectedPrintFolderRelativePath
+                : null;
 
             var itemScan = await ScanSpecificationInternalAsync(rootFolder, discSpec, supportedExts, previouslySelectedPrintFolder, cancellationToken);
             scannedItems.Add(itemScan);
 
+            // In V2: Blocking issues are unresolved print folder, scanner failure, unresolved product, or empty album
             if (itemScan.PrintFolderStatus != PrintFolderResolutionStatus.Resolved ||
-                itemScan.MismatchCount != 0 ||
-                itemScan.ScanStatus != ScanStatus.Success ||
+                itemScan.ScanStatus == ScanStatus.Failed ||
                 (_specificationResolver != null && itemScan.PrintSpecificationId == null))
             {
                 hasIssues = true;
@@ -370,41 +456,207 @@ public class ScanService : IScanService
         snapshot.Items = scannedItems;
         snapshot.CompletedAt = DateTimeOffset.UtcNow;
 
-        if (existingOrder != null && existingOrder.Status == OrderStatus.Locked)
+        if (_fingerprintService != null)
         {
-            // Locked orders remain Locked!
-            order.Status = OrderStatus.Locked;
+            var fp = _fingerprintService.ComputeOrderFingerprint(rootFolder, discOrder.RelativePath);
+            order.Fingerprint = fp.Value;
+        }
 
-            // Check if filesystem changed after lock
-            if (_billRepository != null)
+        bool isBilledOrLocked = (existingOrder != null && (existingOrder.Status == OrderStatus.Locked || existingOrder.Status == OrderStatus.Billed));
+        CustomerBill? lockedCustomerBill = null;
+
+        if (_customerBillRepository != null && existingOrder != null)
+        {
+            lockedCustomerBill = await _customerBillRepository.GetLockedBillByOrderIdAsync(existingOrder.Id, cancellationToken);
+            if (lockedCustomerBill == null && !string.IsNullOrWhiteSpace(existingOrder.RelativePath))
             {
-                var lockedBill = await _billRepository.GetBillByOrderIdAsync(order.Id, cancellationToken);
-                if (lockedBill != null && lockedBill.Status == OrderStatus.Locked)
-                {
-                    bool changed = HasFilesystemChangedFromLockedBill(lockedBill, scannedItems);
-                    order.FilesystemChangedAfterLock = changed;
-                    if (changed)
-                    {
-                        _logger?.LogWarning("Filesystem changed after lock detected for order {OrderId} ({Folder})", order.Id, order.OriginalFolderName);
-                    }
-                }
+                var bills = await _customerBillRepository.GetBillsBySourceFolderPathAsync(existingOrder.RelativePath, cancellationToken);
+                lockedCustomerBill = bills.FirstOrDefault();
+            }
+            if (lockedCustomerBill != null)
+            {
+                isBilledOrLocked = true;
             }
         }
-        else if (scannedItems.Count == 0 || hasIssues)
+
+        if (scannedItems.Count == 0 || hasIssues)
         {
             order.Status = OrderStatus.NeedsReview;
+        }
+        else if (isBilledOrLocked)
+        {
+            // Billed orders remain marked as Billed (not locked, fully editable/rescan-friendly)
+            order.Status = OrderStatus.Billed;
         }
         else
         {
             order.Status = OrderStatus.Ready;
         }
 
+        order.FilesystemChangedAfterLock = false;
+
         if (_orderRepository != null)
         {
             await _orderRepository.SaveOrderAsync(order, snapshot, cancellationToken);
         }
 
+        // Cách 1: Tự động cập nhật thẳng vào CustomerBill đã lưu
+        if (_customerBillRepository != null && order.Status != OrderStatus.NeedsReview)
+        {
+            lockedCustomerBill ??= await _customerBillRepository.GetLockedBillByOrderIdAsync(order.Id, cancellationToken);
+            if (lockedCustomerBill == null && !string.IsNullOrWhiteSpace(order.RelativePath))
+            {
+                var bills = await _customerBillRepository.GetBillsBySourceFolderPathAsync(order.RelativePath, cancellationToken);
+                lockedCustomerBill = bills.FirstOrDefault();
+            }
+
+            if (lockedCustomerBill != null)
+            {
+                await SyncCustomerBillWithOrderAsync(order, lockedCustomerBill, cancellationToken);
+            }
+        }
+
+        // If this order is Ready or Billed and legacy billing service available, calculate/recalculate the bill
+        if (_billRepository != null && _billingService != null && order.Status != OrderStatus.NeedsReview)
+        {
+            try
+            {
+                await _billingService.CalculateBillForOrderAsync(order.Id, cancellationToken);
+                _logger?.LogInformation("Calculated/updated draft bill for order {OrderId} after scan.", order.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to calculate draft bill for order {OrderId} after scan.", order.Id);
+            }
+        }
+
         return order;
+    }
+
+    private async Task SyncCustomerBillWithOrderAsync(Order order, CustomerBill bill, CancellationToken cancellationToken)
+    {
+        var orderLines = bill.Lines.Where(l => l.OrderId == order.Id).ToList();
+        var linesBySpecFolder = orderLines
+            .Where(l => !string.IsNullOrEmpty(l.SpecificationFolderName))
+            .ToDictionary(l => l.SpecificationFolderName!, StringComparer.OrdinalIgnoreCase);
+
+        var currentSpecFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in order.Items)
+        {
+            currentSpecFolders.Add(item.SpecificationFolderName);
+            int newQty = item.PrintCount ?? item.SourceCount;
+
+            if (linesBySpecFolder.TryGetValue(item.SpecificationFolderName, out var line))
+            {
+                line.ScannedQuantity = newQty;
+                line.BilledQuantity = newQty;
+
+                if (line.BillingMethodSnapshot == BillingMethod.AlbumBasePlusExtra)
+                {
+                    line.SheetCount = newQty;
+                    int incSheets = line.IncludedSheetsSnapshot ?? 10;
+                    line.ExtraSheetCount = Math.Max(0, newQty - incSheets);
+                    long baseP = line.BasePriceSnapshot ?? 0;
+                    long extraP = line.ExtraSheetPriceSnapshot ?? 0;
+                    line.LineTotal = baseP + (line.ExtraSheetCount.Value * extraP);
+                }
+                else
+                {
+                    line.LineTotal = line.BilledQuantity * line.BilledUnitPrice;
+                }
+
+                line.FinalPrintFolderPath = item.SelectedPrintFolderRelativePath;
+                line.FolderResolutionModeSnapshot = item.FolderResolutionMode;
+                line.IssueMessage = item.PrintFolderStatus != PrintFolderResolutionStatus.Resolved
+                    ? $"Chưa có thư mục in hợp lệ ({item.PrintFolderStatus})."
+                    : null;
+            }
+            else
+            {
+                PrintSpecification? spec = item.PrintSpecification;
+                if (spec == null && item.PrintSpecificationId.HasValue && _specificationResolver != null)
+                {
+                    var res = await _specificationResolver.ResolveSpecificationAsync(item.SpecificationFolderName, cancellationToken);
+                    spec = res.ResolvedSpecification;
+                }
+
+                var billingMethod = spec?.BillingMethod ?? BillingMethod.FileCount;
+                long unitPrice = spec?.UnitPrice ?? 0;
+                long basePrice = spec?.BasePrice ?? 0;
+                long extraSheetPrice = spec?.ExtraSheetPrice ?? 0;
+                int includedSheets = spec?.IncludedSheets ?? 10;
+
+                var newLine = new CustomerBillLine
+                {
+                    BillId = bill.Id,
+                    OrderId = order.Id,
+                    ProductJobId = item.Id,
+                    ProductSpecificationId = spec?.Id,
+                    SpecificationFolderName = item.SpecificationFolderName,
+                    ProductNameSnapshot = spec?.CanonicalName ?? item.SpecificationFolderName,
+                    VariantSnapshot = spec?.CanonicalSize,
+                    BillingMethodSnapshot = billingMethod,
+                    ScannedQuantity = newQty,
+                    BilledQuantity = newQty,
+                    BilledUnitPrice = unitPrice,
+                    ConfiguredUnitPrice = unitPrice,
+                    BasePriceSnapshot = basePrice,
+                    ExtraSheetPriceSnapshot = extraSheetPrice,
+                    IncludedSheetsSnapshot = includedSheets,
+                    IsIncluded = true,
+                    SortOrder = bill.Lines.Count + 1,
+                    FinalPrintFolderPath = item.SelectedPrintFolderRelativePath,
+                    FolderResolutionModeSnapshot = item.FolderResolutionMode,
+                    IssueMessage = item.PrintFolderStatus != PrintFolderResolutionStatus.Resolved
+                        ? $"Chưa có thư mục in hợp lệ ({item.PrintFolderStatus})."
+                        : (spec == null ? "Chưa liên kết bảng giá." : null)
+                };
+
+                if (billingMethod == BillingMethod.AlbumBasePlusExtra)
+                {
+                    newLine.SheetCount = newQty;
+                    newLine.ExtraSheetCount = Math.Max(0, newQty - includedSheets);
+                    newLine.LineTotal = basePrice + (newLine.ExtraSheetCount.Value * extraSheetPrice);
+                }
+                else
+                {
+                    newLine.LineTotal = newQty * unitPrice;
+                }
+
+                bill.Lines.Add(newLine);
+            }
+        }
+
+        // Remove any line whose specification folder was deleted from disk
+        bill.Lines.RemoveAll(l => l.OrderId == order.Id && (l.SpecificationFolderName == null || !currentSpecFolders.Contains(l.SpecificationFolderName)));
+
+        // Update CustomerBillOrder subtotal
+        var billOrder = bill.Orders.FirstOrDefault(o => o.OrderId == order.Id);
+        if (billOrder != null)
+        {
+            billOrder.Subtotal = bill.Lines.Where(l => l.OrderId == order.Id && l.IsIncluded).Sum(l => l.LineTotal);
+        }
+
+        // Recalculate bill totals
+        long prodSubtotal = bill.Lines.Where(l => l.IsIncluded).Sum(l => l.LineTotal);
+        bill.ProductSubtotal = prodSubtotal;
+        bill.GrandTotal = Math.Max(0, bill.ProductSubtotal + bill.AdjustmentsTotal);
+        bill.UpdatedAt = DateTimeOffset.UtcNow;
+
+        if (_customerBillRepository != null)
+        {
+            await _customerBillRepository.SaveBillAsync(bill, cancellationToken);
+        }
+
+        var jobIds = bill.Lines.Where(l => l.OrderId == order.Id).Select(l => l.ProductJobId).ToList();
+        if (jobIds.Count > 0 && _orderRepository != null)
+        {
+            await _orderRepository.SetCustomerBillIdForItemsAsync(jobIds, bill.Id, cancellationToken);
+        }
+
+        _logger?.LogInformation("ScanService synchronized bill {BillNumber} (ID {BillId}) with rescanned order {OrderId}. Grand total: {GrandTotal}",
+            bill.BillNumber, bill.Id, order.Id, bill.GrandTotal);
     }
 
     private static bool HasFilesystemChangedFromLockedBill(Bill lockedBill, List<OrderItemScan> currentItems)
@@ -422,7 +674,12 @@ public class ScanService : IScanService
                 return true;
             }
 
-            if (matchingItem.SourceCount != line.SourceCount || matchingItem.PrintCount != line.PrintCount)
+            if (matchingItem.PrintCount != line.PrintCount)
+            {
+                return true;
+            }
+
+            if (!string.Equals(matchingItem.SelectedPrintFolderRelativePath, line.FinalPrintFolderPath, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -430,6 +687,41 @@ public class ScanService : IScanService
 
         return false;
     }
+
+    private static bool HasFilesystemChangedFromCustomerBill(CustomerBill customerBill, long orderId, List<OrderItemScan> currentItems)
+    {
+        var billedLines = customerBill.Lines.Where(l => l.OrderId == orderId && l.IsIncluded).ToList();
+        if (billedLines.Count != currentItems.Count)
+        {
+            return true;
+        }
+
+        foreach (var line in billedLines)
+        {
+            var matchingItem = currentItems.FirstOrDefault(i =>
+                (line.ProductSpecificationId.HasValue && i.PrintSpecificationId == line.ProductSpecificationId) ||
+                string.Equals(i.SpecificationFolderName, line.ProductNameSnapshot, StringComparison.OrdinalIgnoreCase));
+
+            if (matchingItem == null)
+            {
+                return true;
+            }
+
+            if (matchingItem.PrintCount != line.BilledQuantity)
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(line.FinalPrintFolderPath) &&
+                !string.Equals(matchingItem.SelectedPrintFolderRelativePath, line.FinalPrintFolderPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     private async Task<OrderItemScan> ScanSpecificationInternalAsync(
         string rootFolder,
@@ -490,36 +782,58 @@ public class ScanService : IScanService
             itemScan.SelectedPrintFolderRelativePath = printResult.SelectedPrintFolderRelativePath;
             itemScan.PrintCount = printResult.PrintCount;
             itemScan.CandidatePrintFolderRelativePaths = printResult.CandidatePrintFolderRelativePaths.ToList();
+            itemScan.FolderResolutionMode = printResult.ResolutionMode;
 
             if (!string.IsNullOrEmpty(printResult.ErrorMessage))
             {
                 itemScan.ErrorMessage = printResult.ErrorMessage;
             }
 
-            // 3. Evaluate mismatch
+            // 3. Bill quantity derived directly from final print folder (V2 simplification)
             if (printResult.Status == PrintFolderResolutionStatus.Resolved && printResult.PrintCount.HasValue)
             {
-                itemScan.MismatchCount = printResult.PrintCount.Value - sourceCount;
+                int fileCount = printResult.PrintCount.Value;
+                itemScan.PrintableFileCount = fileCount;
+                itemScan.MismatchCount = 0;
 
-                if (sourceCount == printResult.PrintCount.Value)
+                if (itemScan.PrintSpecification?.BillingMethod == BillingMethod.AlbumBasePlusExtra)
                 {
-                    // Auto match!
-                    itemScan.BillQuantity = printResult.PrintCount.Value;
-                    itemScan.QuantityResolutionMode = QuantityResolutionMode.AutoMatch;
+                    itemScan.BillQuantity = 1; // 1 album per recognized album product folder
+                    itemScan.QuantityResolutionMode = QuantityResolutionMode.UsePrint;
+
+                    if (fileCount == 0)
+                    {
+                        itemScan.ScanStatus = ScanStatus.Failed;
+                        itemScan.ErrorMessage = "Album không có tệp in nào (0 tệp).";
+                    }
+                    else if (fileCount < (itemScan.PrintSpecification.IncludedSheets ?? 10))
+                    {
+                        // Informational warning - non-blocking!
+                        itemScan.ScanStatus = ScanStatus.Warning;
+                        itemScan.ErrorMessage = $"Album dưới số trang/tờ tiêu chuẩn ({fileCount} < {itemScan.PrintSpecification.IncludedSheets ?? 10})";
+                    }
+                    else
+                    {
+                        itemScan.ScanStatus = ScanStatus.Success;
+                    }
                 }
                 else
                 {
-                    // Source != Print: Mismatch! Requires user decision
-                    itemScan.BillQuantity = null;
-                    itemScan.QuantityResolutionMode = null;
+                    // Photo print or FileCount
+                    itemScan.BillQuantity = fileCount;
+                    itemScan.QuantityResolutionMode = QuantityResolutionMode.UsePrint;
+                    itemScan.ScanStatus = ScanStatus.Success;
                 }
             }
             else
             {
-                // Ambiguous or no print folder
                 itemScan.MismatchCount = null;
                 itemScan.BillQuantity = null;
+                itemScan.ScanStatus = printResult.Status == PrintFolderResolutionStatus.AmbiguousPrintFolder
+                    ? ScanStatus.Warning
+                    : ScanStatus.Failed;
             }
+
         }
         catch (Exception ex)
         {

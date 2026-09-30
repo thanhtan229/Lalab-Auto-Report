@@ -29,43 +29,14 @@ public partial class DashboardView : UserControl
         if (ViewModel != null) ViewModel.CurrentFilter = "Ready";
     }
 
+    private void FilterBilled_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null) ViewModel.CurrentFilter = "Billed";
+    }
+
     private void FilterLocked_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel != null) ViewModel.CurrentFilter = "Locked";
-    }
-
-    private void LockOrder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
-        {
-            var res = MessageBox.Show(
-                $"Xác nhận quét kiểm tra và khóa đơn hàng '{order.OriginalFolderName}'?\n\nĐơn hàng sau khi khóa sẽ được lưu thành hóa đơn lịch sử.",
-                "Khóa đơn hàng",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (res == MessageBoxResult.Yes)
-            {
-                ViewModel.VerifyAndLockOrderCommand.Execute(order);
-            }
-        }
-    }
-
-    private void ReopenOrder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
-        {
-            var res = MessageBox.Show(
-                $"Bạn có chắc chắn muốn mở khóa đơn hàng '{order.OriginalFolderName}'?\n\nThao tác này sẽ mở khóa đơn hàng để chỉnh sửa lại.",
-                "Mở lại đơn hàng",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (res == MessageBoxResult.Yes)
-            {
-                ViewModel.ReopenOrderCommand.Execute(order);
-            }
-        }
+        if (ViewModel != null) ViewModel.CurrentFilter = "Billed";
     }
 
     private void OpenOrderFolder_Click(object sender, RoutedEventArgs e)
@@ -81,6 +52,22 @@ public partial class DashboardView : UserControl
         if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
         {
             ViewModel.RescanOrderCommand.Execute(order);
+        }
+    }
+
+    private void DeleteOrder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
+        {
+            ViewModel.DeleteOrderCommand.Execute(order);
+        }
+    }
+
+    private void ComputeOrViewBill_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
+        {
+            ViewModel.ComputeOrViewBillCommand.Execute(order);
         }
     }
 
@@ -155,6 +142,25 @@ public partial class DashboardView : UserControl
             if (!string.IsNullOrWhiteSpace(input) && int.TryParse(input, out int customQty) && customQty >= 0)
             {
                 ViewModel.ResolveQuantityCommand.Execute((item, QuantityResolutionMode.Custom, customQty, (string?)"Người dùng nhập thủ công"));
+            }
+        }
+    }
+
+    public void OrderCodeBadge_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is OrderDisplayModel order && !string.IsNullOrWhiteSpace(order.OrderCode))
+        {
+            try
+            {
+                Clipboard.SetText(order.OrderCode);
+                if (ViewModel != null)
+                {
+                    ViewModel.StatusMessage = $"Đã sao chép mã đơn: {order.OrderCode}";
+                }
+            }
+            catch
+            {
+                // Clipboard access might rarely fail
             }
         }
     }

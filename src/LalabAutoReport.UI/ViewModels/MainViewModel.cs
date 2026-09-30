@@ -15,7 +15,72 @@ public partial class MainViewModel : ObservableObject
     private object? _currentView;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDashboardActive))]
+    [NotifyPropertyChangedFor(nameof(IsReportsActive))]
+    [NotifyPropertyChangedFor(nameof(IsCustomersActive))]
+    [NotifyPropertyChangedFor(nameof(IsPriceListActive))]
+    [NotifyPropertyChangedFor(nameof(IsSettingsActive))]
     private string _activeTab = "Dashboard";
+
+    public bool IsDashboardActive
+    {
+        get => ActiveTab == "Dashboard";
+        set
+        {
+            if (value && ActiveTab != "Dashboard")
+            {
+                NavigateToDashboard();
+            }
+        }
+    }
+
+    public bool IsReportsActive
+    {
+        get => ActiveTab == "Reports";
+        set
+        {
+            if (value && ActiveTab != "Reports")
+            {
+                _ = NavigateToReportsAsync();
+            }
+        }
+    }
+
+    public bool IsCustomersActive
+    {
+        get => ActiveTab == "Customers";
+        set
+        {
+            if (value && ActiveTab != "Customers")
+            {
+                _ = NavigateToCustomersAsync();
+            }
+        }
+    }
+
+    public bool IsPriceListActive
+    {
+        get => ActiveTab == "PriceList";
+        set
+        {
+            if (value && ActiveTab != "PriceList")
+            {
+                _ = NavigateToPriceListAsync();
+            }
+        }
+    }
+
+    public bool IsSettingsActive
+    {
+        get => ActiveTab == "Settings";
+        set
+        {
+            if (value && ActiveTab != "Settings")
+            {
+                NavigateToSettings();
+            }
+        }
+    }
 
     [ObservableProperty]
     private bool _hasRootFolderWarning;
@@ -23,11 +88,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _rootFolderText = string.Empty;
 
-    public DashboardViewModel DashboardVM { get; }
-    public ReportsViewModel ReportsVM { get; }
-    public SettingsViewModel SettingsVM { get; }
-    public CustomersViewModel CustomersVM { get; }
-    public PriceListViewModel PriceListVM { get; }
+    public DashboardViewModel DashboardVM { get; } = null!;
+    public ReportsViewModel ReportsVM { get; } = null!;
+    public SettingsViewModel SettingsVM { get; } = null!;
+    public CustomersViewModel CustomersVM { get; } = null!;
+    public PriceListViewModel PriceListVM { get; } = null!;
 
     public MainViewModel(
         DashboardViewModel dashboardVM,
@@ -47,19 +112,47 @@ public partial class MainViewModel : ObservableObject
         _currentView = DashboardVM;
         _activeTab = "Dashboard";
 
-        SettingsVM.SettingsSaved += OnSettingsSaved;
+        if (SettingsVM != null)
+        {
+            SettingsVM.SettingsSaved += OnSettingsSaved;
+            SettingsVM.DataResetCompleted += OnDataResetCompleted;
+        }
     }
 
     public async Task InitializeAsync()
     {
-        await SettingsVM.LoadSettingsAsync();
+        if (SettingsVM != null)
+            await SettingsVM.LoadSettingsAsync();
         await CheckRootFolderAsync();
-        await DashboardVM.LoadOrdersForSelectedDateAsync();
+        if (DashboardVM != null)
+            await DashboardVM.LoadOrdersForSelectedDateAsync();
     }
 
     private void OnSettingsSaved()
     {
         _ = CheckRootFolderAsync();
+    }
+
+    private async void OnDataResetCompleted()
+    {
+        await CheckRootFolderAsync();
+        if (DashboardVM != null)
+        {
+            await DashboardVM.LoadOrdersForSelectedDateAsync();
+        }
+        if (CustomersVM != null)
+        {
+            await CustomersVM.LoadCustomersAsync();
+        }
+        if (PriceListVM != null)
+        {
+            await PriceListVM.LoadSpecificationsAsync();
+        }
+        if (ReportsVM != null)
+        {
+            await ReportsVM.LoadReportBillsAsync();
+            await ReportsVM.LoadReportAsync();
+        }
     }
 
     private async Task CheckRootFolderAsync()
@@ -81,7 +174,10 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = ReportsVM;
         ActiveTab = "Reports";
-        await ReportsVM.LoadReportAsync();
+        if (ReportsVM != null)
+        {
+            await ReportsVM.LoadReportAsync();
+        }
     }
 
     [RelayCommand]
@@ -89,7 +185,10 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = CustomersVM;
         ActiveTab = "Customers";
-        await CustomersVM.LoadCustomersAsync();
+        if (CustomersVM != null)
+        {
+            await CustomersVM.LoadCustomersAsync();
+        }
     }
 
     [RelayCommand]
@@ -97,7 +196,10 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = PriceListVM;
         ActiveTab = "PriceList";
-        await PriceListVM.LoadSpecificationsAsync();
+        if (PriceListVM != null)
+        {
+            await PriceListVM.LoadSpecificationsAsync();
+        }
     }
 
     [RelayCommand]
@@ -105,6 +207,9 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = SettingsVM;
         ActiveTab = "Settings";
-        _ = SettingsVM.LoadSettingsAsync();
+        if (SettingsVM != null)
+        {
+            _ = SettingsVM.LoadSettingsAsync();
+        }
     }
 }

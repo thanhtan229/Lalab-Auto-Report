@@ -19,6 +19,7 @@ public class ReportServiceTests : IDisposable
     private readonly DatabaseMigrator _migrator;
     private readonly SqliteOrderRepository _orderRepo;
     private readonly SqliteBillRepository _billRepo;
+    private readonly SqliteCustomerBillRepository _customerBillRepo;
     private readonly SqliteCustomerRepository _customerRepo;
     private readonly SqlitePrintSpecificationRepository _specRepo;
     private readonly SqliteSettingsRepository _settingsRepo;
@@ -44,6 +45,7 @@ public class ReportServiceTests : IDisposable
 
         _orderRepo = new SqliteOrderRepository(_connectionFactory);
         _billRepo = new SqliteBillRepository(_connectionFactory);
+        _customerBillRepo = new SqliteCustomerBillRepository(_connectionFactory);
         _customerRepo = new SqliteCustomerRepository(_connectionFactory);
         _specRepo = new SqlitePrintSpecificationRepository(_connectionFactory);
         _settingsRepo = new SqliteSettingsRepository(_connectionFactory);
@@ -91,7 +93,8 @@ public class ReportServiceTests : IDisposable
             _billingService,
             _specRepo,
             _customerRepo,
-            _scanService
+            _scanService,
+            _customerBillRepo
         );
     }
 
@@ -244,6 +247,167 @@ public class ReportServiceTests : IDisposable
         report.TotalBillQuantity.Should().Be(6); // 4 + 2
         report.TotalAmount.Should().Be(50000); // 4*5000 + 2*15000 = 20,000 + 30,000 = 50,000 VND
         report.DailySummaries.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ScanDate_WithoutManualBilling_ReportReflectsRevenueAndQuantityFromScanServiceAutoCalculate()
+    {
+        var cust = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Studio Kim" }, "Studio Kim");
+        string date = "2026-09-20";
+        CreateOrderFixture(date, "Studio Kim", "13x18 in", 8, 8);
+
+        // Scan date — ScanService now automatically calculates bill for Ready orders
+        var scanned = await _scanService.ScanDateAsync(date);
+        scanned.Should().HaveCount(1);
+        scanned[0].Status.Should().Be(OrderStatus.Ready);
+
+        // Daily report
+        var daily = await _reportService.GetDailyReportAsync(date);
+        daily.TotalOrders.Should().Be(1);
+        daily.TotalBillQuantity.Should().Be(8);
+        daily.TotalAmount.Should().Be(40000); // 8 * 5000 VND
+
+        // Monthly report
+        var monthly = await _reportService.GetMonthlyReportAsync(2026, 9);
+        monthly.TotalOrders.Should().Be(1);
+        monthly.TotalBillQuantity.Should().Be(8);
+        monthly.TotalAmount.Should().Be(40000);
+    }
+
+    [Fact]
+    public async Task CustomerBill_WithAdjustments_ReportReflectsGrandTotalAndQuantities()
+    {
+        var cust = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Studio Mai" }, "Studio Mai");
+        string date = "2026-09-22";
+        CreateOrderFixture(date, "Studio Mai", "13x18 in", 10, 10);
+
+        var scanned = await _scanService.ScanDateAsync(date);
+
+        var billLine = new CustomerBillLine
+        {
+            OrderId = scanned[0].Id,
+            ProductJobId = scanned[0].Items[0].Id,
+            ProductNameSnapshot = "13x18 in",
+            BilledQuantity = 10,
+            BilledUnitPrice = 5000,
+            LineTotal = 50000,
+            IsIncluded = true
+        };
+
+        var bill = new CustomerBill
+        {
+            BillNumber = "BILL-20260922-0001",
+            BillType = BillType.Customer,
+            CustomerId = cust.Id,
+            CustomerNameSnapshot = "Studio Mai",
+            PeriodStart = date,
+            PeriodEnd = date,
+            Status = CustomerBillStatus.Locked,
+            ProductSubtotal = 50000,
+            AdjustmentsTotal = 20000, // +30k shipping, -10k discount
+            GrandTotal = 70000,
+            Orders = new()
+            {
+                new CustomerBillOrder
+                {
+                    OrderId = scanned[0].Id,
+                    OrderDateSnapshot = date,
+                    OrderNameSnapshot = "Studio Mai",
+                    OriginalFolderNameSnapshot = "Studio Mai",
+                    Subtotal = 50000,
+                    IsIncluded = true,
+                    Lines = new() { billLine }
+                }
+            },
+            Lines = new() { billLine },
+            Adjustments = new()
+            {
+                new BillAdjustment { Type = AdjustmentType.Shipping, Label = "Ship", Direction = AdjustmentDirection.Add, Amount = 30000 },
+                new BillAdjustment { Type = AdjustmentType.Discount, Label = "Giam gia", Direction = AdjustmentDirection.Deduct, Amount = 10000 }
+            }
+        };
+
+        await _customerBillRepo.SaveBillAsync(bill);
+
+        var daily = await _reportService.GetDailyReportAsync(date);
+        daily.TotalOrders.Should().Be(1);
+        daily.TotalBillQuantity.Should().Be(10);
+        daily.TotalAmount.Should().Be(70000); // 50k + 20k adjustment
+
+        var monthly = await _reportService.GetMonthlyReportAsync(2026, 9);
+        monthly.TotalAmount.Should().Be(70000);
+        monthly.TotalBillQuantity.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task MixedScenario_LockedCustomerBill_And_UnbilledReadyOrder_AggregatesWithoutDoubleCounting()
+    {
+        var cust1 = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách Đã Chốt" }, "Khách Đã Chốt");
+        var cust2 = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách Chưa Chốt" }, "Khách Chưa Chốt");
+
+        string date = "2026-09-25";
+        CreateOrderFixture(date, "Khách Đã Chốt", "13x18 in", 10, 10);
+        CreateOrderFixture(date, "Khách Chưa Chốt", "20x30", 2, 2);
+
+        var scanned = await _scanService.ScanDateAsync(date);
+        var order1 = scanned.First(o => o.OriginalFolderName == "Khách Đã Chốt");
+        var order2 = scanned.First(o => o.OriginalFolderName == "Khách Chưa Chốt");
+
+        // Customer 1 has locked customer bill
+        var line1 = new CustomerBillLine
+        {
+            OrderId = order1.Id,
+            ProductJobId = order1.Items[0].Id,
+            ProductNameSnapshot = "13x18 in",
+            BilledQuantity = 10,
+            BilledUnitPrice = 5000,
+            LineTotal = 50000,
+            IsIncluded = true
+        };
+
+        var bill = new CustomerBill
+        {
+            BillNumber = "BILL-20260925-0001",
+            BillType = BillType.Customer,
+            CustomerId = cust1.Id,
+            CustomerNameSnapshot = "Khách Đã Chốt",
+            PeriodStart = date,
+            PeriodEnd = date,
+            Status = CustomerBillStatus.Locked,
+            ProductSubtotal = 50000,
+            AdjustmentsTotal = 0,
+            GrandTotal = 50000,
+            Orders = new()
+            {
+                new CustomerBillOrder
+                {
+                    OrderId = order1.Id,
+                    OrderDateSnapshot = date,
+                    OrderNameSnapshot = "Khách Đã Chốt",
+                    OriginalFolderNameSnapshot = "Khách Đã Chốt",
+                    Subtotal = 50000,
+                    IsIncluded = true,
+                    Lines = new() { line1 }
+                }
+            },
+            Lines = new() { line1 }
+        };
+        await _customerBillRepo.SaveBillAsync(bill);
+
+        // Daily report
+        var daily = await _reportService.GetDailyReportAsync(date);
+        daily.TotalOrders.Should().Be(2);
+        // Order 1: 10 prints @ 50,000 VND
+        // Order 2: 2 prints @ 30,000 VND (2 * 15,000)
+        daily.TotalBillQuantity.Should().Be(12);
+        daily.TotalAmount.Should().Be(80000);
+        daily.Customers.Should().HaveCount(2);
+
+        // Monthly report
+        var monthly = await _reportService.GetMonthlyReportAsync(2026, 9);
+        monthly.TotalOrders.Should().Be(2);
+        monthly.TotalBillQuantity.Should().Be(12);
+        monthly.TotalAmount.Should().Be(80000);
     }
 
     private void CreateOrderFixture(string date, string customerFolder, string specFolder, int sourceCount, int printCount)

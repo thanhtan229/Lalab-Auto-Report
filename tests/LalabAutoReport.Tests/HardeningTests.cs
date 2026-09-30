@@ -165,9 +165,9 @@ public class HardeningTests : IDisposable
 
         var spec = await _specRepo.CreateSpecificationAsync(new PrintSpecification
         {
-            CanonicalName = "13x18 in",
-            UnitPrice = 5000
-        }, "13x18");
+            CanonicalName = "60x90 in",
+            UnitPrice = 90000
+        }, "60x90");
 
         // 2. Perform online backup
         var backupInfo = await _backupService.CreateBackupAsync();
@@ -252,7 +252,7 @@ public class HardeningTests : IDisposable
                 Assert.Equal(25, item.SourceCount);
                 Assert.Equal(25, item.PrintCount);
                 Assert.Equal(25, item.BillQuantity);
-                Assert.Equal(QuantityResolutionMode.AutoMatch, item.QuantityResolutionMode);
+                Assert.Equal(QuantityResolutionMode.UsePrint, item.QuantityResolutionMode);
             }
         }
 

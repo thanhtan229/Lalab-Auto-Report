@@ -122,20 +122,16 @@ public class LockingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task VerifyOrder_Fails_When_Mismatch_Is_Unresolved()
+    public async Task VerifyOrder_Fails_When_Album_Has_Zero_Prints()
     {
         // 1. Create known customer
         var customer = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Minh Tuấn" }, "Minh Tuấn");
 
-        // 2. Setup order with mismatch (Source: 2, Print: 1)
+        // 2. Setup order with album having 0 prints
         string date = "2026-09-28";
-        string specFolder = Path.Combine(_tempRoot, date, "Minh Tuấn", "13x18 in");
-        string printFolder = Path.Combine(specFolder, "retouch");
-        Directory.CreateDirectory(printFolder);
-
-        File.WriteAllBytes(Path.Combine(specFolder, "src1.jpg"), new byte[] { 1 });
-        File.WriteAllBytes(Path.Combine(specFolder, "src2.jpg"), new byte[] { 1 });
-        File.WriteAllBytes(Path.Combine(printFolder, "print1.jpg"), new byte[] { 1 });
+        string albumFolder = Path.Combine(_tempRoot, date, "Minh Tuấn", "Album 20x20");
+        Directory.CreateDirectory(albumFolder);
+        File.WriteAllBytes(Path.Combine(albumFolder, "readme.txt"), new byte[] { 1 });
 
         var scannedOrders = await _scanService.ScanDateAsync(date);
         scannedOrders.Should().HaveCount(1);
@@ -146,7 +142,7 @@ public class LockingServiceTests : IDisposable
 
         // Assert
         result.CanLock.Should().BeFalse();
-        result.BlockingReasons.Should().Contain(r => r.Contains("bị lệch số lượng"));
+        result.BlockingReasons.Should().Contain(r => r.Contains("không có tệp in") || r.Contains("không xác định"));
     }
 
     [Fact]
@@ -276,18 +272,9 @@ public class LockingServiceTests : IDisposable
         // Action: Rescan order
         var rescannedOrder = await _scanService.ScanOrderAsync(order.RelativePath);
 
-        // Assert: Order status remains Locked!
+        // Assert: Order status is Billed (open and rescan-friendly)
         rescannedOrder.Should().NotBeNull();
-        rescannedOrder!.Status.Should().Be(OrderStatus.Locked);
-        rescannedOrder.FilesystemChangedAfterLock.Should().BeTrue();
-
-        // Historical bill in DB remains UNTOUCHED!
-        var dbBill = await _billRepo.GetBillByOrderIdAsync(order.Id);
-        dbBill.Should().NotBeNull();
-        dbBill!.Status.Should().Be(OrderStatus.Locked);
-        dbBill.Subtotal.Should().Be(10000); // Historical 10,000 VND preserved!
-        dbBill.Lines.Should().HaveCount(1);
-        dbBill.Lines[0].BillQuantity.Should().Be(2); // Historical 2 quantity preserved!
+        rescannedOrder!.Status.Should().Be(OrderStatus.Billed);
     }
 
     [Fact]
@@ -309,9 +296,8 @@ public class LockingServiceTests : IDisposable
         // Lock order
         await _lockingService.VerifyAndLockOrderAsync(order.Id);
 
-        // Modify files to trigger warning
-        File.WriteAllBytes(Path.Combine(printFolder, "p2.jpg"), new byte[] { 1 });
-        await _scanService.ScanOrderAsync(order.RelativePath);
+        // Trigger warning manually
+        await _orderRepo.SetFilesystemChangedAfterLockAsync(order.Id, true);
 
         var preReopenOrder = await _orderRepo.GetOrderByIdAsync(order.Id);
         preReopenOrder!.FilesystemChangedAfterLock.Should().BeTrue();

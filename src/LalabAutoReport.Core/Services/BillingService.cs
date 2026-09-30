@@ -41,6 +41,17 @@ public class BillingService : IBillingService
             throw new KeyNotFoundException($"Không tìm thấy đơn hàng ID {orderId}.");
         }
 
+        if (order.Status == OrderStatus.Locked)
+        {
+            throw new InvalidOperationException($"Đơn hàng '{order.OriginalFolderName}' đã bị khóa, không thể tính lại bill.");
+        }
+
+        var existingBill = await _billRepository.GetBillByOrderIdAsync(orderId, cancellationToken);
+        if (existingBill != null && existingBill.Status == OrderStatus.Locked)
+        {
+            throw new InvalidOperationException($"Đơn hàng '{order.OriginalFolderName}' đã có hóa đơn bị khóa, không thể tính lại bill.");
+        }
+
         if (order.Items.Count == 0)
         {
             throw new InvalidOperationException($"Đơn hàng '{order.OriginalFolderName}' không có quy cách in nào để tính tiền.");
@@ -57,24 +68,7 @@ public class BillingService : IBillingService
                 throw new InvalidOperationException($"Quy cách '{item.SpecificationFolderName}' chưa có thư mục in hợp lệ.");
             }
 
-            // Auto-resolve bill quantity if counts match
-            if (item.SourceCount == item.PrintCount.Value && !item.BillQuantity.HasValue)
-            {
-                item.BillQuantity = item.PrintCount.Value;
-                item.QuantityResolutionMode = QuantityResolutionMode.AutoMatch;
-                await _orderRepository.UpdateOrderItemResolutionAsync(item.Id, item.BillQuantity.Value, QuantityResolutionMode.AutoMatch, null, cancellationToken);
-            }
-
-            // Mismatch must be resolved
-            if (!item.BillQuantity.HasValue)
-            {
-                throw new InvalidOperationException($"Quy cách '{item.SpecificationFolderName}' bị lệch số lượng (Gốc: {item.SourceCount}, In: {item.PrintCount}) và chưa được chọn số lượng tính tiền.");
-            }
-
-            if (item.BillQuantity.Value < 0)
-            {
-                throw new InvalidOperationException($"Số lượng tính tiền của quy cách '{item.SpecificationFolderName}' không được nhỏ hơn 0.");
-            }
+            int printCount = item.PrintCount.Value;
 
             // Resolve spec & price
             if (!item.PrintSpecificationId.HasValue)
@@ -88,33 +82,82 @@ public class BillingService : IBillingService
                 throw new InvalidOperationException($"Không tìm thấy quy cách ID {item.PrintSpecificationId.Value} trong bảng giá.");
             }
 
-            long unitPrice = spec.UnitPrice;
-            long lineTotal = item.BillQuantity.Value * unitPrice;
+            long lineTotal;
+            int billedQuantity;
+            int? sheetCount = null;
+            int? includedSheets = null;
+            int? extraSheets = null;
+            long? basePrice = null;
+            long? extraSheetPrice = null;
+
+            if (spec.BillingMethod == BillingMethod.AlbumBasePlusExtra)
+            {
+                if (printCount == 0)
+                {
+                    throw new InvalidOperationException($"Album '{item.SpecificationFolderName}' không có tệp in nào (0 tệp).");
+                }
+
+                billedQuantity = 1; // 1 physical album per product job
+                sheetCount = printCount;
+                includedSheets = spec.IncludedSheets ?? 10;
+                basePrice = spec.BasePrice ?? 0;
+                extraSheetPrice = spec.ExtraSheetPrice ?? 0;
+                extraSheets = Math.Max(0, sheetCount.Value - includedSheets.Value);
+                lineTotal = basePrice.Value + (extraSheets.Value * extraSheetPrice.Value);
+
+                item.BillQuantity = 1;
+                item.QuantityResolutionMode = item.QuantityResolutionMode ?? QuantityResolutionMode.UsePrint;
+            }
+            else
+            {
+                // FileCount (default photo prints)
+                billedQuantity = item.BillQuantity ?? printCount;
+                if (billedQuantity < 0)
+                {
+                    throw new InvalidOperationException($"Số lượng tính tiền của quy cách '{item.SpecificationFolderName}' không được nhỏ hơn 0.");
+                }
+
+                lineTotal = billedQuantity * spec.UnitPrice;
+                item.BillQuantity = billedQuantity;
+                item.QuantityResolutionMode = item.QuantityResolutionMode ?? QuantityResolutionMode.UsePrint;
+            }
+
             subtotal += lineTotal;
 
             lines.Add(new BillLine
             {
                 PrintSpecificationId = spec.Id,
+                ProductNameSnapshot = spec.CanonicalName,
+                BillingMethodSnapshot = spec.BillingMethod,
                 SourceCount = item.SourceCount,
                 PrintCount = item.PrintCount,
-                BillQuantity = item.BillQuantity.Value,
-                QuantityResolutionMode = item.QuantityResolutionMode ?? QuantityResolutionMode.AutoMatch,
+                SheetCount = sheetCount,
+                IncludedSheetsSnapshot = includedSheets,
+                ExtraSheetCount = extraSheets,
+                BasePriceSnapshot = basePrice,
+                ExtraSheetPriceSnapshot = extraSheetPrice,
+                FinalPrintFolderPath = item.SelectedPrintFolderRelativePath,
+                FolderResolutionModeSnapshot = item.FolderResolutionMode,
+                BillQuantity = billedQuantity,
+                QuantityResolutionMode = item.QuantityResolutionMode ?? QuantityResolutionMode.UsePrint,
                 QuantityResolutionNote = item.QuantityResolutionNote,
-                UnitPrice = unitPrice,
+                UnitPrice = spec.UnitPrice,
                 LineTotal = lineTotal,
                 SourceScanSnapshotId = item.ScanSnapshotId,
                 PrintSpecification = spec
             });
         }
 
+
         var bill = new Bill
         {
+            Id = existingBill?.Id ?? 0,
             OrderId = order.Id,
             CustomerId = order.CustomerId ?? 0,
             Status = OrderStatus.Billed,
             Subtotal = subtotal,
             Lines = lines,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = existingBill?.CreatedAt ?? DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };
 

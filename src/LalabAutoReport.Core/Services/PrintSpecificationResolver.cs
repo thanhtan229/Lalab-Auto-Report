@@ -9,9 +9,10 @@ using Microsoft.Extensions.Logging;
 
 namespace LalabAutoReport.Core.Services;
 
-public class PrintSpecificationResolver : IPrintSpecificationResolver
+public class PrintSpecificationResolver : IProductResolver
 {
     private readonly IPrintSpecificationRepository _specificationRepository;
+    private readonly IProductResolver? _productResolver;
     private readonly ILogger<PrintSpecificationResolver>? _logger;
 
     public PrintSpecificationResolver(
@@ -20,10 +21,40 @@ public class PrintSpecificationResolver : IPrintSpecificationResolver
     {
         _specificationRepository = specificationRepository;
         _logger = logger;
+
+        if (specificationRepository is IProductRepository prodRepo)
+        {
+            _productResolver = new ProductResolver(prodRepo);
+        }
+    }
+
+    public async Task<ProductResolutionResult> ResolveProductAsync(string folderName, CancellationToken cancellationToken = default)
+    {
+        if (_productResolver != null)
+        {
+            return await _productResolver.ResolveProductAsync(folderName, cancellationToken);
+        }
+
+        var specRes = await ResolveSpecificationAsync(folderName, cancellationToken);
+        var variant = specRes.ResolvedSpecification?.ToProductVariant();
+
+        return new ProductResolutionResult(
+            Status: specRes.Status,
+            ResolvedVariant: variant,
+            ResolvedFamily: null,
+            CanonicalSize: variant?.CanonicalSize,
+            Candidates: variant != null ? new[] { variant } : Array.Empty<ProductVariant>(),
+            ErrorMessage: specRes.ErrorMessage
+        );
     }
 
     public async Task<PrintSpecificationResolutionResult> ResolveSpecificationAsync(string folderName, CancellationToken cancellationToken = default)
     {
+        if (_productResolver != null)
+        {
+            return await _productResolver.ResolveSpecificationAsync(folderName, cancellationToken);
+        }
+
         if (string.IsNullOrWhiteSpace(folderName))
         {
             return new PrintSpecificationResolutionResult(PrintSpecificationResolutionStatus.Unknown, null, "Tên quy cách rỗng");

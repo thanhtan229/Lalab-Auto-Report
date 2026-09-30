@@ -159,6 +159,55 @@ public class SqliteCustomerRepository : ICustomerRepository
         });
     }
 
+    public async Task UpdateAliasAsync(long aliasId, string newAliasText, CancellationToken cancellationToken = default)
+    {
+        if (aliasId <= 0)
+            throw new ArgumentException("Mã alias không hợp lệ.", nameof(aliasId));
+
+        if (string.IsNullOrWhiteSpace(newAliasText))
+            throw new ArgumentException("Tên alias không được để trống.", nameof(newAliasText));
+
+        string trimmed = newAliasText.Trim();
+        string normalized = CustomerNormalizer.Normalize(trimmed);
+
+        using var connection = _connectionFactory.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+
+        var currentAlias = await connection.QuerySingleOrDefaultAsync<CustomerAliasDto>(
+            "SELECT * FROM customer_aliases WHERE id = @Id",
+            new { Id = aliasId },
+            transaction: transaction);
+
+        if (currentAlias == null)
+        {
+            throw new InvalidOperationException("Không tìm thấy alias cần cập nhật.");
+        }
+
+        var duplicate = await connection.QuerySingleOrDefaultAsync<CustomerAliasDto>(
+            "SELECT * FROM customer_aliases WHERE normalized_alias = @Norm AND id != @Id LIMIT 1",
+            new { Norm = normalized, Id = aliasId },
+            transaction: transaction);
+
+        if (duplicate != null)
+        {
+            throw new InvalidOperationException($"Alias '{trimmed}' đã tồn tại trong hệ thống (khớp với alias '{duplicate.alias_text}').");
+        }
+
+        await connection.ExecuteAsync(@"
+            UPDATE customer_aliases
+            SET alias_text = @AliasText,
+                normalized_alias = @NormalizedAlias
+            WHERE id = @Id;
+        ", new
+        {
+            Id = aliasId,
+            AliasText = trimmed,
+            NormalizedAlias = normalized
+        }, transaction: transaction);
+
+        transaction.Commit();
+    }
+
     public async Task RemoveAliasAsync(long aliasId, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
@@ -174,6 +223,59 @@ public class SqliteCustomerRepository : ICustomerRepository
 
         var dtos = await connection.QueryAsync<CustomerAliasDto>("SELECT * FROM customer_aliases");
         return dtos.Select(MapAlias).ToList();
+    }
+
+    public async Task<CustomerAlias?> FindAliasByTextAsync(string aliasText, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(aliasText)) return null;
+        string normalized = CustomerNormalizer.Normalize(aliasText);
+        using var connection = _connectionFactory.CreateConnection();
+        var dto = await connection.QuerySingleOrDefaultAsync<CustomerAliasDto>(
+            "SELECT * FROM customer_aliases WHERE normalized_alias = @Norm LIMIT 1",
+            new { Norm = normalized });
+        return dto != null ? MapAlias(dto) : null;
+    }
+
+    public async Task ReassignAliasAsync(long aliasId, long newCustomerId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(
+            "UPDATE customer_aliases SET customer_id = @NewCustomerId WHERE id = @Id",
+            new { Id = aliasId, NewCustomerId = newCustomerId });
+    }
+
+    public async Task<bool> HasCustomerHistoryAsync(long customerId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        int orderCount = await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(1) FROM orders WHERE customer_id = @CustomerId",
+            new { CustomerId = customerId });
+
+        if (orderCount > 0) return true;
+
+        int billCount = await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(1) FROM customer_bills WHERE customer_id = @CustomerId",
+            new { CustomerId = customerId });
+
+        return billCount > 0;
+    }
+
+    public async Task DeleteCustomerAsync(long customerId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+
+        await connection.ExecuteAsync(
+            "DELETE FROM customer_aliases WHERE customer_id = @CustomerId",
+            new { CustomerId = customerId },
+            transaction: transaction);
+
+        await connection.ExecuteAsync(
+            "DELETE FROM customers WHERE id = @Id",
+            new { Id = customerId },
+            transaction: transaction);
+
+        transaction.Commit();
     }
 
     private static Customer MapCustomer(CustomerDto dto) => new()

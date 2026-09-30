@@ -5,7 +5,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:domain="clr-namespace:LalabAutoReport.Core.Domain;assembly=LalabAutoReport.Core"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="900">
+             d:DesignHeight="700" d:DesignWidth="1050">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Custom clean TabItem style (inherits global Tinix tokens) -->
+        <Style x:Key="TinixTabItem" TargetType="TabItem" BasedOn="{StaticResource Tinix.TabItem}"/>
+        <Style x:Key="TinixTabControl" TargetType="TabControl" BasedOn="{StaticResource Tinix.TabControl}"/>
+    </UserControl.Resources>
+
     <Grid Background="{StaticResource Tinix.Color.Bg.Body}" Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -13,14 +21,37 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock Text="DANH MỤC KHÁCH HÀNG" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
-            <TextBlock Text="Quản Lý Khách Hàng &amp; Alias Thư Mục" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="DANH MỤC KHÁCH HÀNG" FontSize="{StaticResource Tinix.FontSize.Caption}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
+                <TextBlock Text="Quản Lý Khách Hàng, Alias &amp; Lập Hóa Đơn" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="{StaticResource Tinix.FontSize.Display}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+            </StackPanel>
+            <Button Grid.Column="1" Command="{Binding ComputeBillCommand}" IsEnabled="{Binding HasUnbilledOrders}" Height="38" Style="{StaticResource Tinix.Button.Primary}" Padding="18,0" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⚡ " FontSize="14" VerticalAlignment="Center"/>
+                    <TextBlock VerticalAlignment="Center" FontWeight="Bold">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="TÍNH BILL"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsGuestSelected}" Value="True">
+                                        <Setter Property="Text" Value="LẬP BILL KHÁCH LẺ (QUICK BILL)"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </Button>
+        </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="320"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -38,7 +69,7 @@
                         <TextBox.Resources>
                             <VisualBrush x:Key="CueSearch" AlignmentX="Left" AlignmentY="Center" Stretch="None">
                                 <VisualBrush.Visual>
-                                    <TextBlock Text="🔍 Tìm kiếm khách hàng..." Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0"/>
+                                    <TextBlock Text="🔍 Tìm kiếm khách hàng..." Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0" FontSize="{StaticResource Tinix.FontSize.Caption}"/>
                                 </VisualBrush.Visual>
                             </VisualBrush>
                         </TextBox.Resources>
@@ -54,15 +85,69 @@
                     </TextBox>
 
                     <!-- List -->
-                    <ListBox Grid.Row="1" ItemsSource="{Binding FilteredCustomers}" SelectedItem="{Binding SelectedCustomer}" BorderThickness="0" Background="Transparent">
+                    <ListBox Grid.Row="1" 
+                             ItemsSource="{Binding FilteredCustomers}" 
+                             SelectedItem="{Binding SelectedCustomer}" 
+                             BorderThickness="0" 
+                             Background="Transparent"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,6"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="ItemBorder" 
+                                                    Background="{StaticResource Tinix.Color.Bg.Subtle}" 
+                                                    CornerRadius="{StaticResource Tinix.Radius.Md}" 
+                                                    BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" 
+                                                    BorderThickness="1"
+                                                    SnapsToDevicePixels="True">
+                                                <ContentPresenter Margin="14,10"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource Tinix.Color.Primary.Subtle}"/>
+                                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary}"/>
+                                                    <Setter TargetName="ItemBorder" Property="BorderThickness" Value="1.5"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type domain:Customer}">
-                                <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="12,8" Margin="0,0,0,6" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding CanonicalName}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13"/>
-                                        <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias thư mục: {0}'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,2,0,0"/>
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Background="#FEF3C7" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="4,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Id}" Value="-1">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="⚡" FontSize="10" Foreground="#B45309" FontWeight="Bold"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding CanonicalName}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="{StaticResource Tinix.FontSize.Body}"/>
                                     </StackPanel>
-                                </Border>
+                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                        <TextBlock Text="{Binding Aliases.Count, StringFormat='{}Số alias: {0}'}" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                        <TextBlock Text="{Binding Phone, StringFormat='{} • SĐT: {0}'}" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                    </StackPanel>
+                                </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -70,71 +155,359 @@
                     <!-- Add Customer -->
                     <Border Grid.Row="2" Margin="0,12,0,0" Padding="0,12,0,0" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,1,0,0">
                         <StackPanel>
-                            <TextBlock Text="Thêm khách hàng mới:" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Thêm khách hàng mới:" FontSize="{StaticResource Tinix.FontSize.Small}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding NewCustomerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
-                                <Button Grid.Column="1" Command="{Binding CreateCustomerCommand}" Content="Thêm" Margin="6,0,0,0" Style="{StaticResource Tinix.Button.Primary}" Padding="14,0" Height="34"/>
+                                <Button Grid.Column="1" Command="{Binding CreateCustomerCommand}" Content="Thêm" Margin="6,0,0,0" Style="{StaticResource Tinix.Button.Info}" Padding="14,0" Height="34"/>
                             </Grid>
                         </StackPanel>
                     </Border>
                 </Grid>
             </Border>
 
-            <!-- RIGHT: Customer Detail & Aliases -->
+            <!-- RIGHT: Customer Detail, Unbilled Summary & Tabs -->
             <Border Grid.Column="1" Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="20">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/> <!-- Customer Info Form -->
+                        <RowDefinition Height="Auto"/> <!-- Unbilled Summary Card -->
+                        <RowDefinition Height="*"/>    <!-- Tabbed Content: Bills / Aliases -->
+                        <RowDefinition Height="Auto"/> <!-- Status message -->
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                        <TextBlock Text="Tên Khách Hàng Chuẩn (Canonical):" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
-                        <TextBlock Text="{Binding SelectedCustomer.CanonicalName}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,0"/>
-                    </StackPanel>
+                    <!-- Customer Header & Edit Info Form -->
+                    <Border Grid.Row="0" Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="14,12" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Header & Save Button -->
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock FontSize="{StaticResource Tinix.FontSize.Caption}" FontWeight="Bold" Margin="0,0,0,2">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="THÔNG TIN KHÁCH HÀNG CHUẨN"/>
+                                                <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsGuestSelected}" Value="True">
+                                                        <Setter Property="Text" Value="⚡ QUẢN LÝ ĐƠN &amp; HÓA ĐƠN KHÁCH LẺ"/>
+                                                        <Setter Property="Foreground" Value="#B45309"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding SelectedCustomer.CanonicalName, TargetNullValue='(Chưa chọn khách hàng)'}" FontSize="{StaticResource Tinix.FontSize.Section}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Command="{Binding SaveCustomerInfoCommand}" Content="💾 Lưu Thông Tin" Height="32" Padding="14,0" Style="{StaticResource Tinix.Button.Info}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                            Visibility="{Binding IsGuestSelected, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                    <Button Style="{StaticResource Tinix.Button.Secondary}" Height="32" Padding="12,0" ToolTip="Xóa khách hàng này" Click="DeleteCustomer_Click" VerticalAlignment="Center" Foreground="{StaticResource Tinix.Color.Danger}"
+                                            Visibility="{Binding IsGuestSelected, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Width="12" Height="12" Stretch="Uniform" Fill="{StaticResource Tinix.Color.Danger}" Margin="0,0,6,0" VerticalAlignment="Center" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                            <TextBlock Text="Xóa Khách Hàng" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
 
-                    <TextBlock Grid.Row="1" Text="Danh sách Alias (tên thư mục tự động gán vào khách hàng này):" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,8" FontSize="13"/>
+                            <!-- Editable Fields -->
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.4*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="1.6*"/>
+                                </Grid.ColumnDefinitions>
 
-                    <!-- Aliases List -->
-                    <ListBox Grid.Row="2" ItemsSource="{Binding SelectedCustomer.Aliases}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" Background="{StaticResource Tinix.Color.Bg.Subtle}" Margin="0,0,0,12" Padding="6">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type domain:CustomerAlias}">
-                                <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="10,6" Margin="0,2" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                                <!-- Tên khách hàng chuẩn -->
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="Tên khách hàng chuẩn:" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,2"/>
+                                    <TextBox Text="{Binding EditCustomerName, UpdateSourceTrigger=PropertyChanged}" Height="32" Style="{StaticResource Tinix.TextBox.Standard}"
+                                             IsEnabled="{Binding IsGuestSelected, Converter={StaticResource InverseBoolConverter}}"/>
+                                </StackPanel>
+
+                                <!-- Số điện thoại -->
+                                <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                    <TextBlock Text="Số điện thoại:" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,2"/>
+                                    <TextBox Text="{Binding EditCustomerPhone, UpdateSourceTrigger=PropertyChanged}" Height="32" Style="{StaticResource Tinix.TextBox.Standard}"
+                                             IsEnabled="{Binding IsGuestSelected, Converter={StaticResource InverseBoolConverter}}"/>
+                                </StackPanel>
+
+                                <!-- Ghi chú -->
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Ghi chú:" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,2"/>
+                                    <TextBox Text="{Binding EditCustomerNote, UpdateSourceTrigger=PropertyChanged}" Height="32" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- UNBILLED SUMMARY CARD -->
+                    <Border Grid.Row="1" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,14" Margin="0,0,0,16">
+                        <Grid>
+                            <!-- Normal customer summary -->
+                            <Grid Visibility="{Binding IsGuestSelected, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Warning banner if unbilled from previous period -->
+                                <Border Grid.Row="0" Background="{StaticResource Tinix.Color.Warning.Bg}" BorderBrush="{StaticResource Tinix.Color.Warning.Border}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="10,6" Margin="0,0,0,10"
+                                        Visibility="{Binding UnbilledSummary.HasPreviousPeriodOrders, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="⚠️ Phát hiện đơn hàng chưa tính bill từ các ngày trước kỳ gần nhất (sẽ được tự động gom vào bill mới)." Foreground="{StaticResource Tinix.Color.Warning}" FontWeight="SemiBold" FontSize="{StaticResource Tinix.FontSize.Caption}"/>
+                                </Border>
+
+                                <!-- Metrics -->
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Unbilled Orders -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                                        <TextBlock Text="ĐƠN CHƯA BILL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="{Binding UnbilledSummary.UnbilledOrderCount, FallbackValue='0'}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}"/>
+                                    </StackPanel>
+
+                                    <!-- Unbilled Jobs -->
+                                    <StackPanel Grid.Column="1" Margin="0,0,24,0">
+                                        <TextBlock Text="JOB IN CHƯA BILL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="{Binding UnbilledSummary.UnbilledJobCount, FallbackValue='0'}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                    </StackPanel>
+
+                                    <!-- Estimated Total -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="ƯỚC TÍNH TẠM TÍNH" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,2"/>
+                                        <TextBlock Text="{Binding UnbilledSummary.EstimatedTotalAmount, Converter={StaticResource NumberThousandsConverter}, StringFormat='{}{0} đ', FallbackValue='0 đ'}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Last Bill Info -->
+                                <TextBlock Grid.Row="2" Text="{Binding UnbilledSummary.LastLockedBillNumber, StringFormat='{}Bill đã chốt gần nhất: {0}', TargetNullValue='Chưa có bill nào được chốt trước đây.'}" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="0,10,0,0"/>
+                            </Grid>
+
+                            <!-- Guest summary -->
+                            <Grid Visibility="{Binding IsGuestSelected, Converter={StaticResource BoolToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,24,0">
+                                    <TextBlock Text="HÓA ĐƠN ĐÃ LẬP" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,2"/>
+                                    <TextBlock Text="{Binding CustomerBills.Count, FallbackValue='0'}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="⚡ Khách Lẻ (Quick Bill) xuất theo từng đơn, không tính gộp theo kỳ dài ngày." FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="{StaticResource Tinix.FontSize.Small}"/>
+                                    <TextBlock Text="Nhấn nút 'LẬP BILL KHÁCH LẺ (QUICK BILL)' ở góc trên để chọn thư mục ảnh và xuất hóa đơn ngay." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="{StaticResource Tinix.FontSize.Caption}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- TABBED SECTIONS: BILL HISTORY & ALIASES -->
+                    <TabControl Grid.Row="2" Style="{StaticResource TinixTabControl}">
+                        <!-- TAB 1: BILL HISTORY -->
+                        <TabItem Header="Lịch Sử Hóa Đơn" Style="{StaticResource TinixTabItem}">
+                            <Grid Margin="0,12,0,0">
+                                <!-- Empty State -->
+                                <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="24" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CustomerBills.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="Chưa có hóa đơn nào cho khách hàng này." FontSize="{StaticResource Tinix.FontSize.Body}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Nhấn nút '⚡ TÍNH BILL' (hoặc 'LẬP BILL KHÁCH LẺ') để lập hóa đơn mới." FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Muted}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Bills List -->
+                                <ListBox ItemsSource="{Binding CustomerBills}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CustomerBills.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            <Setter Property="Padding" Value="0"/>
+                                            <Setter Property="Margin" Value="0,0,0,8"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ListBoxItem">
+                                                        <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="14,12">
+                                                            <ContentPresenter/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type domain:CustomerBill}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="220"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Left: Bill Number & Status -->
+                                                <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                                        <TextBlock Text="{Binding BillNumber}" FontFamily="{StaticResource Tinix.Font.Mono}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                                        <!-- Guest Badge -->
+                                                        <Border Background="#FEF3C7" CornerRadius="{StaticResource Tinix.Radius.Sm}" HorizontalAlignment="Left" Padding="6,1" Margin="6,0,0,0">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding BillType}" Value="Guest">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock Text="⚡ Khách Lẻ" FontSize="10" FontWeight="Bold" Foreground="#B45309"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding CustomerNameSnapshot}" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,2"/>
+                                                    <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,4"/>
+                                                    
+                                                    <!-- Status Badge -->
+                                                    <Border Style="{StaticResource Tinix.Badge.Success}" HorizontalAlignment="Left" Padding="8,2">
+                                                        <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}"/>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <!-- Middle: Period Range & Totals -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,16,0">
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                        <TextBlock Text="Kỳ:" FontSize="{StaticResource Tinix.FontSize.Small}" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="{Binding PeriodStart, StringFormat='{}{0:yyyy-MM-dd}'}" FontWeight="SemiBold" FontSize="{StaticResource Tinix.FontSize.Small}" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                                        <TextBlock Text=" ➔ " FontSize="{StaticResource Tinix.FontSize.Small}" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                                                        <TextBlock Text="{Binding PeriodEnd, StringFormat='{}{0:yyyy-MM-dd}'}" FontWeight="SemiBold" FontSize="{StaticResource Tinix.FontSize.Small}" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                                        <TextBlock Text="{Binding OrderCount, StringFormat='{}  •  {0} đơn'}" FontSize="{StaticResource Tinix.FontSize.Small}" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Tổng thanh toán: " FontSize="{StaticResource Tinix.FontSize.Small}" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                                        <TextBlock Text="{Binding GrandTotal, Converter={StaticResource NumberThousandsConverter}, StringFormat='{}{0} đ'}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource Tinix.Color.Primary}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Right: Actions -->
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Content="Mở Bill" 
+                                                            Command="{Binding DataContext.OpenBillCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+                                                            Padding="12,6" Margin="0,0,6,0"/>
+                                                    <Button Content="XUẤT BILL" 
+                                                            Command="{Binding DataContext.ReExportJpegCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+                                                            Padding="12,6" Margin="0,0,6,0"
+                                                            ToolTip="Xuất lại file hóa đơn JPEG và Excel"/>
+                                                    <Button Content="Mở File" 
+                                                            Command="{Binding DataContext.OpenFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Style="{StaticResource Tinix.Button.Ghost}" 
+                                                            Padding="8,6" Margin="0,0,4,0" ToolTip="Mở tệp ảnh JPEG đã xuất"/>
+                                                    <Button Content="Thư Mục" 
+                                                            Command="{Binding DataContext.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Style="{StaticResource Tinix.Button.Ghost}" 
+                                                            Padding="8,6" ToolTip="Mở thư mục chứa file bill"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- TAB 2: ALIASES -->
+                        <TabItem Header="Alias Thư Mục" Style="{StaticResource TinixTabItem}">
+                            <Grid Margin="0,12,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Danh sách Alias (tên thư mục tự động gán vào khách hàng này):" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,8" FontSize="{StaticResource Tinix.FontSize.Small}"/>
+
+                                <!-- Aliases List -->
+                                <ListBox Grid.Row="1" ItemsSource="{Binding SelectedCustomer.Aliases}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" Background="{StaticResource Tinix.Color.Bg.Subtle}" Margin="0,0,0,12" Padding="6">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type domain:CustomerAlias}">
+                                            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="10,6" Margin="0,2" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" FontFamily="{StaticResource Tinix.Font.Mono}" FontSize="{StaticResource Tinix.FontSize.Small}"/>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Button Style="{StaticResource Tinix.Button.Icon}" Margin="0,0,6,0" ToolTip="Sửa alias" Click="EditAlias_Click">
+                                                            <Path Width="13" Height="13" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                                        </Button>
+                                                        <Button Style="{StaticResource Tinix.Button.Icon.Danger}" ToolTip="Xóa alias" Click="RemoveAlias_Click">
+                                                            <Path Width="13" Height="13" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <!-- Add Alias -->
+                                <StackPanel Grid.Row="2" Margin="0,0,0,4">
+                                    <TextBlock Text="Thêm alias mới cho khách này:" FontSize="{StaticResource Tinix.FontSize.Small}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" FontFamily="Consolas" FontSize="13"/>
-                                        <Button Grid.Column="1" Content="Xóa" Padding="10,3" Style="{StaticResource Tinix.Button.Danger}" FontSize="11" Click="RemoveAlias_Click"/>
+                                        <TextBox Text="{Binding NewAliasText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
+                                        <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Info}" Padding="16,0" Height="34"/>
                                     </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-
-                    <!-- Add Alias -->
-                    <StackPanel Grid.Row="3" Margin="0,0,0,12">
-                        <TextBlock Text="Thêm alias mới cho khách này:" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding NewAliasText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
-                            <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Primary}" Padding="16,0" Height="34"/>
-                        </Grid>
-                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
 
                     <!-- Status -->
-                    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" FontSize="{StaticResource Tinix.FontSize.Caption}" Margin="0,8,0,0"/>
                 </Grid>
             </Border>
         </Grid>

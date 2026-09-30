@@ -182,4 +182,241 @@ public class CustomerResolutionTests
         orders.Single(o => o.OriginalFolderName == "Anh An").Items[0].PrintSpecification!.UnitPrice.Should().Be(15000); // 20x30
         orders.Single(o => o.OriginalFolderName == "A.An").Items[0].PrintSpecification!.UnitPrice.Should().Be(80000); // 40x60 TG
     }
+
+    [Fact]
+    public async Task CustomerRepository_UpdateAlias_SuccessAndResolution()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "cust_update_alias.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var custRepo = new SqliteCustomerRepository(connFactory);
+        var customer = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Studio Ánh Dương" });
+        await custRepo.AddAliasAsync(customer.Id, "Anh Duong Cu");
+
+        var allAliases = await custRepo.GetAllAliasesAsync();
+        var alias = allAliases.Single(a => a.AliasText == "Anh Duong Cu");
+
+        var resolver = new CustomerResolver(custRepo);
+
+        // Before edit: "Anh Duong Cu" matches, "Anh Duong Moi" is unresolved
+        var beforeMatch = await resolver.ResolveCustomerAsync("Anh Duong Cu");
+        beforeMatch.Status.Should().Be(CustomerResolutionStatus.ExactMatch);
+        beforeMatch.ResolvedCustomer!.Id.Should().Be(customer.Id);
+
+        var beforeUnknown = await resolver.ResolveCustomerAsync("Anh Duong Moi");
+        beforeUnknown.Status.Should().NotBe(CustomerResolutionStatus.ExactMatch);
+
+        // Act: Edit the saved alias to "Anh Duong Moi"
+        await custRepo.UpdateAliasAsync(alias.Id, "Anh Duong Moi");
+
+        // Verify in DB
+        var updatedCustomer = await custRepo.GetByIdAsync(customer.Id);
+        updatedCustomer!.Aliases.Should().Contain(a => a.AliasText == "Anh Duong Moi");
+        updatedCustomer.Aliases.Should().NotContain(a => a.AliasText == "Anh Duong Cu");
+
+        // After edit: "Anh Duong Moi" matches, "Anh Duong Cu" is unresolved
+        var afterMatch = await resolver.ResolveCustomerAsync("Anh Duong Moi");
+        afterMatch.Status.Should().Be(CustomerResolutionStatus.ExactMatch);
+        afterMatch.ResolvedCustomer!.Id.Should().Be(customer.Id);
+
+        var afterOld = await resolver.ResolveCustomerAsync("Anh Duong Cu");
+        afterOld.ResolvedCustomer.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CustomerRepository_UpdateAlias_Duplicate_ThrowsInvalidOperationException()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "cust_duplicate_alias.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var custRepo = new SqliteCustomerRepository(connFactory);
+        var c1 = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách Hàng 1" });
+        var c2 = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách Hàng 2" });
+
+        await custRepo.AddAliasAsync(c1.Id, "Alias A");
+        await custRepo.AddAliasAsync(c2.Id, "Alias B");
+
+        var allAliases = await custRepo.GetAllAliasesAsync();
+        var aliasB = allAliases.Single(a => a.AliasText == "Alias B");
+
+        // Attempting to update Alias B to "alias a" (conflicts with c1's alias)
+        var act = async () => await custRepo.UpdateAliasAsync(aliasB.Id, "alias a");
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*đã tồn tại*");
+    }
+
+    [Fact]
+    public async Task CustomerRepository_UpdateAlias_SameTextOrCasing_Allowed()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "cust_casing_alias.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var custRepo = new SqliteCustomerRepository(connFactory);
+        var c = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách Hàng C" });
+        await custRepo.AddAliasAsync(c.Id, "thu trang");
+
+        var allAliases = await custRepo.GetAllAliasesAsync();
+        var alias = allAliases.Single(a => a.AliasText == "thu trang");
+
+        // Update casing: "thu trang" -> "Thu Trang"
+        await custRepo.UpdateAliasAsync(alias.Id, "Thu Trang");
+
+        var updated = await custRepo.GetByIdAsync(c.Id);
+        updated!.Aliases.Should().Contain(a => a.AliasText == "Thu Trang");
+    }
+
+    [Fact]
+    public async Task CustomerRepository_RemoveAlias_RemovesFromResolution()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "cust_remove_alias.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var custRepo = new SqliteCustomerRepository(connFactory);
+        var c = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách Hàng D" });
+        await custRepo.AddAliasAsync(c.Id, "Alias Tam Thoi");
+
+        var allAliases = await custRepo.GetAllAliasesAsync();
+        var alias = allAliases.Single(a => a.AliasText == "Alias Tam Thoi");
+
+        await custRepo.RemoveAliasAsync(alias.Id);
+
+        var updated = await custRepo.GetByIdAsync(c.Id);
+        updated!.Aliases.Should().NotContain(a => a.AliasText == "Alias Tam Thoi");
+
+        var resolver = new CustomerResolver(custRepo);
+        var res = await resolver.ResolveCustomerAsync("Alias Tam Thoi");
+        res.ResolvedCustomer.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task PrintSpecRepository_UpdateAndRemoveAlias_WorksCorrectly()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "spec_alias_test.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var specRepo = new SqlitePrintSpecificationRepository(connFactory);
+        var spec = await specRepo.CreateSpecificationAsync(new PrintSpecification
+        {
+            CanonicalName = "Khổ Đặc Biệt Siêu To",
+            UnitPrice = 25000
+        });
+
+        await specRepo.AddAliasAsync(spec.Id, "Khổ Siêu To");
+
+        var allAliases = await specRepo.GetAllAliasesAsync();
+        var alias = allAliases.Single(a => a.AliasText == "Khổ Siêu To");
+
+        // Update alias
+        await specRepo.UpdateAliasAsync(alias.Id, "Khổ Siêu To Nhanh");
+
+        var resolver = new PrintSpecificationResolver(specRepo);
+        var resUpdated = await resolver.ResolveSpecificationAsync("Khổ Siêu To Nhanh");
+        resUpdated.Status.Should().Be(PrintSpecificationResolutionStatus.Resolved);
+        resUpdated.ResolvedSpecification!.Id.Should().Be(spec.Id);
+
+        // Remove alias
+        await specRepo.RemoveAliasAsync(alias.Id);
+        var resRemoved = await resolver.ResolveSpecificationAsync("Khổ Siêu To Nhanh");
+        resRemoved.ResolvedSpecification.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CustomerRepository_FindAliasByText_And_ReassignAlias_Success()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "reassign_alias_test.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var custRepo = new SqliteCustomerRepository(connFactory);
+        var custA = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách A" });
+        var custB = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách B" });
+
+        await custRepo.AddAliasAsync(custA.Id, "AliasChung");
+
+        // Find alias
+        var found = await custRepo.FindAliasByTextAsync("AliasChung");
+        found.Should().NotBeNull();
+        found!.CustomerId.Should().Be(custA.Id);
+
+        // Reassign to custB
+        await custRepo.ReassignAliasAsync(found.Id, custB.Id);
+
+        var reassigned = await custRepo.FindAliasByTextAsync("AliasChung");
+        reassigned.Should().NotBeNull();
+        reassigned!.CustomerId.Should().Be(custB.Id);
+    }
+
+    [Fact]
+    public async Task OrderRepository_UpdateFolderCustomerId_UpdatesMatchingOrdersExceptLocked()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string dbPath = Path.Combine(fixture.RootPath, "update_folder_cust_test.db");
+        var connFactory = new SqliteConnectionFactory(dbPath);
+        var migrator = new DatabaseMigrator(connFactory);
+        await migrator.MigrateAsync();
+
+        var orderRepo = new SqliteOrderRepository(connFactory);
+        var custRepo = new SqliteCustomerRepository(connFactory);
+
+        var cust = await custRepo.CreateCustomerAsync(new Customer { CanonicalName = "Khách Test" });
+
+        // Create 2 normal orders and 1 locked order with original_folder_name = "Anh An"
+        var snapshot = new ScanSnapshot { Scope = ScanScope.Date, Status = ScanStatus.Success };
+        var order1 = new Order
+        {
+            WorkDate = "2026-09-29",
+            OriginalFolderName = "Anh An",
+            RelativePath = @"2026-09-29\Anh An",
+            Status = OrderStatus.Ready
+        };
+        await orderRepo.SaveOrderAsync(order1, snapshot);
+
+        var order2 = new Order
+        {
+            WorkDate = "2026-09-29",
+            OriginalFolderName = "Anh An",
+            RelativePath = @"2026-09-29\Anh An\Don 01",
+            Status = OrderStatus.Ready
+        };
+        await orderRepo.SaveOrderAsync(order2, snapshot);
+
+        var orderLocked = new Order
+        {
+            WorkDate = "2026-09-29",
+            OriginalFolderName = "Anh An",
+            RelativePath = @"2026-09-29\Anh An\Don Khoa",
+            Status = OrderStatus.Locked
+        };
+        await orderRepo.SaveOrderAsync(orderLocked, snapshot);
+
+        // Act: Update folder customer ID
+        await orderRepo.UpdateFolderCustomerIdAsync("2026-09-29", "Anh An", cust.Id);
+
+        // Assert: order1 and order2 updated, orderLocked unaffected
+        var updated1 = await orderRepo.GetOrderByRelativePathAsync(@"2026-09-29\Anh An");
+        updated1!.CustomerId.Should().Be(cust.Id);
+
+        var updated2 = await orderRepo.GetOrderByRelativePathAsync(@"2026-09-29\Anh An\Don 01");
+        updated2!.CustomerId.Should().Be(cust.Id);
+
+        var updatedLocked = await orderRepo.GetOrderByRelativePathAsync(@"2026-09-29\Anh An\Don Khoa");
+        updatedLocked!.CustomerId.Should().BeNull();
+    }
 }

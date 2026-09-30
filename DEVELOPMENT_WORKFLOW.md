@@ -1,593 +1,909 @@
-# Development Workflow Rules
+# DEVELOPMENT_WORKFLOW.md
 
-## Mục tiêu
-
-Trong quá trình development, ưu tiên vòng lặp phát triển nhanh, ổn định và dễ kiểm thử.
-
-Không được mặc định đóng gói ứng dụng thành `.exe` sau mỗi lần coding.
-
-Mục tiêu của mỗi iteration là:
-
-`Understand → Code → Validate → Build when needed → Restart → Health Check → Ready for User Test`
-
-Ứng dụng phải được đưa về trạng thái có thể test ngay sau khi hoàn thành thay đổi.
+> **Tinix Development, Validation, Reload, Restart & Packaging Standard**
+>
+> This document defines how a Tinix project should be developed, validated, reloaded, restarted, health-checked, and prepared for user testing.
+>
+> It is intentionally **framework-agnostic, runtime-agnostic, and platform-aware**. Project-specific commands belong in the **Project Runtime Profile** section of this file.
 
 ---
 
-## 1. Không package `.exe` sau mỗi lần coding
+## 0. Purpose
 
-Trong quá trình development:
+The development workflow should optimize for:
 
-- Không tự động tạo installer.
+- fast iteration;
+- reliable verification;
+- minimal disruption;
+- clear runtime state;
+- safe process handling;
+- easy user testing;
+- avoiding unnecessary builds and packaging.
 
-- Không tự động package `.exe`.
+The default development loop is:
 
-- Không chạy pipeline release nếu không cần thiết.
+`Understand → Change → Validate → Build when justified → Apply latest code → Verify runtime → Ready for user test`
 
-- Không thực hiện các bước đóng gói tốn thời gian chỉ để kiểm tra một thay đổi development thông thường.
-
-Chỉ package `.exe` khi:
-
-- User yêu cầu rõ ràng.
-
-- Cần kiểm thử behavior riêng của packaged application.
-
-- Cần kiểm tra installer/distribution.
-
-- Đang chuẩn bị release.
-
-- Có thay đổi liên quan trực tiếp đến packaging, installer, auto-update hoặc production executable.
-
-Nếu không thuộc các trường hợp trên, hãy chạy ứng dụng trực tiếp từ source hoặc development build.
+The application should be left in a state where the latest relevant changes can be tested immediately.
 
 ---
 
-## 2. Phân biệt Build và Package
+## 1. Scope and Rule Strength
 
-Không được hiểu `build` và `package .exe` là cùng một việc.
+This file governs:
 
-### Build
+- development mode;
+- validation;
+- build decisions;
+- frontend reload;
+- backend/service restart;
+- full application restart;
+- process ownership;
+- runtime health checks;
+- development scripts;
+- packaging behavior;
+- release-related escalation.
 
-Build có thể được sử dụng trong quá trình development để phát hiện:
+Rule strength:
 
-- compile errors;
+- **MUST / MUST NOT** — required unless a documented project-specific rule overrides it.
+- **SHOULD / SHOULD NOT** — default behavior; deviate only for a concrete reason.
+- **MAY** — optional based on the project.
 
-- TypeScript/type errors;
+This file does **not** define:
 
-- bundling errors;
+- product requirements;
+- UI design language;
+- architecture;
+- coding style.
 
-- import/module errors;
-
-- dependency incompatibilities;
-
-- production-only build errors;
-
-- frontend/backend integration issues;
-
-- configuration errors.
-
-Build không nhất thiết phải tạo `.exe`.
-
-### Package
-
-Package là quá trình tạo executable/installer/distributable artifact như:
-
-- `.exe`;
-
-- installer;
-
-- portable build;
-
-- release archive;
-
-- production distribution bundle.
-
-Package chỉ thực hiện khi thực sự cần.
+Use the appropriate project documents for those concerns.
 
 ---
 
-## 3. Khi nào cần Build
+## 2. Project Runtime Profile
 
-Không bắt buộc full build sau mọi thay đổi nhỏ.
+Every non-trivial project SHOULD complete this section.
 
-Agent phải tự đánh giá phạm vi thay đổi.
+Do not invent commands. Use the commands and runtime model that actually exist in the repository.
 
-### Có thể không cần full build khi
+```text
+Product name: Lalab Auto Report
 
-Thay đổi chỉ gồm các chỉnh sửa development nhỏ như:
+Project type:
+- Desktop app
 
-- CSS;
+Primary platform: Windows (Windows 10 / Windows 11 x64)
 
-- spacing;
+Frontend runtime: WPF (.NET 8.0-windows, XAML, CommunityToolkit.Mvvm)
+Backend runtime: In-process (.NET 8 LTS: LalabAutoReport.Core, LalabAutoReport.Infrastructure)
+Desktop/native runtime: WPF (.NET 8.0-windows)
+Database/runtime dependency: SQLite (WAL mode, Dapper, Microsoft.Data.Sqlite)
 
-- text;
+Development start command: DEV_START.bat
+Development stop command: DEV_STOP.bat
+Development restart command: RESTART.bat (or DEV_RESTART.bat)
 
-- icon;
+Frontend dev command: N/A (Compiled into desktop application)
+Backend dev command: N/A (Compiled into desktop application)
 
-- layout nhỏ;
+Targeted test command: dotnet test --filter <TestName>
+Typecheck command: dotnet build -c Debug
+Lint command: dotnet build -c Debug
+Build command: dotnet build src\LalabAutoReport.UI\LalabAutoReport.UI.csproj -c Debug
+Full test command: TEST.bat (or dotnet test --nologo)
 
-- UI presentation;
+Health-check command / endpoint: DEV_STATUS.bat (or powershell -Command "Get-Process -Name 'LalabAutoReport.UI'")
 
-- logic frontend rất cục bộ;
+Package command: PACKAGE.bat (or dotnet publish src/LalabAutoReport.UI/LalabAutoReport.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true)
+Release command: PACKAGE.bat
 
-- thay đổi không ảnh hưởng module graph hoặc compilation.
+HMR / live reload:
+- Not supported (WPF desktop binary; fast restart via RESTART.bat is primary dev loop)
 
-Trong trường hợp này ưu tiên:
+Manual UI reload:
+- Runtime-specific command: RESTART.bat (fast restart loop ~1-2s)
+```
 
-`Code → relevant validation → restart/reload → test`
-
-### Nên Build khi
-
-Thay đổi có liên quan đến:
-
-- TypeScript/interface/type;
-
-- dependency;
-
-- package configuration;
-
-- bundler;
-
-- build configuration;
-
-- environment variables;
-
-- module/import structure;
-
-- shared library;
-
-- API contract;
-
-- backend;
-
-- database;
-
-- application bootstrap;
-
-- routing architecture;
-
-- Electron/Tauri/native layer;
-
-- production runtime;
-
-- hoặc bất kỳ thay đổi nào có khả năng chỉ lỗi khi compile/build.
-
-Trong trường hợp đó:
-
-`Code → Validate → Build → Restart → Health Check`
-
-Không package `.exe` chỉ vì đã chạy build.
+If a field is not applicable, mark it `N/A`.
 
 ---
 
-## 4. Validation sau mỗi thay đổi
+## 3. Development Mode Is the Default
 
-Sau khi coding xong, chạy các validation phù hợp với phạm vi thay đổi.
-
-Có thể bao gồm:
-
-- targeted tests;
-
-- unit tests;
-
-- typecheck;
-
-- lint;
-
-- compile;
-
-- build;
-
-- integration test;
-
-- smoke test.
-
-Không cần chạy toàn bộ test suite nếu thay đổi rất nhỏ và targeted validation đã đủ.
-
-Ngược lại, với thay đổi core hoặc có phạm vi rộng, phải tăng mức validation tương ứng.
-
-Ưu tiên validation có giá trị thực tế, không chạy command nặng một cách máy móc.
-
----
-
-## 5. Tự động Restart sau khi Coding
-
-Sau khi thay đổi code và validation cần thiết hoàn tất, phải đưa ứng dụng về trạng thái sẵn sàng để user test.
-
-### Frontend
-
-Sau mỗi iteration có thay đổi frontend:
-
-- đảm bảo frontend đang chạy code mới nhất;
-
-- restart frontend nếu runtime hiện tại không tự reload đáng tin cậy;
-
-- không để user test nhầm process hoặc bundle cũ.
-
-Nếu development server hỗ trợ hot reload đáng tin cậy và không cần restart, có thể giữ process hiện tại.
-
-Tuy nhiên nếu có nghi ngờ trạng thái runtime cũ, hãy restart.
-
-### Backend
-
-Chỉ restart backend nếu thay đổi có ảnh hưởng tới backend hoặc backend runtime cần reload.
-
-Ví dụ:
-
-- API;
-
-- service;
-
-- server code;
-
-- database integration;
-
-- backend config;
-
-- environment variables;
-
-- shared code được backend sử dụng;
-
-- dependency backend;
-
-- process startup;
-
-- backend runtime state.
-
-Nếu thay đổi chỉ liên quan frontend và backend không bị ảnh hưởng, không restart backend không cần thiết.
-
----
-
-## 6. Không để nhiều instance chạy song song
-
-Trước khi restart một service, phải xác định và dừng đúng instance cũ nếu cần.
-
-Không được để:
-
-- nhiều frontend instance;
-
-- nhiều backend instance;
-
-- nhiều app instance;
-
-- process cũ giữ port;
-
-- zombie process;
-
-- test nhầm server cũ.
-
-Không kill process dựa trên giả định nguy hiểm nếu có khả năng ảnh hưởng ứng dụng khác.
-
-Ưu tiên xác định process dựa trên:
-
-- PID đã lưu;
-
-- port;
-
-- working directory;
-
-- executable;
-
-- command line;
-
-- project-specific process metadata.
-
-Sau khi stop, xác nhận port/process cũ đã được giải phóng trước khi start lại nếu cần.
-
----
-
-## 7. Script chạy Development
-
-Ưu tiên tạo một hoặc một số script development đơn giản để user có thể chạy trực tiếp trên Windows.
-
-Có thể sử dụng:
-
-- `.bat`;
-
-- `.cmd`;
-
-- `.ps1`;
-
-- `.vbs`;
-
-hoặc script phù hợp với stack hiện tại.
-
-Nếu repo chưa có script phù hợp, ưu tiên tạo một entry point rõ ràng, ví dụ:
-
-`RESTART.bat`
-
-hoặc:
-
-`DEV_START.bat`
-
-`DEV_STOP.bat`
-
-`DEV_RESTART.bat`
-
-Không tạo nhiều script dư thừa nếu một script duy nhất có thể xử lý tốt.
-
----
-
-## 8. Yêu cầu đối với `RESTART.bat`
-
-Nếu project phù hợp, ưu tiên duy trì một script `RESTART.bat` có khả năng:
-
-1. xác định các process development hiện tại;
-
-2. dừng process cũ một cách an toàn;
-
-3. giải phóng port nếu cần;
-
-4. start frontend;
-
-5. start backend nếu backend cần chạy;
-
-6. tránh tạo duplicate instance;
-
-7. ghi log startup cần thiết;
-
-8. kiểm tra service đã start thành công;
-
-9. trả về trạng thái thành công/thất bại rõ ràng.
-
-Script phải có thể được chạy nhiều lần mà không làm hệ thống rơi vào trạng thái có nhiều instance trùng nhau.
-
-Ưu tiên tính idempotent.
-
----
-
-## 9. Health Check sau Restart
-
-Không được coi việc chạy command start thành công là bằng chứng ứng dụng đã sẵn sàng.
-
-Sau restart phải kiểm tra runtime thực tế.
-
-### Frontend
-
-Kiểm tra ít nhất một trong các điều kiện:
-
-- dev server đang listen;
-
-- URL frontend trả response;
-
-- application window khởi động thành công;
-
-- UI bundle load được;
-
-- không có startup error nghiêm trọng.
-
-### Backend
-
-Nếu backend được restart, kiểm tra:
-
-- process tồn tại;
-
-- port đang listen;
-
-- health endpoint trả kết quả đúng nếu có;
-
-- API cơ bản phản hồi;
-
-- không có crash loop;
-
-- không có startup exception nghiêm trọng.
-
-Nếu project có endpoint như:
-
-`/health`
-
-`/api/health`
-
-`/ready`
-
-hãy ưu tiên sử dụng endpoint đó.
-
----
-
-## 10. Nếu Restart hoặc Startup thất bại
-
-Không dừng ở việc báo rằng command thất bại.
-
-Hãy:
-
-1. đọc log;
-
-2. xác định lỗi;
-
-3. xác định lỗi có liên quan đến thay đổi vừa thực hiện hay không;
-
-4. sửa lỗi nếu nằm trong scope hợp lý;
-
-5. chạy lại validation;
-
-6. restart lại;
-
-7. health check lại.
-
-Không được tuyên bố app đã sẵn sàng test nếu health check chưa đạt.
-
-Nếu lỗi là blocker nằm ngoài scope hoặc không thể xử lý an toàn, báo cáo rõ:
-
-- command nào thất bại;
-
-- lỗi chính;
-
-- service nào chưa hoạt động;
-
-- phần nào vẫn hoạt động;
-
-- blocker còn lại.
-
----
-
-## 11. Không mở nhiều cửa sổ không cần thiết
-
-Khi restart development environment:
-
-- tránh mở nhiều terminal window;
-
-- tránh mở nhiều browser tab;
-
-- tránh spawn process mới mỗi iteration mà không cleanup process cũ;
-
-- tránh gây nhiễu desktop của user.
-
-Nếu cần chạy process nền, ưu tiên cách chạy ổn định và có thể quản lý PID/log.
-
----
-
-## 12. Không thay đổi workflow hiện có nếu không cần
-
-Trước khi tạo script mới, hãy kiểm tra repo đã có:
-
-- start script;
-
-- dev script;
-
-- restart script;
-
-- build script;
-
-- process manager;
-
-- health check;
-
-- PID management;
-
-- launcher.
-
-Nếu workflow hiện tại đã tốt, ưu tiên mở rộng hoặc sửa workflow đó thay vì tạo một hệ thống song song.
-
-Không phá vỡ command mà user đang sử dụng nếu không có lý do cần thiết.
-
----
-
-## 13. Ưu tiên tốc độ vòng lặp Development
-
-Mục tiêu là user có thể test thay đổi nhanh nhất có thể nhưng vẫn đủ an toàn.
-
-Không chạy tác vụ nặng không cần thiết sau mỗi chỉnh sửa nhỏ.
-
-Ví dụ không nên mặc định:
-
-`Code → full clean → full build → full test suite → package exe → installer → restart`
-
-cho một thay đổi UI nhỏ.
-
-Thay vào đó:
-
-`Code → targeted validation → restart/reload → health check`
-
-Với thay đổi lớn:
-
-`Code → tests/typecheck → build → restart frontend/backend → health check`
-
-Package `.exe` vẫn là bước riêng.
-
----
-
-## 14. Development mode là mặc định
-
-Trừ khi task nói rõ đang làm release hoặc production package, hãy mặc định đang ở:
+Unless the task explicitly concerns release, distribution, installer behavior, or production packaging, assume:
 
 `Development / Test Mode`
 
-Điều này có nghĩa:
+This means:
 
-- ưu tiên source runtime;
+- prefer running from source;
+- prefer development runtime;
+- prefer targeted validation;
+- use the least disruptive reload/restart mechanism;
+- do not package distribution artifacts by default;
+- leave the application ready for testing.
 
-- ưu tiên development build;
-
-- không package `.exe`;
-
-- giữ vòng lặp nhanh;
-
-- tự động đưa app về trạng thái test được.
-
----
-
-## 15. Sau mỗi task coding
-
-Trước khi kết thúc một task coding, agent phải cố gắng đảm bảo:
-
-- code đã được thay đổi đúng yêu cầu;
-
-- validation phù hợp đã chạy;
-
-- build đã chạy nếu cần;
-
-- frontend đang chạy phiên bản mới nhất;
-
-- backend đã restart nếu thay đổi yêu cầu;
-
-- không còn duplicate instance rõ ràng;
-
-- health check đạt;
-
-- app sẵn sàng cho user test.
-
-Báo cáo cuối task nên ngắn gọn và bao gồm:
-
-- thay đổi chính;
-
-- validation đã chạy;
-
-- có build hay không;
-
-- frontend đã restart/reload hay chưa;
-
-- backend có restart hay không;
-
-- health/status hiện tại;
-
-- blocker nếu còn.
+Do not turn routine development into a release pipeline.
 
 ---
 
-## 16. Quy tắc đóng gói cuối cùng
+## 4. Build and Package Are Different
 
-Không package `.exe` trừ khi:
+A **build** validates or prepares executable application code.
 
-- user nói `build exe`;
+A **package** creates a distributable artifact.
 
-- user nói `package`;
+### 4.1. Build
 
-- user nói `release`;
+A build may detect:
 
-- user yêu cầu test executable;
+- compile errors;
+- type errors;
+- bundling errors;
+- module/import errors;
+- dependency incompatibilities;
+- configuration problems;
+- production-only build failures;
+- frontend/backend integration issues.
 
-- task trực tiếp liên quan packaging;
+A build does not necessarily create an installer or executable distribution.
 
-- hoặc có lý do kỹ thuật bắt buộc.
+### 4.2. Package
 
-Nếu không có các điều kiện trên:
+Packaging may create artifacts such as:
 
-**không tạo** `**.exe**`**.**
+- `.exe`;
+- `.msi`;
+- `.dmg`;
+- `.app`;
+- `.apk`;
+- `.ipa`;
+- installer;
+- portable build;
+- release archive;
+- production distribution bundle;
+- container image;
+- deployable package.
 
-Build để kiểm tra code là được phép và được khuyến khích khi phù hợp.
+Do not treat `build` and `package` as synonyms.
 
 ---
 
-## Default Development Loop
+## 5. Do Not Package After Every Coding Task
 
-Mặc định sử dụng workflow:
+Routine development MUST NOT automatically trigger packaging.
 
-`Inspect current runtime`
+Do not automatically:
 
-→ `Implement change`
+- create installers;
+- build release archives;
+- create production executables;
+- run release pipelines;
+- rebuild distributable packages merely to test a normal code change.
 
-→ `Run targeted validation`
+Package only when:
 
-→ `Run build only when justified`
+- the user explicitly requests it;
+- the task concerns packaging or distribution;
+- packaged-runtime behavior must be tested;
+- installer behavior must be tested;
+- auto-update or release behavior changed;
+- a release/milestone requires it;
+- a documented technical requirement makes packaging necessary.
 
-→ `Restart/reload frontend`
+Otherwise, test from source or the normal development build.
 
-→ `Restart backend only when affected`
+---
 
-→ `Health check`
+## 6. Decide Whether a Build Is Needed
 
-→ `Fix startup/runtime issues if introduced`
+A full build is **not required after every small change**.
 
-→ `Leave application ready for user testing`
+Use the smallest validation level that gives sufficient confidence.
 
-Không package `.exe` trong workflow này.
+### 6.1. Build Often Not Required
+
+A full build MAY be skipped for narrow changes such as:
+
+- copy/text;
+- CSS;
+- spacing;
+- visual styling;
+- small icon changes;
+- isolated layout adjustments;
+- narrow frontend presentation changes;
+- very local logic changes when the development runtime already compiles them reliably.
+
+Typical flow:
+
+`Change → targeted validation → HMR/reload → test`
+
+### 6.2. Build Recommended or Required
+
+A build SHOULD be considered when changing:
+
+- types/interfaces;
+- dependencies;
+- package configuration;
+- bundler configuration;
+- environment handling;
+- module/import structure;
+- shared libraries;
+- API contracts;
+- backend compilation;
+- database integration;
+- routing/bootstrap architecture;
+- Electron/Tauri/native layer;
+- application startup;
+- production runtime behavior;
+- code that may fail only during compile/build.
+
+Typical flow:
+
+`Change → validate → build → apply latest runtime → health check`
+
+Do not package merely because a build was run.
+
+---
+
+## 7. Validation Strategy
+
+After coding, run validation proportional to the change.
+
+Possible checks:
+
+- targeted tests;
+- unit tests;
+- typecheck;
+- lint;
+- compile;
+- build;
+- integration tests;
+- smoke tests;
+- health checks;
+- runtime verification.
+
+Principles:
+
+1. Start with the smallest meaningful check.
+2. Broaden validation when risk is higher.
+3. Run mandatory project checks.
+4. Do not run expensive full suites mechanically when targeted checks are sufficient.
+5. Do not skip meaningful validation simply to save time.
+6. Fix failures caused by the current task.
+7. Report unrelated pre-existing failures instead of silently expanding scope.
+
+---
+
+# 8. Development Reload Strategy
+
+Use the **least disruptive mechanism that makes the latest code active and testable**.
+
+Priority:
+
+`HMR / Live Reload → Reload UI → Restart affected service → Restart whole app`
+
+The agent SHOULD choose the lowest level that reliably applies the change.
+
+---
+
+## 8.1. Level 1 — HMR / Live Reload
+
+Prefer HMR or live reload for ordinary frontend changes when supported and reliable.
+
+Typical examples:
+
+- CSS;
+- layout;
+- text;
+- icons;
+- frontend components;
+- many local frontend logic changes.
+
+Desired behavior:
+
+`Save code → HMR applies change → UI updates automatically`
+
+The user should not need to manually restart the application for ordinary frontend work.
+
+If HMR successfully applies the latest code, do not restart more of the application.
+
+---
+
+## 8.2. Level 2 — Reload UI
+
+Use a clean frontend/UI reload when:
+
+- HMR is unavailable;
+- HMR failed;
+- HMR preserved stale state;
+- initialization behavior needs testing;
+- cached frontend state is suspicious;
+- a clean page/app-shell load is required.
+
+Possible mechanisms:
+
+- `F5`;
+- `Ctrl+R`;
+- framework/runtime reload;
+- development-only `Reload UI` action;
+- browser refresh.
+
+A UI reload SHOULD:
+
+- reload the frontend;
+- avoid restarting the backend when unnecessary;
+- avoid rebuilding when unnecessary;
+- avoid restarting the whole application when unnecessary.
+
+For Tinix desktop applications, a development-only `Reload UI` action MAY be provided when useful.
+
+---
+
+## 8.3. Level 3 — Restart Affected Service
+
+Restart only the service whose runtime must load new code.
+
+Examples:
+
+### Restart backend when changes affect:
+
+- API code;
+- server logic;
+- backend configuration;
+- backend environment variables;
+- database integration;
+- backend dependency loading;
+- shared code consumed by backend runtime;
+- server bootstrap;
+- backend runtime state.
+
+### Restart frontend dev server when:
+
+- dev-server configuration changed;
+- bundler configuration changed;
+- environment variables were loaded only at startup;
+- HMR cannot apply the change;
+- frontend process is stale or unhealthy.
+
+Do not restart backend for a frontend-only change unless the project runtime actually requires it.
+
+---
+
+## 8.4. Level 4 — Restart Whole Application
+
+Restart the full application only when necessary.
+
+Typical triggers:
+
+- desktop main-process changes;
+- Electron/Tauri/native changes;
+- native modules;
+- startup logic;
+- launcher changes;
+- application bootstrap changes;
+- process-level configuration;
+- dependency loading that occurs only at startup;
+- runtime changes that cannot be applied with frontend/backend reload alone.
+
+Do not use full app restart as the default response to ordinary UI changes.
+
+---
+
+## 8.5. Core Reload Rule
+
+**Do not restart more of the application than necessary.**
+
+The objective is:
+
+- latest code active;
+- minimal interruption;
+- fast feedback;
+- reliable test state.
+
+---
+
+## 9. Manual Refresh Is a Fallback, Not the Primary Workflow
+
+The preferred user experience is automatic update through HMR/live reload.
+
+Manual refresh exists for recovery and clean-state verification.
+
+Recommended order:
+
+1. Automatic HMR/live reload.
+2. Manual `Reload UI`, `F5`, or `Ctrl+R`.
+3. Restart affected runtime.
+4. Restart whole application.
+
+The user SHOULD NOT need to press refresh after every normal frontend edit.
+
+---
+
+## 10. Preserve Test Context When Reasonable
+
+Fast iteration benefits from preserving useful state.
+
+HMR MAY preserve:
+
+- current screen;
+- selected item;
+- panel state;
+- form state;
+- navigation context.
+
+However, preserved state can hide initialization problems.
+
+Therefore:
+
+- use HMR for rapid iteration;
+- use clean UI reload when validating initialization;
+- use full restart when validating startup behavior.
+
+Do not assume HMR proves that a clean application launch works.
+
+---
+
+## 11. Restart Timing
+
+Do not restart after every tiny intermediate edit.
+
+During implementation:
+
+1. make the necessary edits;
+2. run relevant validation;
+3. apply/restart the affected runtime after the final meaningful change;
+4. verify the runtime;
+5. leave the app ready for user testing.
+
+An earlier restart is appropriate when needed for debugging.
+
+---
+
+## 12. Process Ownership and Duplicate Instances
+
+Before stopping or restarting a process, identify the correct project-owned process.
+
+Prefer evidence such as:
+
+- project-owned PID file;
+- command line;
+- working directory;
+- executable path;
+- process metadata;
+- runtime-specific ownership information;
+- port plus additional ownership evidence.
+
+A port number alone SHOULD NOT be treated as sufficient evidence when safer ownership information exists.
+
+Do not:
+
+- kill all Node processes;
+- kill all Python processes;
+- kill unrelated development servers;
+- terminate unrelated applications.
+
+Avoid:
+
+- duplicate frontend servers;
+- duplicate backend servers;
+- duplicate desktop app instances;
+- stale processes holding ports;
+- zombie processes;
+- testing against an old runtime.
+
+---
+
+## 13. Development Scripts
+
+Projects SHOULD provide simple, predictable development entry points when useful.
+
+Use the platform and stack that fit the project.
+
+Examples:
+
+### Windows
+
+- `.bat`
+- `.cmd`
+- `.ps1`
+- `.vbs`
+
+### Cross-platform / runtime-specific
+
+- package-manager scripts;
+- shell scripts;
+- task runners;
+- Makefile targets;
+- framework-native dev commands.
+
+Possible entry points:
+
+```text
+DEV_START
+DEV_STOP
+DEV_RESTART
+DEV_STATUS
+```
+
+or a single idempotent restart command.
+
+Do not create multiple overlapping scripts when the repository already has a reliable workflow.
+
+---
+
+## 14. Restart Script Requirements
+
+If a project provides a restart script, it SHOULD be safe to run repeatedly.
+
+A good restart workflow can:
+
+1. identify project-owned processes;
+2. stop only affected processes;
+3. wait for shutdown when necessary;
+4. release required ports/resources;
+5. start required services;
+6. avoid duplicate instances;
+7. preserve or write useful startup logs;
+8. verify startup;
+9. return a clear success/failure status.
+
+Prefer **idempotent** scripts.
+
+Running the same restart command twice SHOULD NOT leave duplicate runtimes.
+
+---
+
+## 15. Do Not Replace Existing Workflow Without Need
+
+Before adding a new development script or process manager, inspect whether the repository already has:
+
+- start command;
+- dev command;
+- restart command;
+- build command;
+- test command;
+- health check;
+- process manager;
+- PID management;
+- launcher;
+- framework-native HMR.
+
+If the existing workflow is reliable, extend or repair it rather than creating a parallel system.
+
+Do not break commands the user already relies on without a concrete reason.
+
+---
+
+## 16. Health Check After Restart
+
+A successful start command is not sufficient proof that the application is ready.
+
+After a runtime restart, verify the relevant runtime.
+
+### Frontend
+
+Possible checks:
+
+- dev server is listening;
+- expected frontend URL responds;
+- app window loads;
+- UI bundle loads;
+- no fatal startup error;
+- latest relevant code is active.
+
+### Backend / Service
+
+Possible checks:
+
+- process is alive;
+- expected endpoint responds;
+- health endpoint passes;
+- relevant API responds;
+- no crash loop;
+- no fatal startup exception.
+
+Prefer project-defined health endpoints such as:
+
+```text
+/health
+/api/health
+/ready
+/status
+```
+
+when available.
+
+### Desktop / Native App
+
+Possible checks:
+
+- app process starts;
+- application window opens;
+- required local services are healthy;
+- UI loads;
+- startup logs contain no fatal error.
+
+---
+
+## 17. Verify That the Latest Code Is Running
+
+A runtime can be healthy while still running stale code.
+
+When relevant, verify freshness using the strongest available evidence:
+
+- HMR confirmation;
+- process start time after the final change;
+- build/revision ID;
+- version/fingerprint;
+- changed behavior;
+- runtime log;
+- development server rebuild confirmation.
+
+Do not rely only on:
+
+- browser refresh;
+- successful build;
+- process existence.
+
+The goal is to verify that the user is testing the current implementation.
+
+---
+
+## 18. Startup or Restart Failure
+
+If restart/startup fails:
+
+1. inspect the relevant log or error;
+2. determine whether the failure is related to the current task;
+3. fix it when within scope;
+4. rerun relevant validation;
+5. retry the minimum required runtime action;
+6. rerun the health check.
+
+Do not report the app as ready to test if required verification failed.
+
+If blocked by an unrelated or unsafe issue, report:
+
+- failed command/action;
+- main error;
+- affected runtime;
+- what still works;
+- remaining blocker.
+
+Do not hide a failed restart behind a successful build.
+
+---
+
+## 19. Avoid Unnecessary Desktop Disruption
+
+When developing local applications:
+
+- avoid opening duplicate terminal windows;
+- avoid opening duplicate browser tabs;
+- avoid spawning new windows every iteration;
+- clean up project-owned stale processes;
+- prefer background processes when appropriate;
+- preserve the user's current testing context when possible.
+
+Development automation SHOULD make testing easier, not create desktop noise.
+
+---
+
+## 20. Long-Running and Data-Sensitive Work
+
+Do not automatically interrupt important running work merely to restart a runtime.
+
+Examples:
+
+- export;
+- render;
+- batch processing;
+- upload;
+- migration;
+- transcoding;
+- long-running user job;
+- data mutation.
+
+If restart would interrupt data-sensitive work:
+
+- follow the project-specific policy;
+- wait for a safe point when appropriate;
+- use a restart mechanism that preserves work if available;
+- report the conflict if it cannot be resolved safely.
+
+A project MAY explicitly authorize interruption for specific development-only jobs, but that authorization should be documented in the Project Runtime Profile or another project-specific rule.
+
+---
+
+## 21. Environment and Configuration Changes
+
+Environment/config changes often require stronger runtime actions than ordinary code changes.
+
+When changing:
+
+- `.env`;
+- runtime environment variables;
+- bundler configuration;
+- server configuration;
+- native configuration;
+- dependency resolution;
+- process startup settings;
+
+determine which processes read those values only at startup.
+
+Restart only those affected processes.
+
+Do not assume HMR reloads startup-time configuration.
+
+---
+
+## 22. Development-Only Controls
+
+A project MAY expose development-only controls such as:
+
+```text
+Reload UI
+Restart Backend
+Restart App
+Open Logs
+Show Runtime Status
+```
+
+These controls can improve manual testing.
+
+Rules:
+
+- development controls MUST NOT appear unintentionally in production;
+- `Reload UI` SHOULD be the least disruptive option;
+- destructive or high-impact developer actions SHOULD be clearly distinguished;
+- developer controls SHOULD reuse the project's normal restart mechanisms rather than invent a second runtime path.
+
+---
+
+## 23. Optimize the Development Loop
+
+The goal is fast feedback without sacrificing correctness.
+
+Avoid the default workflow:
+
+`Change → clean everything → full test suite → full build → package → installer → full restart`
+
+for a small UI change.
+
+Prefer:
+
+`Change → targeted validation → HMR/reload → verify`
+
+For larger changes:
+
+`Change → tests/typecheck → build → restart affected runtime → health check`
+
+For startup/native/package changes:
+
+`Change → relevant validation/build → restart full app or package when justified → verify`
+
+---
+
+## 24. Packaging and Release
+
+Packaging is a separate phase from normal development.
+
+Package when:
+
+- explicitly requested;
+- validating packaged behavior;
+- preparing a release;
+- testing installer/distribution;
+- changing packaging, updater, signing, native distribution, or deployment behavior.
+
+For release work, additional checks MAY include:
+
+- clean build;
+- full test suite;
+- package generation;
+- installer test;
+- upgrade test;
+- signing;
+- release notes;
+- version validation;
+- deployment verification.
+
+Do not impose release-level work on ordinary development iterations.
+
+---
+
+## 25. After Each Coding Task
+
+Before reporting a coding task complete, ensure when applicable:
+
+- requested change is implemented;
+- relevant validation passed;
+- build ran if justified;
+- latest frontend code is active;
+- affected backend/service was restarted if needed;
+- whole app was restarted only if needed;
+- duplicate project runtimes are not obviously present;
+- relevant health verification passed;
+- application is ready for user testing.
+
+The final report SHOULD stay concise.
+
+Include when relevant:
+
+- what changed;
+- validation performed;
+- whether build ran;
+- reload/restart action;
+- runtime/health status;
+- blocker or known limitation.
+
+---
+
+## 26. Default Decision Matrix
+
+Use this as a default guide.
+
+| Change type | Validate | Build | Runtime action | Package |
+|---|---|---|---|---|
+| Text / CSS / spacing | Targeted check | Usually no | HMR | No |
+| Normal frontend component | Targeted test/typecheck as relevant | Usually no | HMR → Reload UI if needed | No |
+| Frontend env/dev-server config | Relevant check | Maybe | Restart frontend dev server | No |
+| Backend/API logic | Targeted tests | Maybe | Restart backend/service | No |
+| Shared frontend/backend code | Tests/typecheck | Often useful | Restart affected runtimes | No |
+| Dependency change | Typecheck/tests | Usually yes | Restart affected runtimes | No |
+| Build/bundler config | Relevant checks | Yes | Restart affected runtime | No |
+| Desktop main/native process | Relevant tests/build | Usually yes | Restart whole app | No |
+| Startup/bootstrap | Relevant tests/build | Usually yes | Restart whole app/service | No |
+| Packaging/installer/updater | Release-relevant checks | Yes | As required | Yes |
+| Release | Full required checks | Yes | Clean runtime verification | Yes |
+
+This matrix is guidance. Project-specific runtime behavior takes precedence.
+
+---
+
+## 27. Default Development Loop
+
+Use this default loop:
+
+```text
+Inspect current runtime
+↓
+Implement change
+↓
+Run targeted validation
+↓
+Run build only when justified
+↓
+Apply latest code using the least disruptive mechanism
+    HMR
+    ↓ if insufficient
+    Reload UI
+    ↓ if insufficient
+    Restart affected service
+    ↓ if required
+    Restart whole app
+↓
+Verify latest code is active
+↓
+Health check relevant runtime
+↓
+Fix introduced runtime/startup issues if necessary
+↓
+Leave application ready for user testing
+```
+
+Packaging is **not part of this default loop**.
+
+---
+
+## 28. Core Principle
+
+**Use the smallest action that reliably makes the latest code testable.**
+
+Prefer:
+
+`HMR → Reload UI → Restart affected service → Restart whole app → Package only when justified`
+
+Do not restart, rebuild, or package more of the project than necessary.

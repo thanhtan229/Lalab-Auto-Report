@@ -161,6 +161,140 @@
         </Setter>
     </Style>
 
+    <!-- BUTTON: INFO / LIGHT BLUE (Soft Blue with Navy Text) -->
+    <Style x:Key="Tinix.Button.Info" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Info.Bg}"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Info}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Info.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Info.Hover}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Info}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Info.Active}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Info}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BUTTON: ICON (Small square button for inline actions like Edit) -->
+    <Style x:Key="Tinix.Button.Icon" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Primary.Subtle}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Primary.Focus}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary.Active}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BUTTON: ICON DANGER (Small square button for delete actions) -->
+    <Style x:Key="Tinix.Button.Icon.Danger" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Danger.Bg}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Danger.Border}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Danger}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Danger.Border}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Danger}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- BUTTON: SIDEBAR NAVIGATION ITEM -->
     <Style x:Key="Tinix.Button.SidebarNav" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -191,6 +325,163 @@
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- RADIO BUTTON: SIDEBAR NAVIGATION TAB -->
+    <Style x:Key="Tinix.Sidebar.NavTab" TargetType="RadioButton">
+        <Setter Property="Height" Value="46"/>
+        <Setter Property="Margin" Value="0,0,0,6"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="navBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="8,0,12,0"
+                            SnapsToDevicePixels="True">
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/> <!-- Left active indicator bar -->
+                                <ColumnDefinition Width="Auto"/> <!-- Icon container -->
+                                <ColumnDefinition Width="*"/>    <!-- Title text -->
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 1. Left active accent bar (Tinix Orange) -->
+                            <Border x:Name="activeIndicator"
+                                    Grid.Column="0"
+                                    Width="4"
+                                    Height="22"
+                                    Background="{StaticResource Tinix.Color.Primary}"
+                                    CornerRadius="2"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,0,8,0"
+                                    Opacity="0"/>
+
+                            <!-- 2. Icon Badge / Container -->
+                            <Border x:Name="iconBox"
+                                    Grid.Column="1"
+                                    Width="28"
+                                    Height="28"
+                                    CornerRadius="{StaticResource Tinix.Radius.Sm}"
+                                    Background="Transparent"
+                                    Margin="0,0,10,0">
+                                <TextBlock x:Name="iconText"
+                                           Text="{TemplateBinding Tag}"
+                                           FontSize="15"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+
+                            <!-- 3. Title Text -->
+                            <TextBlock x:Name="labelText"
+                                       Grid.Column="2"
+                                       Text="{TemplateBinding Content}"
+                                       FontFamily="{StaticResource Tinix.Font.UI}"
+                                       FontSize="{StaticResource Tinix.FontSize.Small}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource Tinix.Color.Text.Secondary}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Hover (Inactive) -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter TargetName="labelText" Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+                            <Setter TargetName="iconBox" Property="Background" Value="#E5E1D8"/>
+                        </MultiTrigger>
+
+                        <!-- Pressed -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource Tinix.Color.Border}"/>
+                        </Trigger>
+
+                        <!-- Checked / Active Tab (Elevated White Card with Orange Accent) -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="navBorder" Property="Background" Value="{StaticResource Tinix.Color.Bg.Surface}"/>
+                            <Setter TargetName="navBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Border}"/>
+                            <Setter TargetName="activeIndicator" Property="Opacity" Value="1"/>
+                            <Setter TargetName="iconBox" Property="Background" Value="{StaticResource Tinix.Color.Primary.Subtle}"/>
+                            <Setter TargetName="labelText" Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+                            <Setter TargetName="labelText" Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="navBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#706860" BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.10"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- RADIO BUTTON: FILTER PILL -->
+    <Style x:Key="Tinix.FilterPill" TargetType="RadioButton">
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Bg.Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="pillBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Full}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Hover -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+                        </MultiTrigger>
+
+                        <!-- Checked / Active Pill -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="pillBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="{StaticResource TinixColorPrimaryRaw}" BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.25"/>
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -232,6 +523,17 @@
             </Setter.Value>
         </Setter>
     </Style>
+    
+    <!-- COMBOBOX: STANDARD -->
+    <Style x:Key="Tinix.ComboBox.Standard" TargetType="ComboBox">
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <Style TargetType="ComboBox" BasedOn="{StaticResource Tinix.ComboBox.Standard}"/>
 
     <!-- CARD CONTAINER -->
     <Style x:Key="Tinix.Card" TargetType="Border">
@@ -282,5 +584,95 @@
         <Setter Property="CornerRadius" Value="{StaticResource Tinix.Radius.Full}"/>
         <Setter Property="Padding" Value="10,3"/>
     </Style>
+
+    <!-- ==========================================
+         TAB CONTROL & TAB ITEM (TINIX SLEEK TABS)
+         ========================================== -->
+    <Style x:Key="Tinix.TabItem" TargetType="TabItem">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+        <Setter Property="Padding" Value="18,10"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="tabBorder"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0,0,0,3"
+                            CornerRadius="6,6,0,0"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="headerContent"
+                                          ContentSource="Header"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Hover -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsSelected" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="tabBorder" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+                        </MultiTrigger>
+
+                        <!-- Selected / Active Tab -->
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="tabBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter TargetName="tabBorder" Property="Background" Value="{StaticResource Tinix.Color.Primary.Subtle}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Tinix.TabControl" TargetType="TabControl">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Tab Header Row with subtle bottom divider line -->
+                        <Border Grid.Row="0"
+                                BorderBrush="{StaticResource Tinix.Color.Border.Subtle}"
+                                BorderThickness="0,0,0,1"
+                                Margin="0,0,0,14"
+                                SnapsToDevicePixels="True">
+                            <TabPanel IsItemsHost="True"
+                                      VerticalAlignment="Bottom"/>
+                        </Border>
+
+                        <!-- Tab Content Body -->
+                        <Border Grid.Row="1"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter ContentSource="SelectedContent"/>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TabControl" BasedOn="{StaticResource Tinix.TabControl}"/>
+    <Style TargetType="TabItem" BasedOn="{StaticResource Tinix.TabItem}"/>
 
 </ResourceDictionary>

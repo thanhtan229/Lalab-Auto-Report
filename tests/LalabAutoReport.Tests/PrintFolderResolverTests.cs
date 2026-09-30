@@ -18,12 +18,27 @@ public class PrintFolderResolverTests
     };
 
     [Fact]
-    public void Scenario1_NoRetouchFolder_ShouldReturn_NoPrintFolder()
+    public void Scenario1_DirectImagesInProductFolder_ShouldResolve_ProductFolderItself()
     {
         using var fixture = new TestFileSystemFixture();
         string specDir = fixture.CreateDirectory(@"2026-09-28\Van An\13x18 in");
         fixture.CreateFile(@"2026-09-28\Van An\13x18 in\img1.jpg");
         fixture.CreateFile(@"2026-09-28\Van An\13x18 in\img2.jpg");
+
+        var resolver = new PrintFolderResolver(_fileSystem);
+        var result = resolver.ResolvePrintFolder(specDir, fixture.RootPath, _supportedExts);
+
+        result.Status.Should().Be(PrintFolderResolutionStatus.Resolved);
+        result.SelectedPrintFolderFullPath.Should().Be(specDir);
+        result.PrintCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Scenario1b_NoImagesAnywhere_ShouldReturn_NoPrintFolder()
+    {
+        using var fixture = new TestFileSystemFixture();
+        string specDir = fixture.CreateDirectory(@"2026-09-28\Van An\13x18 in");
+        fixture.CreateFile(@"2026-09-28\Van An\13x18 in\notes.txt");
 
         var resolver = new PrintFolderResolver(_fileSystem);
         var result = resolver.ResolvePrintFolder(specDir, fixture.RootPath, _supportedExts);

@@ -6,7 +6,16 @@
 >
 > Primary platform: **Windows desktop**
 >
-> Primary purpose: Automatically scan photo-print job folders, identify customers and print specifications, compare source vs final print counts, resolve customer aliases, calculate bills, and generate daily/monthly reports without repeatedly browsing folders manually.
+> Primary purpose: Automatically scan photo-print job folders, identify customers and print specifications, resolve customer aliases, calculate bills, and generate daily/monthly reports without repeatedly browsing folders manually.
+>
+> ⚠️ **NOTE: V2 UPGRADE SPECIFICATION IN EFFECT**
+> This document describes the original V1 baseline. The system has been upgraded to **V2** based on the latest business requirements:
+> - **Multi-Order Hierarchy:** Supports `Date -> Customer -> Order -> Product` (Explicit) alongside legacy `Date -> Customer -> Product` (Implicit).
+> - **Final Print Folder Sole Source:** Bill quantity is taken directly from the final print folder (`BillQuantity = PrintCount`). Source vs. Print comparison and mismatch warnings are eliminated.
+> - **Product Architecture:** Organised into `Product Family -> Product Variant -> Product Specific Alias`. Family aliases (`ab`, `alb`, `album`) are shared across all sizes.
+> - **Size Normalizer:** Orientation-independent canonical size normalization (`30x20` = `20x30` -> `min x max`).
+> - **Album Pricing:** Base sheets + extra sheets, sheetCount = file count (no cover deduction).
+> See `ARCHITECTURE.md` and `PLAN_lalab_V2.md` for full details.
 
 ---
 
