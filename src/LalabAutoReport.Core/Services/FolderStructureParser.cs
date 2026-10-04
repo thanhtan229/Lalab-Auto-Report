@@ -69,7 +69,7 @@ public class FolderStructureParser : IFolderStructureParser
         if (!_fileSystem.DirectoryExists(dateFolderPath))
         {
             _logger?.LogWarning("Date folder '{Path}' does not exist.", dateFolderPath);
-            return Array.Empty<DiscoveredOrder>();
+            throw new System.IO.DirectoryNotFoundException($"Không đọc được thư mục ngày: {dateFolderPath}");
         }
 
         var orders = new List<DiscoveredOrder>();
@@ -77,12 +77,19 @@ public class FolderStructureParser : IFolderStructureParser
         {
             foreach (var customerDir in _fileSystem.EnumerateDirectories(dateFolderPath))
             {
-                orders.AddRange(DiscoverOrdersInFolder(rootFolder, customerDir, dateString));
+                try { orders.AddRange(DiscoverOrdersInFolder(rootFolder, customerDir, dateString)); }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+                {
+                    orders.Add(new DiscoveredOrder(dateString, _fileSystem.GetFileName(customerDir), customerDir,
+                        _fileSystem.GetRelativePath(rootFolder, customerDir), Array.Empty<DiscoveredSpecification>(),
+                        DiscoveryError: $"{customerDir}: {ex.Message}"));
+                }
             }
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to enumerate customer folders in date '{DatePath}'", dateFolderPath);
+            throw;
         }
 
         return orders.OrderBy(o => o.OriginalCustomerFolderName, StringComparer.OrdinalIgnoreCase)
@@ -94,7 +101,7 @@ public class FolderStructureParser : IFolderStructureParser
     {
         if (!_fileSystem.DirectoryExists(folderPath))
         {
-            return Array.Empty<DiscoveredOrder>();
+            throw new System.IO.DirectoryNotFoundException($"Không đọc được thư mục khách: {folderPath}");
         }
 
         string customerFolderName = _fileSystem.GetFileName(folderPath);
@@ -168,7 +175,7 @@ public class FolderStructureParser : IFolderStructureParser
                             isExplicitOrder = true;
                         }
                     }
-                    catch { }
+                    catch { throw; }
                 }
             }
 
@@ -425,7 +432,7 @@ public class FolderStructureParser : IFolderStructureParser
                             isExplicitOrder = true;
                         }
                     }
-                    catch { }
+                    catch { throw; }
                 }
             }
 
@@ -535,6 +542,7 @@ public class FolderStructureParser : IFolderStructureParser
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Failed to enumerate specifications in '{Folder}'", folderPath);
+            throw;
         }
 
         return specs.OrderBy(s => s.FolderName, StringComparer.OrdinalIgnoreCase).ToList();

@@ -1,0 +1,18 @@
+{
+  "createdUtc": "2026-10-02T13:13:18.379891+00:00",
+  "mode": "read-only aggregate inventory; no automatic historical repair",
+  "integrityCheck": [
+    "ok"
+  ],
+  "foreignKeyViolationCount": 0,
+  "schemaVersion": 21,
+  "orderCount": 18,
+  "knownRootMissingCount": 0,
+  "legacyUnassignedRootCount": 0,
+  "duplicateIdentityGroupCount": 0,
+  "sameRelativePathAcrossRootsGroupCount": 0,
+  "customerBillCount": 36,
+  "pendingOperationCount": 0,
+  "reconciliationRequired": true,
+  "caution": "No inventory can reconstruct a physical order previously flattened into another order; historical provenance needs human evidence."
+}

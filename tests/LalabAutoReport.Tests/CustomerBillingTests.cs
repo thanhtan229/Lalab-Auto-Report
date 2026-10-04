@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using FluentAssertions;
 using LalabAutoReport.Core.Domain;
 using LalabAutoReport.Core.Interfaces;
@@ -87,6 +88,68 @@ public class CustomerBillingTests : IDisposable
         );
 
         _jpegExporter = new WpfJpegBillExporter(_settingsRepo);
+    }
+
+    [Theory]
+    [InlineData(BillType.Customer, CustomerBillStatus.Locked)]
+    [InlineData(BillType.Guest, CustomerBillStatus.Exported)]
+    public async Task ProductionHistory_CannotRewriteOrDeleteWithoutReopen(BillType type, CustomerBillStatus status)
+    {
+        var bill = new CustomerBill { BillNumber = "HISTORY", BillType = type, Status = status,
+            CustomerNameSnapshot = "Snapshot", GrandTotal = 5000, ProductSubtotal = 5000 };
+        await _customerBillRepo.SaveBillAsync(bill);
+        var stale = (await _customerBillRepo.GetByIdAsync(bill.Id))!;
+        stale.GrandTotal = 9999;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _customerBillRepo.SaveBillAsync(stale));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _customerBillRepo.DeleteBillAsync(bill.Id));
+        await _customerBillRepo.DeleteDraftBillAsync(bill.Id);
+        (await _customerBillRepo.GetByIdAsync(bill.Id))!.GrandTotal.Should().Be(5000);
+        await _customerBillingService.ReopenBillAsync(bill.Id, "Correct approved amount");
+        var reopened = (await _customerBillRepo.GetByIdAsync(bill.Id))!;
+        reopened.GrandTotal = 6000;
+        await _customerBillRepo.SaveBillAsync(reopened);
+        (await _customerBillRepo.GetByIdAsync(bill.Id))!.GrandTotal.Should().Be(6000);
+    }
+
+    [Fact]
+    public async Task ProductionHistory_ExportMetadataDoesNotUndoConcurrentPayment()
+    {
+        var bill = new CustomerBill { BillNumber = "EXPORT", Status = CustomerBillStatus.Locked,
+            CustomerNameSnapshot = "Snapshot", GrandTotal = 5000 };
+        await _customerBillRepo.SaveBillAsync(bill);
+        await _customerBillRepo.SetPaymentStatusAsync(bill.Id, true);
+        bill.Status = CustomerBillStatus.Exported;
+        bill.ExportFilePath = "test.jpg";
+        await _customerBillRepo.SaveBillAsync(bill);
+        var saved = (await _customerBillRepo.GetByIdAsync(bill.Id))!;
+        saved.IsPaid.Should().BeTrue();
+        saved.GrandTotal.Should().Be(5000);
+        saved.Status.Should().Be(CustomerBillStatus.Exported);
+    }
+
+    [Fact]
+    public async Task ProductionVerification_FilesChangedAfterReviewCannotLockStaleDraft()
+    {
+        var customer = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Fresh Verify" });
+        string folder = Path.Combine(_tempRoot, "2026-10-02", "Fresh Verify", "13x18 in");
+        CreateDummyFiles(folder, 2);
+        await _scanService.ScanDateAsync("2026-10-02");
+        var draft = (await _customerBillingService.BuildOrRefreshDraftAsync(customer.Id)).Draft;
+        File.WriteAllText(Path.Combine(folder, "new.jpg"), "");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _customerBillingService.LockBillAsync(draft));
+        (await _customerBillRepo.GetByIdAsync(draft.Id))!.Status.Should().Be(CustomerBillStatus.Draft);
+        var reviewed = (await _customerBillingService.BuildOrRefreshDraftAsync(customer.Id)).Draft;
+        reviewed.Lines[0].BilledQuantity = 4;
+        reviewed.Lines[0].QuantityOverrideReason = "Approved adjustment";
+        await _customerBillingService.LockBillAsync(reviewed);
+        (await _customerBillRepo.GetByIdAsync(reviewed.Id))!.Lines[0].BilledQuantity.Should().Be(4);
+    }
+
+    [Fact]
+    public void ProductionCloudLink_DoesNotExposeLanToken()
+    {
+        MobileAccessLink.Create("https://cloud.example", "private-lan-token", true).Should().Be("https://cloud.example/");
+        MobileAccessLink.Create("http://lan:5050", "private-lan-token", false).Should().Contain("?auth=private-lan-token");
     }
 
     public void Dispose()
@@ -844,15 +907,31 @@ public class CustomerBillingTests : IDisposable
         // 5. User adds a new file to the folder on disk: 04.jpg
         File.WriteAllText(Path.Combine(orderDir, "04.jpg"), "fake");
 
-        // 6. Rescan order (Cách 1: Tự động cập nhật thẳng vào CustomerBill đã lưu)
+        // 6. Rescan order: Must detect FilesystemChangedAfterLock and preserve the locked snapshot!
         var rescanned = await _scanService.ScanOrderAsync($"{date}\\Chị Lan");
         rescanned.Should().NotBeNull();
-        rescanned!.Status.Should().Be(OrderStatus.Billed);
-        rescanned.Items[0].PrintCount.Should().Be(4);
+        rescanned!.Items[0].PrintCount.Should().Be(4);
+        rescanned.FilesystemChangedAfterLock.Should().BeTrue();
+
+        var billAfterRescan = await _customerBillRepo.GetByIdAsync(lockedBill.Id);
+        billAfterRescan.Should().NotBeNull();
+        billAfterRescan!.Lines[0].BilledQuantity.Should().Be(3); // Preserved snapshot!
+        billAfterRescan.Status.Should().Be(CustomerBillStatus.Locked);
+
+        var dbOrderAfterRescan = await _orderRepo.GetOrderByIdAsync(order.Id);
+        dbOrderAfterRescan!.FilesystemChangedAfterLock.Should().BeTrue();
+
+        // 7. When user explicitly chooses to update (reopening and syncing):
+        await _customerBillingService.ReopenBillAsync(lockedBill.Id, "User confirmed update");
+        await _customerBillingService.SyncBillWithScannedOrderAsync(rescanned);
+        await _orderRepo.SetFilesystemChangedAfterLockAsync(order.Id, false);
 
         var updatedBill = await _customerBillRepo.GetByIdAsync(lockedBill.Id);
         updatedBill.Should().NotBeNull();
         updatedBill!.Lines[0].BilledQuantity.Should().Be(4);
+
+        var dbOrderAfterUpdate = await _orderRepo.GetOrderByIdAsync(order.Id);
+        dbOrderAfterUpdate!.FilesystemChangedAfterLock.Should().BeFalse();
     }
 
     [Fact]
@@ -1096,11 +1175,26 @@ public class CustomerBillingTests : IDisposable
         string exportedPath = await _jpegExporter.ExportBillToJpegAsync(locked);
         await _customerBillingService.RecordBillExportedAsync(locked.Id, exportedPath);
 
-        // 3. Open locked/exported bill in ViewModel
+        // 3. Open locked/exported bill in ViewModel (no changes -> MỞ XEM BILL)
         var vmExported = new CustomerBillReviewViewModel(locked, _customerBillingService, _jpegExporter, null, null, null, _settingsRepo);
         vmExported.CanViewExportedBill.Should().BeTrue();
-        vmExported.ExportButtonText.Should().Be("XUẤT LẠI BILL");
+        vmExported.IsOpenOnlyState.Should().BeTrue();
+        vmExported.ExportButtonText.Should().Be("MỞ XEM BILL");
+        vmExported.ExportButtonIcon.Should().Be("🖼️ ");
         vmExported.ViewBillToolTip.Should().ContainEquivalentOf("mở xem");
+
+        // 3b. Modify quantity -> transitions to XUẤT LẠI BILL
+        vmExported.Orders[0].Lines[0].BilledQuantity = 99;
+        vmExported.HasChanges.Should().BeTrue();
+        vmExported.IsOpenOnlyState.Should().BeFalse();
+        vmExported.ExportButtonText.Should().Be("XUẤT LẠI BILL");
+        vmExported.ExportButtonIcon.Should().Be("⚡ ");
+
+        // 3c. Revert quantity back to 5 -> transitions back to MỞ XEM BILL
+        vmExported.Orders[0].Lines[0].BilledQuantity = 5;
+        vmExported.HasChanges.Should().BeFalse();
+        vmExported.IsOpenOnlyState.Should().BeTrue();
+        vmExported.ExportButtonText.Should().Be("MỞ XEM BILL");
 
         // 4. Test fallback resolution: simulate old bill without export_file_path in DB, but JPEG exists on disk
         locked.ExportFilePath = null;
@@ -1125,7 +1219,9 @@ public class CustomerBillingTests : IDisposable
         billBefore.Should().NotBeNull();
         billBefore!.Orders.Should().HaveCount(1);
 
-        // Action: Detach order
+        // Historical snapshot cannot detach until explicitly reopened.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _customerBillingService.DetachOrderFromCustomerBillAsync(order.Id));
+        await _customerBillingService.ReopenBillAsync(lockedBill.Id, "Approved detach");
         await _customerBillingService.DetachOrderFromCustomerBillAsync(order.Id);
 
         // Assert: Since this bill only had 1 order, detaching it leaves 0 orders -> bill is completely deleted
@@ -1158,7 +1254,8 @@ public class CustomerBillingTests : IDisposable
         var lockedBill = await _customerBillingService.LockBillAsync(draftResult.Draft);
         lockedBill.GrandTotal.Should().Be(35000);
 
-        // Action: Detach order2
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _customerBillingService.DetachOrderFromCustomerBillAsync(order2.Id));
+        await _customerBillingService.ReopenBillAsync(lockedBill.Id, "Approved detach");
         await _customerBillingService.DetachOrderFromCustomerBillAsync(order2.Id);
 
         // Assert: Bill remains with order1 only, total is 15,000
@@ -1357,6 +1454,296 @@ public class CustomerBillingTests : IDisposable
             {
                 try { Directory.Delete(artifactDir, true); } catch { }
             }
+        }
+    }
+
+    [Fact]
+    public async Task ExportBillToJpegAsync_WithCustomerNamedOrder_RendersOrderSubtotalCorrectly()
+    {
+        string artifactDir = Path.Combine(Path.GetTempPath(), "LalabExportTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(artifactDir);
+
+        try
+        {
+            var bill = new CustomerBill
+            {
+                BillNumber = "DH-260929-007",
+                CustomerNameSnapshot = "Quang Studio",
+                PeriodStart = "2026-09-29",
+                PeriodEnd = "2026-09-29",
+                ProductSubtotal = 1140000,
+                GrandTotal = 1140000,
+                Orders = new List<CustomerBillOrder>
+                {
+                    new()
+                    {
+                        OrderId = 1,
+                        OrderCodeSnapshot = "DH-260929-007",
+                        OrderNameSnapshot = "Quang Studio",
+                        OrderDateSnapshot = "2026-09-29",
+                        IsIncluded = true,
+                        Subtotal = 1140000,
+                        Lines = new List<CustomerBillLine>
+                        {
+                            new() { ProductNameSnapshot = "13x18 in", BilledQuantity = 10, BilledUnitPrice = 5000, LineTotal = 50000, IsIncluded = true },
+                            new() { ProductNameSnapshot = "15x21 in", BilledQuantity = 3, BilledUnitPrice = 10000, LineTotal = 30000, IsIncluded = true },
+                            new() { ProductNameSnapshot = "20x30", BilledQuantity = 12, BilledUnitPrice = 15000, LineTotal = 180000, IsIncluded = true },
+                            new() { ProductNameSnapshot = "40x60 TG", BilledQuantity = 5, BilledUnitPrice = 80000, LineTotal = 400000, IsIncluded = true },
+                            new() { ProductNameSnapshot = "Tranh Mica 50x75", BilledQuantity = 4, BilledUnitPrice = 120000, LineTotal = 480000, IsIncluded = true },
+                        }
+                    }
+                }
+            };
+
+            var pages = WpfJpegBillExporter.PaginateBill(bill);
+            pages.Should().HaveCount(1);
+            pages[0].Orders[0].ShowSubtotalOnThisPage.Should().BeTrue();
+
+            string primaryPath = await _jpegExporter.ExportBillToJpegAsync(bill, artifactDir);
+            File.Exists(primaryPath).Should().BeTrue();
+
+            var bytes = File.ReadAllBytes(primaryPath);
+            bytes.Length.Should().BeGreaterThan(5000);
+            bytes[0].Should().Be(0xFF);
+            bytes[1].Should().Be(0xD8);
+        }
+        finally
+        {
+            if (Directory.Exists(artifactDir))
+            {
+                try { Directory.Delete(artifactDir, true); } catch { }
+            }
+        }
+    }
+
+
+    [Fact]
+    public async Task CustomerBillReviewViewModel_ExportShippingLabelAsync_ExportsAndAutoOpensWithoutModal()
+    {
+        string fakeLabelPath = Path.Combine(_tempRoot, "test_label.png");
+        File.WriteAllText(fakeLabelPath, "fake image");
+
+        var dummyExporter = new DummyShippingLabelExporter { ResultPath = fakeLabelPath };
+        var draft = new CustomerBill
+        {
+            BillNumber = "BILL-20261001-0001",
+            CustomerNameSnapshot = "Khách Hàng Test Tem",
+            ShippingAddressSnapshot = "123 Đường Test"
+        };
+
+        await _customerBillRepo.SaveBillAsync(draft);
+        var vm = new CustomerBillReviewViewModel(
+            draft,
+            _customerBillingService,
+            _jpegExporter,
+            null,
+            null,
+            null,
+            _settingsRepo,
+            null,
+            _customerBillRepo,
+            dummyExporter
+        );
+
+        // Act - should complete smoothly without modal confirmation dialog
+        await vm.ExportShippingLabelAsync();
+
+        // Assert
+        dummyExporter.ExportCalled.Should().BeTrue();
+        vm.StatusMessage.Should().Contain("Đã xuất tem dán");
+        vm.StatusMessage.Should().Contain("Clipboard");
+        vm.IsBusy.Should().BeFalse();
+    }
+
+    private class DummyShippingLabelExporter : IShippingLabelExporter
+    {
+        public bool ExportCalled { get; private set; }
+        public string ResultPath { get; set; } = string.Empty;
+
+        public Task<string> ExportShippingLabelImageAsync(CustomerBill bill, string? destinationPath = null, CancellationToken cancellationToken = default)
+        {
+            ExportCalled = true;
+            return Task.FromResult(ResultPath);
+        }
+
+        public Task PrintShippingLabelAsync(CustomerBill bill, bool silent = false, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<string> ExportOrderShippingLabelImageAsync(Order order, string? destinationPath = null, CancellationToken cancellationToken = default)
+        {
+            ExportCalled = true;
+            return Task.FromResult(ResultPath);
+        }
+
+        public Task PrintOrderShippingLabelAsync(Order order, bool silent = false, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task PrintTestSampleLabelAsync(string? printerName = null, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task CustomerBillReviewViewModel_SmartExportButton_OpensOldBillWhenNoChanges_AndReexportsWhenChangedOrForced()
+    {
+        var customer = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Smart Button Test" });
+        string folder = Path.Combine(_tempRoot, "2026-09-29", "Smart Button Test", "In 13x18", "final");
+        CreateDummyFiles(folder, 4);
+        await _scanService.ScanDateAsync("2026-09-29");
+
+        var draftResult = await _customerBillingService.BuildOrRefreshDraftAsync(customer.Id);
+        var locked = await _customerBillingService.LockBillAsync(draftResult.Draft);
+        string exportedPath = await _jpegExporter.ExportBillToJpegAsync(locked);
+        await _customerBillingService.RecordBillExportedAsync(locked.Id, exportedPath);
+
+        int exportCount = 0;
+        var spyExporter = new SpyJpegExporter(_jpegExporter, () => exportCount++);
+
+        var vm = new CustomerBillReviewViewModel(locked, _customerBillingService, spyExporter, null, null, null, _settingsRepo);
+        vm.CustomFileOpener = _ => { };
+        vm.CustomPreviewOpener = (_, _) => { };
+        vm.IsOpenOnlyState.Should().BeTrue();
+        vm.ExportButtonText.Should().Be("MỞ XEM BILL");
+
+        // 1. Calling ExportBillAsync when no changes -> should NOT re-export
+        await vm.ExportBillCommand.ExecuteAsync(null);
+        exportCount.Should().Be(0);
+
+        // 2. Calling ForceReexportBillCommand -> SHOULD re-export even if no changes
+        await vm.ForceReexportBillCommand.ExecuteAsync(null);
+        exportCount.Should().Be(1);
+        vm.IsOpenOnlyState.Should().BeTrue();
+
+        // 3. Make change -> HasChanges becomes true, ExportButtonText becomes "XUẤT LẠI BILL"
+        vm.Orders[0].Lines[0].BilledQuantity = 10;
+        vm.IsOpenOnlyState.Should().BeFalse();
+        vm.ExportButtonText.Should().Be("XUẤT LẠI BILL");
+
+        // Calling ExportBillCommand with changes -> SHOULD re-export
+        await vm.ExportBillCommand.ExecuteAsync(null);
+        // Re-export always uses the persisted historical snapshot.
+        exportCount.Should().Be(2);
+        vm.Bill.Lines[0].BilledQuantity.Should().Be(4);
+        vm.IsEditable.Should().BeFalse();
+        vm.IsOpenOnlyState.Should().BeTrue();
+        vm.ExportButtonText.Should().Be("MỞ XEM BILL");
+    }
+
+    [Fact]
+    public async Task CustomerBillReviewViewModel_ExportBillAsync_RendersInMemoryAndOpensPreviewWindowWithoutDiskWrites()
+    {
+        var customer = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "In Memory Preview Test" });
+        string folder = Path.Combine(_tempRoot, "2026-09-29", "In Memory Preview Test", "In 13x18", "final");
+        CreateDummyFiles(folder, 3);
+        await _scanService.ScanDateAsync("2026-09-29");
+
+        var draftResult = await _customerBillingService.BuildOrRefreshDraftAsync(customer.Id);
+        var draft = draftResult.Draft;
+
+        var vm = new CustomerBillReviewViewModel(draft, _customerBillingService, _jpegExporter, null, null, null, _settingsRepo);
+        
+        bool previewOpened = false;
+        IReadOnlyList<BitmapSource>? capturedBitmaps = null;
+        vm.CustomPreviewOpener = (bill, bitmaps) =>
+        {
+            previewOpened = true;
+            capturedBitmaps = bitmaps;
+        };
+
+        // Act: Execute Export
+        await vm.ExportBillCommand.ExecuteAsync(null);
+
+        // Assert
+        previewOpened.Should().BeTrue("Should open preview in memory");
+        capturedBitmaps.Should().NotBeNull();
+        capturedBitmaps!.Count.Should().Be(1);
+        capturedBitmaps[0].PixelWidth.Should().Be(1080);
+        capturedBitmaps[0].PixelHeight.Should().BeGreaterThan(500);
+
+        // Verify Bill is marked Exported in DB
+        var savedBill = await _customerBillRepo.GetByIdAsync(draft.Id);
+        savedBill.Should().NotBeNull();
+        savedBill!.Status.Should().Be(CustomerBillStatus.Exported);
+        savedBill.ExportedAt.Should().NotBeNull();
+
+        // Verify no unexpected JPEG or Excel files were automatically written to disk
+        string defaultExportFolder = (await _settingsRepo.GetSettingsAsync()).BillExportFolder;
+        if (Directory.Exists(defaultExportFolder))
+        {
+            var files = Directory.GetFiles(defaultExportFolder, $"{savedBill.BillNumber}*");
+            files.Should().BeEmpty("No JPEG or Excel files should be auto-written to disk");
+        }
+    }
+
+    [Fact]
+    public async Task BillVisualRenderer_StitchBitmapsVertically_ProducesSingleContinuousBitmap()
+    {
+        var customer = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Stitch Test Customer" });
+        string folder = Path.Combine(_tempRoot, "2026-09-29", "Stitch Test Customer", "In 13x18", "final");
+        CreateDummyFiles(folder, 2);
+        await _scanService.ScanDateAsync("2026-09-29");
+
+        var draftResult = await _customerBillingService.BuildOrRefreshDraftAsync(customer.Id);
+        var bitmaps = await _jpegExporter.RenderBillBitmapsAsync(draftResult.Draft);
+        bitmaps.Count.Should().BeGreaterThan(0);
+
+        // Simulate 2 pages by passing bitmaps twice
+        var pagesToStitch = new List<BitmapSource> { bitmaps[0], bitmaps[0] };
+        var stitched = _jpegExporter.StitchBitmapsVertically(pagesToStitch);
+
+        stitched.Should().NotBeNull();
+        stitched.PixelWidth.Should().Be(bitmaps[0].PixelWidth);
+        stitched.PixelHeight.Should().Be(bitmaps[0].PixelHeight * 2);
+    }
+
+    private class SpyJpegExporter : IJpegBillExporter, IBillVisualRenderer
+    {
+        private readonly IJpegBillExporter _inner;
+        private readonly Action _onExport;
+
+        public SpyJpegExporter(IJpegBillExporter inner, Action onExport)
+        {
+            _inner = inner;
+            _onExport = onExport;
+        }
+
+        public Task<string> ExportBillToJpegAsync(CustomerBill bill, string? destinationDirectory = null, System.Threading.CancellationToken cancellationToken = default)
+        {
+            _onExport();
+            return _inner.ExportBillToJpegAsync(bill, destinationDirectory, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<BitmapSource>> RenderBillBitmapsAsync(CustomerBill bill, System.Threading.CancellationToken cancellationToken = default)
+        {
+            _onExport();
+            if (_inner is IBillVisualRenderer renderer)
+            {
+                return renderer.RenderBillBitmapsAsync(bill, cancellationToken);
+            }
+            return Task.FromResult<IReadOnlyList<BitmapSource>>(Array.Empty<BitmapSource>());
+        }
+
+        public Task<string> SaveBitmapToJpegAsync(BitmapSource bitmap, string destinationFilePath, int quality = 95, System.Threading.CancellationToken cancellationToken = default)
+        {
+            if (_inner is IBillVisualRenderer renderer)
+            {
+                return renderer.SaveBitmapToJpegAsync(bitmap, destinationFilePath, quality, cancellationToken);
+            }
+            return Task.FromResult(destinationFilePath);
+        }
+
+        public BitmapSource StitchBitmapsVertically(IReadOnlyList<BitmapSource> pages)
+        {
+            if (_inner is IBillVisualRenderer renderer)
+            {
+                return renderer.StitchBitmapsVertically(pages);
+            }
+            return pages.First();
         }
     }
 }

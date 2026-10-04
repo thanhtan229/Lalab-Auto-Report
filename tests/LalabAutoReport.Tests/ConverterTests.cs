@@ -133,21 +133,28 @@ public class ConverterTests
     {
         var thread = new System.Threading.Thread(() =>
         {
-            var textBox = new System.Windows.Controls.TextBox();
-            LalabAutoReport.UI.Behaviors.NumericInputBehavior.SetIsThousands(textBox, true);
-            textBox.Text = "0";
-            textBox.CaretIndex = 1; // Caret after 0 as user clicks
-
-            var textArgs = new System.Windows.Input.TextCompositionEventArgs(
-                System.Windows.Input.InputManager.Current.PrimaryKeyboardDevice,
-                new System.Windows.Input.TextComposition(System.Windows.Input.InputManager.Current, textBox, "3"))
+            try
             {
-                RoutedEvent = System.Windows.UIElement.PreviewTextInputEvent
-            };
-            textBox.RaiseEvent(textArgs);
+                var textBox = new System.Windows.Controls.TextBox();
+                LalabAutoReport.UI.Behaviors.NumericInputBehavior.SetIsThousands(textBox, true);
+                textBox.Text = "0";
+                textBox.CaretIndex = 1; // Caret after 0 as user clicks
 
-            // Typing '3' replaces '0' directly!
-            textBox.Text.Should().Be("3");
+                var textArgs = new System.Windows.Input.TextCompositionEventArgs(
+                    System.Windows.Input.InputManager.Current.PrimaryKeyboardDevice,
+                    new System.Windows.Input.TextComposition(System.Windows.Input.InputManager.Current, textBox, "3"))
+                {
+                    RoutedEvent = System.Windows.UIElement.PreviewTextInputEvent
+                };
+                textBox.RaiseEvent(textArgs);
+
+                // Typing '3' replaces '0' directly!
+                textBox.Text.Should().Be("3");
+            }
+            finally
+            {
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
         });
         thread.SetApartmentState(System.Threading.ApartmentState.STA);
         thread.Start();
@@ -159,21 +166,29 @@ public class ConverterTests
     {
         var thread = new System.Threading.Thread(() =>
         {
-            var textBox = new System.Windows.Controls.TextBox();
-            LalabAutoReport.UI.Behaviors.NumericInputBehavior.SetIsThousands(textBox, true);
-            textBox.Text = "0";
-
-            var keyArgs = new System.Windows.Input.KeyEventArgs(
-                System.Windows.Input.Keyboard.PrimaryDevice,
-                new System.Windows.Interop.HwndSource(0, 0, 0, 0, 0, "", System.IntPtr.Zero),
-                0,
-                System.Windows.Input.Key.Back)
+            try
             {
-                RoutedEvent = System.Windows.UIElement.PreviewKeyDownEvent
-            };
-            textBox.RaiseEvent(keyArgs);
+                var textBox = new System.Windows.Controls.TextBox();
+                LalabAutoReport.UI.Behaviors.NumericInputBehavior.SetIsThousands(textBox, true);
+                textBox.Text = "0";
 
-            textBox.Text.Should().Be(string.Empty);
+                using var hwndSource = new System.Windows.Interop.HwndSource(0, 0, 0, 0, 0, "", System.IntPtr.Zero);
+                var keyArgs = new System.Windows.Input.KeyEventArgs(
+                    System.Windows.Input.Keyboard.PrimaryDevice,
+                    hwndSource,
+                    0,
+                    System.Windows.Input.Key.Back)
+                {
+                    RoutedEvent = System.Windows.UIElement.PreviewKeyDownEvent
+                };
+                textBox.RaiseEvent(keyArgs);
+
+                textBox.Text.Should().Be(string.Empty);
+            }
+            finally
+            {
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
         });
         thread.SetApartmentState(System.Threading.ApartmentState.STA);
         thread.Start();
@@ -185,24 +200,111 @@ public class ConverterTests
     {
         var thread = new System.Threading.Thread(() =>
         {
-            var textBox = new System.Windows.Controls.TextBox();
-            LalabAutoReport.UI.Behaviors.NumericInputBehavior.SetIsThousands(textBox, true);
-            textBox.Text = "50,000";
-
-            var e = new System.Windows.Input.KeyboardFocusChangedEventArgs(
-                System.Windows.Input.Keyboard.PrimaryDevice,
-                0,
-                null,
-                textBox)
+            try
             {
-                RoutedEvent = System.Windows.UIElement.GotKeyboardFocusEvent
-            };
-            textBox.RaiseEvent(e);
+                var textBox = new System.Windows.Controls.TextBox();
+                LalabAutoReport.UI.Behaviors.NumericInputBehavior.SetIsThousands(textBox, true);
+                textBox.Text = "50,000";
 
-            textBox.SelectionLength.Should().Be("50,000".Length);
+                var e = new System.Windows.Input.KeyboardFocusChangedEventArgs(
+                    System.Windows.Input.Keyboard.PrimaryDevice,
+                    0,
+                    null,
+                    textBox)
+                {
+                    RoutedEvent = System.Windows.UIElement.GotKeyboardFocusEvent
+                };
+                textBox.RaiseEvent(e);
+
+                textBox.SelectionLength.Should().Be("50,000".Length);
+            }
+            finally
+            {
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
         });
         thread.SetApartmentState(System.Threading.ApartmentState.STA);
         thread.Start();
         thread.Join();
     }
+
+    [Fact]
+    public void CustomersView_InitializeComponent_DoesNotThrowXamlParseException()
+    {
+        var thread = new System.Threading.Thread(() =>
+        {
+            try
+            {
+                var app = System.Windows.Application.Current ?? new System.Windows.Application();
+                bool hasTokens = false;
+                bool hasStyles = false;
+                foreach (var md in app.Resources.MergedDictionaries)
+                {
+                    if (md.Source?.OriginalString?.Contains("TinixTokens.xaml") == true) hasTokens = true;
+                    if (md.Source?.OriginalString?.Contains("TinixStyles.xaml") == true) hasStyles = true;
+                }
+
+                if (!hasTokens)
+                {
+                    app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary
+                    {
+                        Source = new System.Uri("pack://application:,,,/LalabAutoReport.UI;component/Resources/TinixTokens.xaml")
+                    });
+                }
+                if (!hasStyles)
+                {
+                    app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary
+                    {
+                        Source = new System.Uri("pack://application:,,,/LalabAutoReport.UI;component/Resources/TinixStyles.xaml")
+                    });
+                }
+
+                if (!app.Resources.Contains("InverseBoolConverter"))
+                    app.Resources["InverseBoolConverter"] = new LalabAutoReport.UI.Converters.InverseBooleanConverter();
+                if (!app.Resources.Contains("NumberThousandsConverter"))
+                    app.Resources["NumberThousandsConverter"] = new LalabAutoReport.UI.Converters.NumberThousandsConverter();
+                if (!app.Resources.Contains("BoolToVis"))
+                    app.Resources["BoolToVis"] = new LalabAutoReport.UI.Converters.BoolToVisibilityConverter();
+                if (!app.Resources.Contains("EnumToBoolConverter"))
+                    app.Resources["EnumToBoolConverter"] = new LalabAutoReport.UI.Converters.EnumToBooleanConverter();
+
+                var view = new LalabAutoReport.UI.Views.CustomersView();
+                view.Should().NotBeNull();
+            }
+            finally
+            {
+                System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
+        });
+        thread.SetApartmentState(System.Threading.ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+    }
+
+    [Fact]
+    public void EnumToBooleanConverter_Convert_And_ConvertBack_WorksCorrectly()
+    {
+        var converter = new LalabAutoReport.UI.Converters.EnumToBooleanConverter();
+
+        // Convert
+        converter.Convert(LalabAutoReport.Core.Domain.PriceTier.Retail, typeof(bool), "Retail", System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be(true);
+        converter.Convert(LalabAutoReport.Core.Domain.PriceTier.Retail, typeof(bool), "Studio", System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be(false);
+        converter.Convert(LalabAutoReport.Core.Domain.PriceTier.Vip, typeof(bool), "Vip", System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be(true);
+        converter.Convert(null, typeof(bool), "Retail", System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be(false);
+
+        // ConvertBack true
+        converter.ConvertBack(true, typeof(LalabAutoReport.Core.Domain.PriceTier), "Studio", System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be(LalabAutoReport.Core.Domain.PriceTier.Studio);
+        converter.ConvertBack(true, typeof(LalabAutoReport.Core.Domain.PriceTier), "Vip", System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be(LalabAutoReport.Core.Domain.PriceTier.Vip);
+
+        // ConvertBack false returns Binding.DoNothing
+        converter.ConvertBack(false, typeof(LalabAutoReport.Core.Domain.PriceTier), "Retail", System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be(System.Windows.Data.Binding.DoNothing);
+    }
 }
+

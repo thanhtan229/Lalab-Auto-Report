@@ -1,0 +1,9 @@
+{
+  "staffOrderLabelStatus": 200,
+  "staffBillLabelStatus": 403,
+  "orderLabelContentType": [
+    "image/png"
+  ],
+  "fixture": "isolated synthetic bill 75000",
+  "bytes": 41474
+}

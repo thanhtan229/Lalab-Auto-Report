@@ -6,6 +6,7 @@
              xmlns:vm="clr-namespace:LalabAutoReport.UI.ViewModels"
              xmlns:converters="clr-namespace:LalabAutoReport.UI.Converters"
              mc:Ignorable="d" 
+             Focusable="True"
              d:DesignHeight="700" d:DesignWidth="1000">
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
@@ -21,7 +22,7 @@
         </Grid.RowDefinitions>
 
         <!-- TOP BAR -->
-        <Border Grid.Row="0" Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,0,0,1" Padding="20,14">
+        <Border Grid.Row="0" Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,0,0,1" Padding="20,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -29,28 +30,44 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Date controls -->
+                <!-- Date controls Pod & Date Actions -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Ngày làm việc:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" Margin="0,0,12,0" FontSize="13"/>
-                    <Button Command="{Binding PreviousDayCommand}" Content="◀" Width="30" Height="34" Style="{StaticResource Tinix.Button.Secondary}" Padding="0" Margin="0,0,4,0"/>
-                    <DatePicker SelectedDate="{Binding SelectedDate}" Height="34" Width="135" Margin="0,0,4,0" VerticalContentAlignment="Center"/>
-                    <Button Command="{Binding NextDayCommand}" Content="▶" Width="30" Height="34" Style="{StaticResource Tinix.Button.Secondary}" Padding="0" Margin="0,0,6,0"/>
-                    <Button Command="{Binding TodayCommand}" Content="Hôm nay" Height="34" Style="{StaticResource Tinix.Button.Secondary}" Padding="12,0"/>
+                    <!-- DATE POD CARD (Tinix Orange Pastel Focus Pod) -->
+                    <Border Background="{StaticResource Tinix.Color.DatePod.Bg}" 
+                            BorderBrush="{StaticResource Tinix.Color.DatePod.Border}" 
+                            BorderThickness="1" 
+                            CornerRadius="8" 
+                            Padding="10,4,10,4" 
+                            SnapsToDevicePixels="True">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Orange Accent Indicator bar -->
+                            <Border Width="3.5" Height="22" Background="{StaticResource Tinix.Color.Primary}" CornerRadius="1.5" Margin="0,0,10,0"/>
+
+                            <!-- Icon & Title Label -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="📅" FontSize="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="NGÀY LÀM VIỆC:" FontWeight="Bold" FontSize="11" Foreground="{StaticResource Tinix.Color.DatePod.Text}" VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Navigation buttons & DatePicker -->
+                            <Button Command="{Binding PreviousDayCommand}" Content="◀" Width="28" Height="32" Style="{StaticResource Tinix.Button.Secondary}" Padding="0" Margin="0,0,4,0" ToolTip="Ngày trước"/>
+                            <DatePicker SelectedDate="{Binding SelectedDate}" Height="32" Width="138" Margin="0,0,4,0" VerticalContentAlignment="Center" FontWeight="Bold" FontSize="13"/>
+                            <Button Command="{Binding NextDayCommand}" Content="▶" Width="28" Height="32" Style="{StaticResource Tinix.Button.Secondary}" Padding="0" Margin="0,0,6,0" ToolTip="Ngày sau"/>
+                            <Button Command="{Binding TodayCommand}" Content="Hôm nay" Height="32" Style="{StaticResource Tinix.Button.Secondary}" Padding="10,0" ToolTip="Về ngày hôm nay" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Divider separating Date Pod and Date Actions -->
+                    <Border Width="1" Height="24" Background="{StaticResource Tinix.Color.Border.Subtle}" Margin="12,0"/>
+
+                    <!-- Action buttons for selected date -->
+                    <Button Command="{Binding ScanDateCommand}" Content="🔄 Quét lại" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="12,0" Margin="0,0,6,0" ToolTip="Quét lại ngày đang chọn" FontSize="12.5" FontWeight="SemiBold"/>
+                    <Button Command="{Binding OpenDateFolderCommand}" Content="📂 Thư mục" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="10,0" ToolTip="Mở thư mục ngày" FontSize="12.5"/>
                 </StackPanel>
 
                 <!-- Action buttons -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Command="{Binding ScanMissingDaysCommand}" Content="Quét ngày còn thiếu" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Margin="0,0,8,0"/>
-                    <Button Command="{Binding OpenDateFolderCommand}" Content="Mở thư mục ngày" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Margin="0,0,8,0"/>
-                    <Button Command="{Binding OpenQuickBillCommand}" Content="⚡ Quick Bill" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Margin="0,0,10,0" ToolTip="Tính và xuất hóa đơn khách lẻ (không lưu hồ sơ khách hàng)"/>
-                    
-                    <!-- Primary Call to Action: Tinix Orange -->
-                    <Button Command="{Binding ScanDateCommand}" Height="36" Style="{StaticResource Tinix.Button.Primary}" Padding="22,0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🔍 Quét Ngày" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
+                    <Button Command="{Binding ScanMissingDaysCommand}" Content="Quét ngày còn thiếu" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="14,0"/>
                     <Button Command="{Binding CancelScanCommand}" Content="Hủy Quét" Height="36" Style="{StaticResource Tinix.Button.Danger}" Margin="8,0,0,0" Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}"/>
                 </StackPanel>
             </Grid>
@@ -59,17 +76,19 @@
         <!-- SUMMARY STRIP -->
         <Border Grid.Row="1" Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,0,0,1" Padding="20,12">
             <StackPanel Orientation="Horizontal">
-                <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,8" Margin="0,0,12,0" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                <!-- Total Orders Badge Card (Purple) -->
+                <Border Background="{StaticResource Tinix.Color.Card.Order.Bg}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,8" Margin="0,0,12,0" BorderBrush="{StaticResource Tinix.Color.Card.Order.Border}" BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Tổng số đơn: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="13"/>
-                        <TextBlock Text="{Binding TotalOrders}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13"/>
+                        <TextBlock Text="Tổng số đơn: " Foreground="{StaticResource Tinix.Color.Card.Order.Title}" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding TotalOrders}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Order.Value}" FontSize="13"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,8" Margin="0,0,12,0" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                <!-- Total Customers Badge Card (Emerald) -->
+                <Border Background="{StaticResource Tinix.Color.Card.Customer.Bg}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,8" Margin="0,0,12,0" BorderBrush="{StaticResource Tinix.Color.Card.Customer.Border}" BorderThickness="1">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Khách hàng: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="13"/>
-                        <TextBlock Text="{Binding TotalCustomers}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13"/>
+                        <TextBlock Text="Khách hàng: " Foreground="{StaticResource Tinix.Color.Card.Customer.Title}" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="{Binding TotalCustomers}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Customer.Value}" FontSize="13"/>
                     </StackPanel>
                 </Border>
 
@@ -105,7 +124,9 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="280"/>
+                    <ColumnDefinition Width="170"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="260"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Pill-like Filter Controls -->
@@ -114,10 +135,21 @@
                     <RadioButton Content="Cần xử lý (!)" IsChecked="{Binding CurrentFilter, ConverterParameter=NeedsReview, Mode=OneWay}" Click="FilterNeedsReview_Click" Style="{StaticResource Tinix.FilterPill}"/>
                     <RadioButton Content="Sẵn sàng (✓)" IsChecked="{Binding CurrentFilter, ConverterParameter=Ready, Mode=OneWay}" Click="FilterReady_Click" Style="{StaticResource Tinix.FilterPill}"/>
                     <RadioButton Content="Đã tính Bill (🧾)" IsChecked="{Binding CurrentFilter, ConverterParameter=Billed, Mode=OneWay}" Click="FilterBilled_Click" Style="{StaticResource Tinix.FilterPill}"/>
+                    <RadioButton Content="Chưa giao (📦)" IsChecked="{Binding CurrentFilter, ConverterParameter=Undelivered, Mode=OneWay}" Click="FilterUndelivered_Click" Style="{StaticResource Tinix.FilterPill}"/>
+                    <RadioButton Content="Đã giao (🚚)" IsChecked="{Binding CurrentFilter, ConverterParameter=Delivered, Mode=OneWay}" Click="FilterDelivered_Click" Style="{StaticResource Tinix.FilterPill}"/>
                 </StackPanel>
 
+                <!-- Root Folder Filter Combobox -->
+                <ComboBox Grid.Column="2" 
+                          ItemsSource="{Binding RootFolderFilterOptions}" 
+                          SelectedValuePath="Id" 
+                          DisplayMemberPath="Name" 
+                          SelectedValue="{Binding SelectedRootFolderId}" 
+                          Height="34" FontSize="12" VerticalContentAlignment="Center"
+                          ToolTip="Lọc hiển thị theo Kho dữ liệu"/>
+
                 <!-- Search Box -->
-                <TextBox Grid.Column="2" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" VerticalContentAlignment="Center" FontSize="12">
+                <TextBox Grid.Column="4" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" VerticalContentAlignment="Center" FontSize="12">
                     <TextBox.Resources>
                         <VisualBrush x:Key="CueBannerBrush" AlignmentX="Left" AlignmentY="Center" Stretch="None">
                             <VisualBrush.Visual>
@@ -165,10 +197,19 @@
                 </Border>
             </Border>
 
-            <!-- ORDERS LIST -->
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
-                <ScrollViewer.Style>
-                    <Style TargetType="ScrollViewer">
+            <!-- ORDERS LIST (VIRTUALIZED) -->
+            <ListBox ItemsSource="{Binding FilteredOrders}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="20"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.CanContentScroll="True"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     VirtualizingPanel.ScrollUnit="Pixel">
+                <ListBox.Style>
+                    <Style TargetType="ListBox">
                         <Setter Property="Visibility" Value="Visible"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding HasOrders}" Value="False">
@@ -176,17 +217,74 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </ScrollViewer.Style>
-                <ItemsControl ItemsSource="{Binding FilteredOrders}">
-                <ItemsControl.ItemTemplate>
+                </ListBox.Style>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <EventSetter Event="MouseDoubleClick" Handler="OrderCard_MouseDoubleClick"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter HorizontalAlignment="Stretch"/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:OrderDisplayModel}">
                         <!-- Tinix Card Container -->
                         <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Margin="0,0,0,14" Padding="18">
                             <StackPanel>
-                                <!-- Order Header (2 Rows: Hàng 1 = Tên đơn + Nút; Hàng 2 = Tags + Thông số + Thành tiền) -->
-                                <StackPanel Margin="0,0,0,12">
-                                    <!-- Hàng trên: Tên đơn hàng và Cụm nút thao tác -->
-                                    <Grid Margin="0,0,0,8">
+                                <!-- Order Header (Trái: Thumbnail 56x56; Phải: Thông tin & Nút) -->
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- THUMBNAIL BOX (56x56) -->
+                                    <Border Grid.Column="0"
+                                            Width="56" Height="56"
+                                            CornerRadius="6"
+                                            Background="#F8FAFC"
+                                            BorderBrush="{StaticResource Tinix.Color.Border.Subtle}"
+                                            BorderThickness="1"
+                                            Margin="0,0,14,0"
+                                            VerticalAlignment="Center"
+                                            ClipToBounds="True"
+                                            Cursor="Hand"
+                                            MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp"
+                                            ToolTip="{Binding ThumbnailTooltip}"
+                                            Visibility="{Binding DataContext.ShowOrderThumbnails, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}">
+                                        <Grid>
+                                            <!-- Placeholder / Icon khi chưa nạp hoặc không có ảnh -->
+                                            <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#F1F5F9"
+                                                    Visibility="{Binding IsThumbnailPlaceholderVisible, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="🖼️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.4"/>
+                                            </Border>
+
+                                            <!-- Thumbnail Image -->
+                                            <Image Source="{Binding ThumbnailImage}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Visibility="{Binding HasThumbnailImage, Converter={StaticResource BoolToVis}}"/>
+
+                                            <!-- Badge cho định dạng nặng/đồ họa (PSD, RAW, TIF...) -->
+                                            <Border Background="#1E293B" CornerRadius="4" Padding="5,2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Visibility="{Binding IsUnsupportedFormat, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="{Binding ThumbnailFormatExtension}" Foreground="#FFFFFF" FontWeight="Bold" FontSize="11" FontFamily="Consolas, monospace"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Order Header Info (2 Rows) -->
+                                    <StackPanel Grid.Column="1">
+                                        <!-- Hàng trên: Tên đơn hàng và Cụm nút thao tác -->
+                                        <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
@@ -202,98 +300,161 @@
                                             <TextBlock Text="{Binding FullOrderDisplayName}" FontWeight="Bold" FontSize="16" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding FullOrderDisplayName}"/>
                                         </StackPanel>
 
-                                        <!-- Order Actions -->
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button Content="Mở thư mục" Height="30" Padding="12,0" Margin="0,0,6,0" Style="{StaticResource Tinix.Button.Secondary}" Click="OpenOrderFolder_Click"/>
-                                            <Button Content="Quét lại" Height="30" Padding="12,0" Margin="0,0,6,0" Style="{StaticResource Tinix.Button.Secondary}" Click="RescanOrder_Click"/>
-                                            <Button Content="🗑 Xóa" Height="30" Padding="10,0" Margin="0,0,6,0" Style="{StaticResource Tinix.Button.Secondary}" Click="DeleteOrder_Click"
-                                                    ToolTip="{Binding DeleteOrderTooltip}"
-                                                    IsEnabled="{Binding CanDelete}"/>
+                                            <!-- Order Actions -->
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="Mở thư mục" Height="30" Padding="12,0" Margin="0,0,6,0" Style="{StaticResource Tinix.Button.Secondary}" Click="OpenOrderFolder_Click"/>
+                                                <Button Content="🗑 Xóa" Height="30" Padding="10,0" Margin="0,0,6,0" Style="{StaticResource Tinix.Button.Secondary}" Click="DeleteOrder_Click"
+                                                        ToolTip="{Binding DeleteOrderTooltip}"
+                                                        IsEnabled="{Binding CanDelete}"/>
 
-                                            <!-- Nút Tính Bill: Màu cam nổi bật (Primary) khi chưa tính bill -->
-                                            <Button Content="⚡ Tính Bill" Height="30" Padding="14,0" Style="{StaticResource Tinix.Button.Primary}" Click="ComputeOrViewBill_Click"
-                                                    Visibility="{Binding IsBilled, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
+                                                <!-- Nút Ghi chú -->
+                                                <Button Content="📝 Ghi chú" Height="30" Padding="10,0" Margin="0,0,6,0" Style="{StaticResource Tinix.Button.Secondary}"
+                                                        Command="{Binding DataContext.EditOrderNoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" ToolTip="Thêm hoặc sửa ghi chú cho đơn hàng này"/>
 
-                                            <!-- Nút Xem Bill: Style Info (màu blue nhạt) khi đã tính bill -->
-                                            <Button Content="🧾 Xem Bill" Height="30" Padding="14,0" Style="{StaticResource Tinix.Button.Info}" Click="ComputeOrViewBill_Click"
-                                                    Visibility="{Binding IsBilled, Converter={StaticResource BoolToVis}}"/>
-                                        </StackPanel>
-                                    </Grid>
+                                                <!-- Nút In tem nhiệt đóng gói (Bên trái nút Giao hàng theo yêu cầu) -->
+                                                <Button Content="🏷️ In tem" Height="30" Padding="10,0" Margin="0,0,6,0" Style="{StaticResource Tinix.Button.Secondary}"
+                                                        Command="{Binding DataContext.PrintOrderLabelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="Xem trước và in tem nhiệt đóng gói 75x100mm (tự động đánh dấu ĐÃ GIAO)"/>
 
-                                    <!-- Hàng dưới: Tags nhận diện, số lượng (trái) và Thành tiền (phải) -->
+                                                <!-- Nút trạng thái Giao hàng (Chưa giao / Đã giao) -->
+                                                <Button Height="30" Padding="10,0" Margin="0,0,6,0"
+                                                        Command="{Binding DataContext.ToggleDeliveredCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="{Binding DeliveredButtonTooltip}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource Tinix.Button.Secondary}">
+                                                            <Setter Property="Content" Value="🚚 Chưa giao"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsDelivered}" Value="True">
+                                                                    <Setter Property="Content" Value="🚚 Đã giao"/>
+                                                                    <Setter Property="Background" Value="#DBEAFE"/>
+                                                                    <Setter Property="Foreground" Value="#1D4ED8"/>
+                                                                    <Setter Property="BorderBrush" Value="#93C5FD"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+
+                                                <!-- Nút Xem Bill: Luôn hiển thị cho mọi đơn hàng -->
+                                                <Button Content="🧾 Xem Bill" Height="30" Padding="14,0" Style="{StaticResource Tinix.Button.Info}" Click="ComputeOrViewBill_Click"
+                                                        ToolTip="Mở xem chi tiết và chỉnh sửa hóa đơn (hoặc bấm đúp vào thẻ đơn)"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Hàng dưới: Tags nhận diện, số lượng (trái) và Thành tiền (phải) -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Bên trái: Customer Mapping Badge, Status Badge, và Số lượng (Ảnh in, Album) -->
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <!-- Customer Mapping Badge (Clickable to change customer) -->
+                                                <Button Command="{Binding DataContext.AssignCustomerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="{Binding CustomerMappingTooltip}"
+                                                        Margin="0,0,8,0" Padding="0" BorderThickness="0" Background="Transparent"
+                                                        Cursor="Hand">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button">
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <Border x:Name="BadgeBorder" CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2"
+                                                                                Background="{Binding CustomerBadgeBg}"
+                                                                                BorderBrush="{Binding CustomerBadgeBorder}"
+                                                                                BorderThickness="1" SnapsToDevicePixels="True">
+                                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                                <TextBlock Text="{Binding CustomerBadgeText}"
+                                                                                           Foreground="{Binding CustomerBadgeFg}"
+                                                                                           FontSize="11" FontWeight="SemiBold"/>
+                                                                                <TextBlock Text=" ▾" FontSize="9" FontWeight="Bold"
+                                                                                           Foreground="{Binding CustomerBadgeFg}"
+                                                                                           Opacity="0.7" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </Border>
+                                                                        <ControlTemplate.Triggers>
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter TargetName="BadgeBorder" Property="Opacity" Value="0.85"/>
+                                                                            </Trigger>
+                                                                        </ControlTemplate.Triggers>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+
+                                                <!-- Tinix Pill Status Badge -->
+                                                <Border CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="10,3" Margin="0,0,8,0" Background="{Binding StatusBadgeBg}" BorderBrush="{Binding StatusBadgeBorder}" BorderThickness="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBadgeFg}" FontSize="11" FontWeight="SemiBold"/>
+                                                </Border>
+
+                                                <!-- Bill Export Status Badge (Đã xuất bill / Chưa xuất bill) -->
+                                                <Border CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" Margin="0,0,8,0"
+                                                        Background="{Binding BillExportStatusBadgeBg}"
+                                                        BorderBrush="{Binding BillExportStatusBadgeBorder}"
+                                                        BorderThickness="1" VerticalAlignment="Center"
+                                                        ToolTip="{Binding BillExportStatusTooltip}">
+                                                    <TextBlock Text="{Binding BillExportStatusBadgeText}" Foreground="{Binding BillExportStatusBadgeFg}" FontSize="11" FontWeight="Bold"/>
+                                                </Border>
+
+                                                <!-- Printed Status Badge (shown when marked as PRINTED or PARTIAL) -->
+                                                <Border Visibility="{Binding HasPrintProgressBadge, Converter={StaticResource BoolToVis}}" CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" Margin="0,0,8,0" Background="{Binding PrintedStatusBadgeBg}" BorderBrush="{Binding PrintedStatusBadgeBorder}" BorderThickness="1" VerticalAlignment="Center" ToolTip="Tiến độ in ấn trong xưởng">
+                                                    <TextBlock Text="{Binding PrintedStatusText}" Foreground="{Binding PrintedStatusBadgeFg}" FontSize="11" FontWeight="Bold"/>
+                                                </Border>
+
+                                                <!-- Delivered Status Badge (shown when marked as DELIVERED) -->
+                                                <Border Visibility="{Binding IsDelivered, Converter={StaticResource BoolToVis}}" CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" Margin="0,0,8,0" Background="{Binding DeliveredStatusBadgeBg}" BorderBrush="{Binding DeliveredStatusBadgeBorder}" BorderThickness="1" VerticalAlignment="Center" ToolTip="{Binding DeliveredDetailText}">
+                                                    <TextBlock Text="{Binding DeliveredStatusText}" Foreground="{Binding DeliveredStatusBadgeFg}" FontSize="11" FontWeight="Bold"/>
+                                                </Border>
+
+                                                <!-- Root Folder Badge (shown when order has RootFolderName) -->
+                                                <Border Visibility="{Binding HasRootFolder, Converter={StaticResource BoolToVis}}" CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" Margin="0,0,14,0" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" VerticalAlignment="Center" ToolTip="Kho dữ liệu chứa đơn hàng này">
+                                                    <TextBlock Text="{Binding RootBadgeText}" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" FontWeight="SemiBold"/>
+                                                </Border>
+
+                                                <!-- Divider mờ giữa Badges và Số lượng -->
+                                                <Border Width="1" Height="14" Background="{StaticResource Tinix.Color.Border.Subtle}" Margin="0,0,14,0" VerticalAlignment="Center"/>
+
+                                                <!-- Summary Totals (Counts) -->
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Ảnh in: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding TotalPhotos}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,14,0" FontSize="13" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Album: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding TotalAlbums}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Bên phải: Thành tiền (Căn thẳng dưới cụm nút bấm) -->
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="Thành tiền: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding FormattedTotalAmount}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}" FontSize="15" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Order Note Banner (shown when HasNote is true) -->
+                                <Border Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}" 
+                                        Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="12,7" Margin="0,0,0,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-
-                                        <!-- Bên trái: Customer Mapping Badge, Status Badge, và Số lượng (Ảnh in, Album) -->
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <!-- Customer Mapping Badge (Clickable to change customer) -->
-                                            <Button Command="{Binding DataContext.AssignCustomerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    ToolTip="{Binding CustomerMappingTooltip}"
-                                                    Margin="0,0,8,0" Padding="0" BorderThickness="0" Background="Transparent"
-                                                    Cursor="Hand">
-                                                <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="BadgeBorder" CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2"
-                                                                            Background="{Binding CustomerBadgeBg}"
-                                                                            BorderBrush="{Binding CustomerBadgeBorder}"
-                                                                            BorderThickness="1" SnapsToDevicePixels="True">
-                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                                            <TextBlock Text="{Binding CustomerBadgeText}"
-                                                                                       Foreground="{Binding CustomerBadgeFg}"
-                                                                                       FontSize="11" FontWeight="SemiBold"/>
-                                                                            <TextBlock Text=" ▾" FontSize="9" FontWeight="Bold"
-                                                                                       Foreground="{Binding CustomerBadgeFg}"
-                                                                                       Opacity="0.7" VerticalAlignment="Center"/>
-                                                                        </StackPanel>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="BadgeBorder" Property="Opacity" Value="0.85"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </Button.Style>
-                                            </Button>
-
-                                            <!-- Tinix Pill Status Badge -->
-                                            <Border CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="10,3" Margin="0,0,8,0" Background="{Binding StatusBadgeBg}" BorderBrush="{Binding StatusBadgeBorder}" BorderThickness="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBadgeFg}" FontSize="11" FontWeight="SemiBold"/>
-                                            </Border>
-
-                                            <!-- Printed Status Badge (shown when marked as PRINTED) -->
-                                            <Border Visibility="{Binding IsPrinted, Converter={StaticResource BoolToVis}}" CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" Margin="0,0,14,0" Background="{Binding PrintedStatusBadgeBg}" BorderBrush="{Binding PrintedStatusBadgeBorder}" BorderThickness="1" VerticalAlignment="Center" ToolTip="Thư mục đã được đánh dấu ĐÃ IN trong xưởng">
-                                                <TextBlock Text="{Binding PrintedStatusText}" Foreground="{Binding PrintedStatusBadgeFg}" FontSize="11" FontWeight="Bold"/>
-                                            </Border>
-
-                                            <!-- Divider mờ giữa Badges và Số lượng -->
-                                            <Border Width="1" Height="14" Background="{StaticResource Tinix.Color.Border.Subtle}" Margin="0,0,14,0" VerticalAlignment="Center"/>
-
-                                            <!-- Summary Totals (Counts) -->
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="Ảnh in: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding TotalPhotos}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,14,0" FontSize="13" VerticalAlignment="Center"/>
-                                                <TextBlock Text="Album: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding TotalAlbums}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </StackPanel>
-
-                                        <!-- Bên phải: Thành tiền (Căn thẳng dưới cụm nút bấm) -->
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="Thành tiền: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding FormattedTotalAmount}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}" FontSize="15" VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                        <TextBlock Grid.Column="0" Text="📝 Ghi chú: " FontWeight="Bold" Foreground="#92400E" FontSize="12" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Note}" Foreground="#78350F" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="4,0,8,0"/>
+                                        <Button Grid.Column="2" Content="Sửa ghi chú" Style="{StaticResource Tinix.Button.Secondary}" Padding="8,2" Height="24" FontSize="11"
+                                                Command="{Binding DataContext.EditOrderNoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"/>
                                     </Grid>
-                                </StackPanel>
+                                </Border>
 
                                 <!-- Items / Specifications Table -->
                                 <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Md}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="10">
@@ -334,10 +495,36 @@
                                                             <!-- Col 3: Line Total -->
                                                             <TextBlock Grid.Column="3" Text="{Binding FormattedLineTotal}" VerticalAlignment="Center" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}" FontSize="12"/>
 
-                                                            <!-- Col 4: Status Badge / Text -->
-                                                            <Border Grid.Column="4" CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{Binding StatusBadgeBg}" BorderBrush="{Binding StatusBadgeBorder}" BorderThickness="1" ToolTip="{Binding EffectiveBillingFolderTooltip}">
-                                                                <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBadgeFg}" FontSize="11" FontWeight="SemiBold"/>
-                                                            </Border>
+                                                            <!-- Col 4: Print Status Toggle & Billing Status Badge -->
+                                                            <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <Button Command="{Binding DataContext.ToggleItemPrintedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Background="{Binding ItemPrintedBadgeBg}"
+                                                                        BorderBrush="{Binding ItemPrintedBadgeBorder}"
+                                                                        BorderThickness="1"
+                                                                        Padding="8,2"
+                                                                        Margin="0,0,8,0"
+                                                                        Height="24"
+                                                                        Cursor="Hand"
+                                                                        ToolTip="Bấm để chuyển đổi trạng thái Đã in / Chưa in cho thư mục quy cách này">
+                                                                    <Button.Template>
+                                                                        <ControlTemplate TargetType="Button">
+                                                                            <Border Background="{TemplateBinding Background}"
+                                                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                                                    CornerRadius="{StaticResource Tinix.Radius.Full}"
+                                                                                    Padding="{TemplateBinding Padding}">
+                                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                            </Border>
+                                                                        </ControlTemplate>
+                                                                    </Button.Template>
+                                                                    <TextBlock Text="{Binding ItemPrintedBadgeText}" Foreground="{Binding ItemPrintedBadgeFg}" FontSize="11" FontWeight="SemiBold"/>
+                                                                </Button>
+
+                                                                <Border CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{Binding StatusBadgeBg}" BorderBrush="{Binding StatusBadgeBorder}" BorderThickness="1" ToolTip="{Binding EffectiveBillingFolderTooltip}">
+                                                                    <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBadgeFg}" FontSize="11" FontWeight="SemiBold"/>
+                                                                </Border>
+                                                            </StackPanel>
                                                         </Grid>
 
                                                         <!-- Row resolution controls (shown when ambiguous) -->
@@ -366,9 +553,8 @@
                             </StackPanel>
                         </Border>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            </ScrollViewer>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Grid>
 
         <!-- FOOTER / STATUS BAR -->
@@ -385,5 +571,65 @@
                 </StackPanel>
             </Grid>
         </Border>
+
+        <!-- LIGHTBOX PREVIEW POPUP (IN-APP MODAL OVERLAY) -->
+        <Grid Grid.Row="0" Grid.RowSpan="5" 
+              Visibility="{Binding IsPreviewPopupOpen, Converter={StaticResource BoolToVis}}" 
+              Panel.ZIndex="1000">
+            <!-- Dark semi-transparent backdrop (Click outside to close) -->
+            <Border Background="#99000000" MouseLeftButtonDown="PreviewBackdrop_MouseLeftButtonDown"/>
+
+            <!-- Centered Modal Card -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="{StaticResource Tinix.Color.Bg.Surface}"
+                    BorderBrush="{StaticResource Tinix.Color.Border.Subtle}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource Tinix.Radius.Lg}"
+                    MaxWidth="420"
+                    Padding="18">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.25" Color="#000000"/>
+                </Border.Effect>
+                <StackPanel>
+                    <!-- Header: Title, Order info, Close button -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                <TextBlock Text="🖼️ " FontSize="14" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding PreviewOrder.CanonicalCustomerName, FallbackValue='Ảnh Nhận Diện Đơn Hàng'}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding PreviewOrder.OrderCode, StringFormat='Mã đơn: {0}'}" FontSize="12" FontFamily="{StaticResource Tinix.Font.Mono}" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding ClosePreviewPopupCommand}" Content="✕" Width="28" Height="28" Style="{StaticResource Tinix.Button.Secondary}" Padding="0" FontSize="13" FontWeight="Bold" VerticalAlignment="Top"/>
+                    </Grid>
+
+                    <!-- Image Display Box (~360x360 px) -->
+                    <Border Background="#0F172A" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="6" HorizontalAlignment="Center" Margin="0,0,0,10" Width="360" Height="360">
+                        <Grid>
+                            <Image Source="{Binding PreviewOrder.ThumbnailImage}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="Đang nạp ảnh..." Foreground="White" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding PreviewOrder.IsThumbnailLoading, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- File Name & Path Info -->
+                    <TextBlock Text="{Binding PreviewOrder.FullThumbnailCandidatePath}" FontFamily="{StaticResource Tinix.Font.Mono}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}" TextTrimming="CharacterEllipsis" Margin="0,0,0,14" ToolTip="{Binding PreviewOrder.FullThumbnailCandidatePath}"/>
+
+                    <!-- Action Buttons -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding OpenPreviewContainingFolderCommand}" Content="📂 Mở Thư Mục" Style="{StaticResource Tinix.Button.Secondary}" Height="34" FontSize="12"/>
+                        <Button Grid.Column="2" Command="{Binding OpenPreviewOriginalImageCommand}" Content="🖼️ Mở Ảnh Gốc" Style="{StaticResource Tinix.Button.Primary}" Height="34" FontSize="12" ToolTip="Mở ảnh gốc chất lượng cao bằng trình xem ảnh của Windows"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

@@ -24,10 +24,11 @@ public class TabNavigationUiTests
     public void MainViewModel_InitialActiveTab_IsDashboard()
     {
         var settingsRepo = new MockSettingsRepo();
-        var vm = new MainViewModel(null!, null!, null!, null!, null!, settingsRepo);
+        var vm = new MainViewModel(null!, null!, null!, null!, null!, null!, settingsRepo);
 
         vm.ActiveTab.Should().Be("Dashboard");
         vm.IsDashboardActive.Should().BeTrue();
+        vm.IsInvoicesActive.Should().BeFalse();
         vm.IsReportsActive.Should().BeFalse();
         vm.IsCustomersActive.Should().BeFalse();
         vm.IsPriceListActive.Should().BeFalse();
@@ -38,12 +39,20 @@ public class TabNavigationUiTests
     public void MainViewModel_SettingActiveProperty_SwitchesTabProperly()
     {
         var settingsRepo = new MockSettingsRepo();
-        var vm = new MainViewModel(null!, null!, null!, null!, null!, settingsRepo);
+        var vm = new MainViewModel(null!, null!, null!, null!, null!, null!, settingsRepo);
+
+        // Switch to Invoices via property
+        vm.IsInvoicesActive = true;
+        vm.ActiveTab.Should().Be("Invoices");
+        vm.IsDashboardActive.Should().BeFalse();
+        vm.IsInvoicesActive.Should().BeTrue();
+        vm.IsReportsActive.Should().BeFalse();
 
         // Switch to Reports via property
         vm.IsReportsActive = true;
         vm.ActiveTab.Should().Be("Reports");
         vm.IsDashboardActive.Should().BeFalse();
+        vm.IsInvoicesActive.Should().BeFalse();
         vm.IsReportsActive.Should().BeTrue();
         vm.IsCustomersActive.Should().BeFalse();
         vm.IsPriceListActive.Should().BeFalse();
@@ -96,20 +105,23 @@ public class TabNavigationUiTests
         var pattern = @"Content=""([^""]+)""\s+IsChecked=""\{Binding (Is[A-Za-z]+Active)\}""";
         var matches = System.Text.RegularExpressions.Regex.Matches(content, pattern);
 
-        matches.Count.Should().Be(5);
+        matches.Count.Should().Be(6);
         matches[0].Groups[1].Value.Should().Be("ĐƠN HÀNG");
         matches[0].Groups[2].Value.Should().Be("IsDashboardActive");
 
-        matches[1].Groups[1].Value.Should().Be("KHÁCH HÀNG");
-        matches[1].Groups[2].Value.Should().Be("IsCustomersActive");
+        matches[1].Groups[1].Value.Should().Be("HÓA ĐƠN");
+        matches[1].Groups[2].Value.Should().Be("IsInvoicesActive");
 
-        matches[2].Groups[1].Value.Should().Be("BẢNG GIÁ");
-        matches[2].Groups[2].Value.Should().Be("IsPriceListActive");
+        matches[2].Groups[1].Value.Should().Be("KHÁCH HÀNG");
+        matches[2].Groups[2].Value.Should().Be("IsCustomersActive");
 
-        matches[3].Groups[1].Value.Should().Be("BÁO CÁO");
-        matches[3].Groups[2].Value.Should().Be("IsReportsActive");
+        matches[3].Groups[1].Value.Should().Be("BẢNG GIÁ");
+        matches[3].Groups[2].Value.Should().Be("IsPriceListActive");
 
-        matches[4].Groups[1].Value.Should().Be("CÀI ĐẶT");
-        matches[4].Groups[2].Value.Should().Be("IsSettingsActive");
+        matches[4].Groups[1].Value.Should().Be("BÁO CÁO");
+        matches[4].Groups[2].Value.Should().Be("IsReportsActive");
+
+        matches[5].Groups[1].Value.Should().Be("CÀI ĐẶT");
+        matches[5].Groups[2].Value.Should().Be("IsSettingsActive");
     }
 }

@@ -187,7 +187,7 @@ public class GuestBillingTests : IDisposable
         CreateDummyFiles(Path.Combine(folder2, "In Lua 10x15"), 8);
 
         // Action: Build draft with both folders
-        var result = await _customerBillingService.BuildGuestBillDraftAsync(new[] { folder1, folder2 });
+        var result = await _customerBillingService.BuildGuestBillDraftAsync(new[] { folder1, folder2 }, persistDraft: true);
         var draft = result.Draft;
 
         // Assert
@@ -312,6 +312,9 @@ public class GuestBillingTests : IDisposable
         var draft = (await _customerBillingService.BuildGuestBillDraftAsync(new[] { guestFolder })).Draft;
         await _customerBillingService.LockBillAsync(draft);
 
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _customerBillingService.ConvertGuestBillToCustomerAsync(draft.Id, "Studio Mai Wedding"));
+        await _customerBillingService.ReopenBillAsync(draft.Id, "Approved customer correction");
+
         // 2. Action: Convert to Customer "Studio Mai Wedding"
         var customer = await _customerBillingService.ConvertGuestBillToCustomerAsync(draft.Id, "Studio Mai Wedding");
 
@@ -400,16 +403,21 @@ public class GuestBillingTests : IDisposable
     }
 
     [Fact]
-    public void QuickBillSetupViewModel_HasFolders_TracksSourceFoldersProperly()
+    public async Task BuildGuestBillDraftAsync_Default_IsStateless_DoesNotPersistDraftToDatabase()
     {
-        var vm = new LalabAutoReport.UI.ViewModels.QuickBillSetupViewModel(_customerBillingService, _customerBillRepo, _jpegExporter, _settingsRepo);
-        vm.HasFolders.Should().BeFalse();
+        await _productRepo.CreateSpecificationAsync(new PrintSpecification { CanonicalName = "In 15x21", UnitPrice = 5000 });
+        string guestFolder = Path.Combine(_tempRoot, "Khách Lẻ Stateless Test");
+        CreateDummyFiles(Path.Combine(guestFolder, "In 15x21"), 5);
 
-        vm.SourceFolders.Add(@"D:\TestData\Folder1");
-        vm.HasFolders.Should().BeTrue();
+        // Action: Build draft with default persistDraft = false
+        var result = await _customerBillingService.BuildGuestBillDraftAsync(new[] { guestFolder });
 
-        vm.SourceFolders.Remove(@"D:\TestData\Folder1");
-        vm.HasFolders.Should().BeFalse();
+        // Assert
+        result.Draft.Should().NotBeNull();
+        result.Draft.Id.Should().Be(0);
+
+        var allBillsInDb = await _customerBillRepo.GetAllBillsAsync();
+        allBillsInDb.Should().BeEmpty();
     }
 
     [Fact]
@@ -453,8 +461,8 @@ public class GuestBillingTests : IDisposable
         string customerFolder = Path.Combine(_tempRoot, "Quang Studio");
         CreateDummyFiles(Path.Combine(customerFolder, "In 15x21"), 10);
 
-        // 4. Action: Build draft with folder name
-        var result = await _customerBillingService.BuildGuestBillDraftAsync(new[] { customerFolder }, "Quang Studio");
+        // 4. Action: Build draft with folder name (persisting draft to test conversion)
+        var result = await _customerBillingService.BuildGuestBillDraftAsync(new[] { customerFolder }, "Quang Studio", persistDraft: true);
 
         // 5. Assert: Draft must remain Guest with SuggestedCustomer, NOT auto-converted
         result.Draft.Should().NotBeNull();

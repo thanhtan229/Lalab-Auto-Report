@@ -498,3 +498,9 @@ create_shortcut.ps1
 branding_preview.html
 quick_bill_blue_preview.png
 quick_bill_preview.png
+
+# Cloudflare Worker local state
+.wrangler/
+.dev.vars
+.dev.vars.*
+

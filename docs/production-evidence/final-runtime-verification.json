@@ -1,0 +1,25 @@
+{
+  "desktopExecutable": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\bin\\Debug\\net8.0-windows\\LalabAutoReport.UI.exe",
+  "workerHealth": {
+    "status": "configuration_required",
+    "configurationReady": false,
+    "appName": "Lalab Cloud Worker 24/7",
+    "version": "1.0.0",
+    "workshopName": "XƯỞNG IN ẢNH CHUYÊN NGHIỆP",
+    "lastSyncedAt": "Chưa đồng bộ",
+    "time": "2026-10-02T13:27:14.254Z"
+  },
+  "workerRootPid": 102532,
+  "desktopPid": 93452,
+  "syntheticWorkerSecretsRemoved": true,
+  "checkedUtc": "2026-10-02T13:27:14.2954991Z",
+  "fixtureProcessCount": 0,
+  "desktopHealth": {
+    "appName": "Lalab Auto Report",
+    "version": "1.0",
+    "workshopName": "XƯỞNG IN ẢNH LALAB",
+    "serverTime": "2026-10-02 20:27:14",
+    "cloudSyncEnabled": true,
+    "remoteUrl": "https://lalab.tinix.io.vn"
+  }
+}

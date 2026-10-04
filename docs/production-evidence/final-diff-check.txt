@@ -1,0 +1,250 @@
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'PROJECT_STATUS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'TEST.bat', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'agents.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Core/Domain/Enums.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Core/Interfaces/IFolderVisualMarkerService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Core/Services/AutoScanCoordinator.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Core/Services/BillingService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Data/DatabaseBackupService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Data/DatabaseMigrator.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Data/SqliteCustomerRepository.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Data/SqliteFolderPrintRepository.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Data/SqliteProductRepository.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Data/SqliteSettingsRepository.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Reporting/ClosedXmlBillExporter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.Infrastructure/Windows/FolderVisualMarkerService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/App.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/App.xaml.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/MainWindow.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/MainWindow.xaml.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Resources/TinixStyles.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Resources/TinixTokens.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Services/QuickBillLauncher.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/ViewModels/CustomerBillLineDisplayModel.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/ViewModels/CustomerBillOrderDisplayModel.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/ViewModels/MainViewModel.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/ViewModels/PriceListViewModel.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/ViewModels/ReportsViewModel.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/ViewModels/SettingsViewModel.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/CustomerBillReviewWindow.xaml.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/CustomersView.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/DashboardView.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/DashboardView.xaml.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/InputDialog.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/InputDialog.xaml.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/PriceListView.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/PriceListView.xaml.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/ReportsView.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/LalabAutoReport.UI/Views/SettingsView.xaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LalabAutoReport.Tests/ContextMenuIntegrationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LalabAutoReport.Tests/ConverterTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LalabAutoReport.Tests/ExcelBillExporterTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LalabAutoReport.Tests/OrderItemDisplayModelTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LalabAutoReport.Tests/TabNavigationUiTests.cs', LF will be replaced by CRLF the next time Git touches it
+.gitignore:506: new blank line at EOF.
+PROJECT_STATUS.md:307: trailing whitespace.
++ 
+PROJECT_STATUS.md:309: trailing whitespace.
++ 
+src/LalabAutoReport.Core/Domain/Enums.cs:256: new blank line at EOF.
+src/LalabAutoReport.Core/Interfaces/Interfaces.cs:767: new blank line at EOF.
+src/LalabAutoReport.Core/Services/CustomerBillingService.cs:276: trailing whitespace.
++                    var (albumBase, albumExtra) = spec != null 
+src/LalabAutoReport.Core/Services/CustomerBillingService.cs:277: trailing whitespace.
++                        ? spec.GetEffectiveAlbumPrices(customer.PriceTier) 
+src/LalabAutoReport.Infrastructure/Data/DatabaseBackupService.cs:21: trailing whitespace.
++        ISqliteConnectionFactory connectionFactory, 
+src/LalabAutoReport.Infrastructure/Data/DatabaseMigrator.cs:631: trailing whitespace.
++                CREATE INDEX IF NOT EXISTS idx_customer_bills_customer_paid 
+src/LalabAutoReport.Infrastructure/Data/DatabaseMigrator.cs:1300: trailing whitespace.
++                DELETE FROM guest_bill_source_folders 
+src/LalabAutoReport.Infrastructure/Reporting/ClosedXmlBillExporter.cs:79: trailing whitespace.
++        string wsName = !string.IsNullOrWhiteSpace(settings?.WorkshopName) 
+src/LalabAutoReport.Infrastructure/Reporting/ClosedXmlBillExporter.cs:80: trailing whitespace.
++            ? settings.WorkshopName.ToUpperInvariant() 
+src/LalabAutoReport.Infrastructure/Reporting/ClosedXmlBillExporter.cs:82: trailing whitespace.
++        string wsSlogan = !string.IsNullOrWhiteSpace(settings?.WorkshopSlogan) 
+src/LalabAutoReport.Infrastructure/Reporting/ClosedXmlBillExporter.cs:83: trailing whitespace.
++            ? settings.WorkshopSlogan 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:327: trailing whitespace.
++            string wsName = !string.IsNullOrWhiteSpace(settings?.WorkshopName) 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:328: trailing whitespace.
++                ? settings.WorkshopName 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:330: trailing whitespace.
++            string wsSlogan = !string.IsNullOrWhiteSpace(settings?.WorkshopSlogan) 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:331: trailing whitespace.
++                ? settings.WorkshopSlogan 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:604: trailing whitespace.
++                        new SolidColorBrush(Color.FromRgb(248, 250, 252)), 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:605: trailing whitespace.
++                        new Pen(new SolidColorBrush(Color.FromRgb(226, 232, 240)), 1.5), 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:622: trailing whitespace.
++                            settings!.BankBinOrCode, 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:623: trailing whitespace.
++                            settings.BankAccountNumber, 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:624: trailing whitespace.
++                            bill.GrandTotal, 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:642: trailing whitespace.
++                    string qrTitle = isVietQr 
+src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs:643: trailing whitespace.
++                        ? "QUÉT MÃ VIETQR ĐỂ THANH TOÁN TỰ ĐỘNG" 
+src/LalabAutoReport.UI/ViewModels/DashboardViewModel.cs:1270: trailing whitespace.
++        StatusMessage = newStatus 
+src/LalabAutoReport.UI/ViewModels/DashboardViewModel.cs:1397: trailing whitespace.
++        StatusMessage = newPrinted 
+src/LalabAutoReport.UI/ViewModels/OrderDisplayModel.cs:344: trailing whitespace.
++    public string BillExportStatusTooltip => IsBillExported 
+src/LalabAutoReport.UI/ViewModels/OrderDisplayModel.cs:345: trailing whitespace.
++        ? "Đơn hàng này đã được lập và xuất hóa đơn JPEG thành công" 
+src/LalabAutoReport.UI/ViewModels/PriceListViewModel.cs:170: trailing whitespace.
++            SelectedCreationFamily = AvailableFamilies.FirstOrDefault(f => f.Id == SelectedCreationFamily.Id) 
+src/LalabAutoReport.UI/ViewModels/PriceListViewModel.cs:171: trailing whitespace.
++                ?? AvailableFamilies.FirstOrDefault(f => f.Category == NewCategory) 
+src/LalabAutoReport.UI/ViewModels/PriceListViewModel.cs:176: trailing whitespace.
++            SelectedCreationFamily = AvailableFamilies.FirstOrDefault(f => f.Category == NewCategory) 
+src/LalabAutoReport.UI/ViewModels/SettingsViewModel.cs:994: trailing whitespace.
++        
+src/LalabAutoReport.UI/Views/CustomerBillReviewWindow.xaml:316: trailing whitespace.
++                                                        <TextBox IsEnabled="{Binding DataContext.IsEditable, RelativeSource={RelativeSource AncestorType=Window}}" Text="{Binding OrderName, UpdateSourceTrigger=PropertyChanged}" 
+src/LalabAutoReport.UI/Views/CustomerBillReviewWindow.xaml:554: trailing whitespace.
++                                <TextBox IsEnabled="{Binding IsEditable}" Text="{Binding ShippingAddress, UpdateSourceTrigger=PropertyChanged}" 
+src/LalabAutoReport.UI/Views/CustomerBillReviewWindow.xaml:555: trailing whitespace.
++                                         AcceptsReturn="True" Height="48" TextWrapping="Wrap" 
+src/LalabAutoReport.UI/Views/CustomersView.xaml:247: trailing whitespace.
++                                    <TextBlock Text="💡 Khi tính bill, hệ thống tự động áp dụng giá theo cấp độ này. Nếu chưa đặt giá riêng, hệ thống tự dùng giá chuẩn khách lẻ." 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:36: trailing whitespace.
++                    <Border Background="{StaticResource Tinix.Color.DatePod.Bg}" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:37: trailing whitespace.
++                            BorderBrush="{StaticResource Tinix.Color.DatePod.Border}" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:38: trailing whitespace.
++                            BorderThickness="1" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:39: trailing whitespace.
++                            CornerRadius="8" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:40: trailing whitespace.
++                            Padding="10,4,10,4" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:143: trailing whitespace.
++                <ComboBox Grid.Column="2" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:144: trailing whitespace.
++                          ItemsSource="{Binding RootFolderFilterOptions}" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:145: trailing whitespace.
++                          SelectedValuePath="Id" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:146: trailing whitespace.
++                          DisplayMemberPath="Name" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:147: trailing whitespace.
++                          SelectedValue="{Binding SelectedRootFolderId}" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:443: trailing whitespace.
++                                <Border Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:576: trailing whitespace.
++        <Grid Grid.Row="0" Grid.RowSpan="5" 
+src/LalabAutoReport.UI/Views/DashboardView.xaml:577: trailing whitespace.
++              Visibility="{Binding IsPreviewPopupOpen, Converter={StaticResource BoolToVis}}" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:32: trailing whitespace.
++            <Button Grid.Column="1" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:33: trailing whitespace.
++                    Style="{StaticResource Tinix.Button.Secondary}" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:34: trailing whitespace.
++                    Height="38" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:35: trailing whitespace.
++                    Padding="16,0" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:36: trailing whitespace.
++                    VerticalAlignment="Center" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:123: trailing whitespace.
++                                               Foreground="{StaticResource Tinix.Color.Text.Primary}" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:159: trailing whitespace.
++                                          ItemsSource="{Binding AvailableFamilies}" 
+src/LalabAutoReport.UI/Views/PriceListView.xaml:160: trailing whitespace.
++                                          SelectedItem="{Binding SelectedCreationFamily}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:70: trailing whitespace.
++                                                    <Button Command="{Binding DataContext.BrowseAndUpdatePathCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:71: trailing whitespace.
++                                                            CommandParameter="{Binding}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:72: trailing whitespace.
++                                                            Content="📂 Sửa Đường Dẫn..." 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:73: trailing whitespace.
++                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:76: trailing whitespace.
++                                                    <Button Command="{Binding DataContext.RenameRootFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:77: trailing whitespace.
++                                                            CommandParameter="{Binding}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:78: trailing whitespace.
++                                                            Content="✏️ Đổi Tên" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:79: trailing whitespace.
++                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:82: trailing whitespace.
++                                                    <Button Command="{Binding DataContext.ToggleActiveRootCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:83: trailing whitespace.
++                                                            CommandParameter="{Binding}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:84: trailing whitespace.
++                                                            Content="{Binding ToggleActiveButtonText}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:85: trailing whitespace.
++                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:88: trailing whitespace.
++                                                    <Button Command="{Binding DataContext.SetDefaultRootCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:89: trailing whitespace.
++                                                            CommandParameter="{Binding}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:90: trailing whitespace.
++                                                            Content="⭐ Đặt Mặc Định" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:92: trailing whitespace.
++                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:95: trailing whitespace.
++                                                    <Button Command="{Binding DataContext.DeleteRootFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:96: trailing whitespace.
++                                                            CommandParameter="{Binding}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:97: trailing whitespace.
++                                                            Content="🗑️ Xóa Kho" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:98: trailing whitespace.
++                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:202: trailing whitespace.
++                                <RadioButton Content="⚡ VietQR tự động (Napas247 — Tự sinh mã có số tiền và mã hóa đơn từng đơn, quét là trả đúng tiền)" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:203: trailing whitespace.
++                                             IsChecked="{Binding IsVietQrMode}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:204: trailing whitespace.
++                                             GroupName="QrModeGroup" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:206: trailing whitespace.
++                                
+src/LalabAutoReport.UI/Views/SettingsView.xaml:207: trailing whitespace.
++                                <RadioButton Content="🖼️ Dùng ảnh mã QR có sẵn (Tải lên ảnh QR MoMo, ZaloPay hoặc mã QR tài khoản riêng của xưởng)" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:208: trailing whitespace.
++                                             IsChecked="{Binding IsCustomQrMode}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:209: trailing whitespace.
++                                             GroupName="QrModeGroup" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:211: trailing whitespace.
++                                
+src/LalabAutoReport.UI/Views/SettingsView.xaml:212: trailing whitespace.
++                                <RadioButton Content="🚫 Không hiển thị mã QR trên hóa đơn" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:213: trailing whitespace.
++                                             IsChecked="{Binding IsQrDisabled}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:214: trailing whitespace.
++                                             GroupName="QrModeGroup" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:262: trailing whitespace.
++                                    <ComboBox Grid.Row="0" Grid.Column="1" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:263: trailing whitespace.
++                                              ItemsSource="{Binding AvailableBanks}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:264: trailing whitespace.
++                                              SelectedItem="{Binding SelectedBank}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:265: trailing whitespace.
++                                              DisplayMemberPath="DisplayName" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:266: trailing whitespace.
++                                              Height="34" FontSize="13" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:267: trailing whitespace.
++                                              VerticalContentAlignment="Center" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:592: trailing whitespace.
++                                    <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:593: trailing whitespace.
++                                              Content="Thu nhỏ xuống khay hệ thống (Taskbar Tray) khi bấm nút đóng [X] thay vì tắt hẳn phần mềm" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:596: trailing whitespace.
++                                    <CheckBox IsChecked="{Binding AutoStartWithWindows}" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:597: trailing whitespace.
++                                              Content="Tự động khởi động cùng Windows ở chế độ chạy ngầm (Khuyên dùng để điện thoại kết nối được ngay khi bật máy)" 
+src/LalabAutoReport.UI/Views/SettingsView.xaml:604: trailing whitespace.
++                            
+src/LalabAutoReport.UI/Views/SettingsView.xaml:622: trailing whitespace.
++                                        
+src/LalabAutoReport.UI/Views/SettingsView.xaml:636: trailing whitespace.
++                                        
+tests/LalabAutoReport.Tests/ConverterTests.cs:310: new blank line at EOF.
+tests/LalabAutoReport.Tests/CustomerBillingTests.cs:1649: trailing whitespace.
++        
+tests/LalabAutoReport.Tests/InvoiceHistoryAndReorganizationTests.cs:444: new blank line at EOF.

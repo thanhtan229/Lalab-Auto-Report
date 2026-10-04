@@ -1,0 +1,21 @@
+{
+  "RecordedUtc": "2026-10-03T01:33:06.7412095Z",
+  "Health": {
+    "status": "ok",
+    "configurationReady": true,
+    "appName": "Lalab Cloud Worker 24/7",
+    "version": "1.0.0",
+    "workshopName": "XƯỞNG IN ẢNH CHUYÊN NGHIỆP",
+    "lastSyncedAt": "2026-10-02T12:18:58.142Z",
+    "time": "2026-10-03T01:33:04.427Z"
+  },
+  "AdminLoginRole": "Admin",
+  "StaffLoginRole": "Staff",
+  "ProtocolVersion": 2,
+  "StreamIdPresent": true,
+  "LegacyUnclaimedAckStatus": 400,
+  "NonexistentClaimStatus": 409,
+  "StaffFinancialMediaStatus": 403,
+  "UnauthenticatedBillStatus": 401,
+  "NewPwaConfirmationPresent": true
+}

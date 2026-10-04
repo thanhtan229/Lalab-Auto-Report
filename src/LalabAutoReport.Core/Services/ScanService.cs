@@ -25,6 +25,7 @@ public class ScanService : IScanService
     private readonly ICustomerBillRepository? _customerBillRepository;
     private readonly IFolderFingerprintService? _fingerprintService;
     private readonly IPrintStatusService? _printStatusService;
+    private readonly IRootFolderRepository? _rootFolderRepository;
     private readonly ILogger<ScanService>? _logger;
 
     public ScanService(
@@ -40,6 +41,7 @@ public class ScanService : IScanService
         ICustomerBillRepository? customerBillRepository = null,
         IFolderFingerprintService? fingerprintService = null,
         IPrintStatusService? printStatusService = null,
+        IRootFolderRepository? rootFolderRepository = null,
         ILogger<ScanService>? logger = null)
     {
         _fileSystem = fileSystem;
@@ -54,126 +56,230 @@ public class ScanService : IScanService
         _customerBillRepository = customerBillRepository;
         _fingerprintService = fingerprintService;
         _printStatusService = printStatusService;
+        _rootFolderRepository = rootFolderRepository;
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<Order>> ScanDateAsync(
+    public Task<IReadOnlyList<Order>> ScanDateAsync(string dateString, IProgress<ScanProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+        => Task.Run(() => ScanDateCoreAsync(dateString, progress, cancellationToken), cancellationToken);
+
+    private async Task<IReadOnlyList<Order>> ScanDateCoreAsync(
         string dateString,
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         _logger?.LogInformation("Starting scan for date '{Date}'", dateString);
         var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-        string rootFolder = settings.RootFolder;
+        var supportedExts = new HashSet<string>(settings.SupportedExtensions, StringComparer.OrdinalIgnoreCase);
 
-        if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+        IReadOnlyList<RootFolder> activeRoots = Array.Empty<RootFolder>();
+        if (_rootFolderRepository != null)
         {
-            throw new DirectoryNotFoundException($"Root folder '{rootFolder}' does not exist or is not configured.");
+            activeRoots = await _rootFolderRepository.GetActiveRootsAsync(cancellationToken);
         }
 
-        var supportedExts = new HashSet<string>(settings.SupportedExtensions, StringComparer.OrdinalIgnoreCase);
-        var discoveredOrders = _structureParser.DiscoverOrdersForDate(rootFolder, dateString);
+        if (activeRoots.Count == 0)
+        {
+            string rootFolder = settings.RootFolder;
+            if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+            {
+                throw new DirectoryNotFoundException($"Root folder '{rootFolder}' does not exist or is not configured.");
+            }
+            activeRoots = new List<RootFolder>
+            {
+                new RootFolder { Id = 0, Name = "Mặc định", FullPath = rootFolder, IsActive = true, IsDefault = true }
+            };
+        }
 
         var resultOrders = new List<Order>();
-        int total = discoveredOrders.Count;
-        int completed = 0;
 
-        foreach (var discOrder in discoveredOrders)
+        foreach (var root in activeRoots)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            progress?.Report(new ScanProgress(
-                CurrentStep: $"Scanning {discOrder.OriginalCustomerFolderName} ({completed + 1}/{total})",
-                CompletedItems: completed,
-                TotalItems: total,
-                CurrentItemName: discOrder.OriginalCustomerFolderName
-            ));
+            if (string.IsNullOrWhiteSpace(root.FullPath) || !_fileSystem.DirectoryExists(root.FullPath))
+            {
+                _logger?.LogWarning("Root folder '{Name}' at '{Path}' does not exist or is offline; skipping.", root.Name, root.FullPath);
+                continue;
+            }
 
-            try
+            IReadOnlyList<DiscoveredOrder> discoveredOrders;
+            try { discoveredOrders = _structureParser.DiscoverOrdersForDate(root.FullPath, dateString); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
-                var order = await ProcessDiscoveredOrderAsync(rootFolder, discOrder, supportedExts, ScanScope.Date, cancellationToken);
-                resultOrders.Add(order);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error processing customer folder '{Folder}' at '{Path}'", discOrder.OriginalCustomerFolderName, discOrder.RelativePath);
-                var failedOrder = new Order
+                _logger?.LogWarning(ex, "Incomplete date discovery at {Root}; retaining all existing orders", root.FullPath);
+                progress?.Report(new ScanProgress($"Không đọc đủ {root.FullPath}: {ex.Message}", 0, 0));
+                if (_orderRepository != null)
                 {
-                    WorkDate = discOrder.Date,
-                    OriginalFolderName = discOrder.OriginalCustomerFolderName,
-                    RelativePath = discOrder.RelativePath,
-                    Status = OrderStatus.Error,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow,
-                    LastScanAt = DateTimeOffset.UtcNow
-                };
-                resultOrders.Add(failedOrder);
+                    var retained = root.Id > 0 ? await _orderRepository.GetOrdersByDateAndRootAsync(dateString, root.Id, cancellationToken)
+                        : await _orderRepository.GetOrdersByDateAsync(dateString, cancellationToken);
+                    foreach (var failed in retained) { failed.Status = OrderStatus.Error; resultOrders.Add(failed); }
+                }
+                continue; // Never prune after an incomplete observation.
             }
+            int total = discoveredOrders.Count;
+            int completed = 0;
 
-            completed++;
-            progress?.Report(new ScanProgress(
-                CurrentStep: $"Finished {discOrder.OriginalCustomerFolderName}",
-                CompletedItems: completed,
-                TotalItems: total,
-                CurrentItemName: discOrder.OriginalCustomerFolderName
-            ));
-        }
-
-        // Reconcile and prune obsolete/orphaned unbilled orders for this date in DB
-        if (_orderRepository != null)
-        {
-            try
+            foreach (var discOrder in discoveredOrders)
             {
-                var discoveredPathSet = new HashSet<string>(
-                    discoveredOrders.Select(o => o.RelativePath),
-                    StringComparer.OrdinalIgnoreCase);
+                cancellationToken.ThrowIfCancellationRequested();
 
-                var existingDbOrders = await _orderRepository.GetOrdersByDateAsync(dateString, cancellationToken);
-                foreach (var dbOrder in existingDbOrders)
+                string stepPrefix = activeRoots.Count > 1 ? $"[{root.Name}] " : "";
+                progress?.Report(new ScanProgress(
+                    CurrentStep: $"{stepPrefix}Scanning {discOrder.OriginalCustomerFolderName} ({completed + 1}/{total})",
+                    CompletedItems: completed,
+                    TotalItems: total,
+                    CurrentItemName: discOrder.OriginalCustomerFolderName
+                ));
+
+                try
                 {
-                    if (dbOrder.Status != OrderStatus.Locked && !discoveredPathSet.Contains(dbOrder.RelativePath))
+                    var orderToProcess = root.Id > 0
+                        ? discOrder with { RootFolderId = root.Id }
+                        : discOrder;
+
+                    var order = await ProcessDiscoveredOrderAsync(root.FullPath, orderToProcess, supportedExts, ScanScope.Date, cancellationToken);
+                    if (root.Id > 0)
                     {
-                        bool hasLockedBill = false;
-                        if (_customerBillRepository != null)
-                        {
-                            var lockedBill = await _customerBillRepository.GetLockedBillByOrderIdAsync(dbOrder.Id, cancellationToken);
-                            if (lockedBill != null) hasLockedBill = true;
-                        }
-                        if (!hasLockedBill && _billRepository != null)
-                        {
-                            var lockedBill = await _billRepository.GetBillByOrderIdAsync(dbOrder.Id, cancellationToken);
-                            if (lockedBill != null && lockedBill.Status == OrderStatus.Locked) hasLockedBill = true;
-                        }
+                        order.RootFolderId = root.Id;
+                        order.RootFolderName = root.Name;
+                    }
+                    resultOrders.Add(order);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Error processing customer folder '{Folder}' at '{Path}' in root '{RootName}'", discOrder.OriginalCustomerFolderName, discOrder.RelativePath, root.Name);
+                    var failedOrder = new Order
+                    {
+                        WorkDate = discOrder.Date,
+                        OriginalFolderName = discOrder.OriginalCustomerFolderName,
+                        RelativePath = discOrder.RelativePath,
+                        RootFolderId = root.Id > 0 ? root.Id : null,
+                        RootFolderName = root.Id > 0 ? root.Name : null,
+                        Status = OrderStatus.Error,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        UpdatedAt = DateTimeOffset.UtcNow,
+                        LastScanAt = DateTimeOffset.UtcNow
+                    };
+                    resultOrders.Add(failedOrder);
+                }
 
-                        if (!hasLockedBill)
+                completed++;
+                progress?.Report(new ScanProgress(
+                    CurrentStep: $"{stepPrefix}Finished {discOrder.OriginalCustomerFolderName}",
+                    CompletedItems: completed,
+                    TotalItems: total,
+                    CurrentItemName: discOrder.OriginalCustomerFolderName
+                ));
+            }
+
+            // Scoped pruning requires complete discovery.
+            if (_orderRepository != null && discoveredOrders.All(o => o.DiscoveryError == null))
+            {
+                try
+                {
+                    var discoveredPathSet = new HashSet<string>(
+                        discoveredOrders.Select(o => o.RelativePath),
+                        StringComparer.OrdinalIgnoreCase);
+
+                    IReadOnlyList<Order> existingDbOrders;
+                    if (root.Id > 0)
+                    {
+                        existingDbOrders = await _orderRepository.GetOrdersByDateAndRootAsync(dateString, root.Id, cancellationToken);
+                    }
+                    else
+                    {
+                        existingDbOrders = await _orderRepository.GetOrdersByDateAsync(dateString, cancellationToken);
+                    }
+
+                    foreach (var dbOrder in existingDbOrders)
+                    {
+                        if (dbOrder.Status != OrderStatus.Locked && !discoveredPathSet.Contains(dbOrder.RelativePath))
                         {
-                            _logger?.LogInformation("Pruning orphaned/invalid order {OrderId} ({RelativePath}) from database", dbOrder.Id, dbOrder.RelativePath);
-                            await _orderRepository.DeleteOrderAsync(dbOrder.Id, cancellationToken);
+                            bool hasLockedBill = false;
+                            if (_customerBillRepository != null)
+                            {
+                                var lockedBill = await _customerBillRepository.GetLockedBillByOrderIdAsync(dbOrder.Id, cancellationToken);
+                                if (lockedBill != null) hasLockedBill = true;
+                            }
+                            if (!hasLockedBill && _billRepository != null)
+                            {
+                                var lockedBill = await _billRepository.GetBillByOrderIdAsync(dbOrder.Id, cancellationToken);
+                                if (lockedBill != null && lockedBill.Status == OrderStatus.Locked) hasLockedBill = true;
+                            }
+
+                            if (!hasLockedBill)
+                            {
+                                _logger?.LogInformation("Pruning orphaned/invalid order {OrderId} ({RelativePath}) from root {RootId}", dbOrder.Id, dbOrder.RelativePath, root.Id);
+                                await _orderRepository.DeleteOrderAsync(dbOrder.Id, cancellationToken);
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Error during pruning obsolete orders for date '{Date}'", dateString);
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Error during pruning obsolete orders for date '{Date}' in root '{RootName}'", dateString, root.Name);
+                }
             }
         }
 
-        _logger?.LogInformation("Completed scan for date '{Date}': {Count} orders processed.", dateString, resultOrders.Count);
+        _logger?.LogInformation("Completed scan for date '{Date}': {Count} orders processed across {Roots} root(s).", dateString, resultOrders.Count, activeRoots.Count);
         return resultOrders;
     }
 
-    public async Task<Order?> ScanOrderAsync(
-        string orderRelativePath,
+    public Task<Order?> ScanOrderAsync(string orderRelativePath, IProgress<ScanProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+        => ScanOrderInRootAsync(orderRelativePath, null, progress, cancellationToken);
+
+    public Task<Order?> ScanOrderInRootAsync(string orderRelativePath, long? requestedRootFolderId,
+        IProgress<ScanProgress>? progress = null, CancellationToken cancellationToken = default)
+        => Task.Run(() => ScanOrderInRootCoreAsync(orderRelativePath, requestedRootFolderId, progress, cancellationToken), cancellationToken);
+
+    private async Task<Order?> ScanOrderInRootCoreAsync(
+        string orderRelativePath, long? requestedRootFolderId,
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
         string rootFolder = settings.RootFolder;
+        long? rootFolderId = requestedRootFolderId;
+        if (requestedRootFolderId.HasValue)
+        {
+            var requestedRoot = _rootFolderRepository == null ? null
+                : await _rootFolderRepository.GetByIdAsync(requestedRootFolderId.Value, cancellationToken);
+            if (requestedRoot == null) throw new InvalidOperationException("Không tìm thấy root của đơn hàng.");
+            rootFolder = requestedRoot.FullPath;
+        }
+
+        // Try to identify root folder from order in repository
+        if (_orderRepository != null)
+        {
+            var dbOrder = rootFolderId.HasValue
+                ? await _orderRepository.GetOrderByRootAndRelativePathAsync(rootFolderId.Value, orderRelativePath, cancellationToken)
+                : await _orderRepository.GetOrderByRelativePathAsync(orderRelativePath, cancellationToken);
+            if (dbOrder?.RootFolderId != null && _rootFolderRepository != null)
+            {
+                var root = await _rootFolderRepository.GetByIdAsync(dbOrder.RootFolderId.Value, cancellationToken);
+                if (root != null && _fileSystem.DirectoryExists(root.FullPath))
+                {
+                    rootFolder = root.FullPath;
+                    rootFolderId = root.Id;
+                }
+            }
+        }
+
+        if (!rootFolderId.HasValue && _rootFolderRepository != null)
+        {
+            var roots = await _rootFolderRepository.GetActiveRootsAsync(cancellationToken);
+            var matches = roots.Where(r => _fileSystem.DirectoryExists(_fileSystem.Combine(r.FullPath, orderRelativePath))).ToList();
+            if (matches.Count > 1) throw new InvalidOperationException("Đường dẫn có ở nhiều root. Hãy chọn đơn hàng theo root.");
+            if (matches.Count == 1) { rootFolder = matches[0].FullPath; rootFolderId = matches[0].Id; }
+        }
 
         var discOrder = _structureParser.DiscoverSingleOrder(rootFolder, orderRelativePath);
         if (discOrder == null)
@@ -182,10 +288,20 @@ public class ScanService : IScanService
             return null;
         }
 
+        if (rootFolderId.HasValue && rootFolderId.Value > 0)
+        {
+            discOrder = discOrder with { RootFolderId = rootFolderId.Value };
+        }
+
         var supportedExts = new HashSet<string>(settings.SupportedExtensions, StringComparer.OrdinalIgnoreCase);
         try
         {
-            return await ProcessDiscoveredOrderAsync(rootFolder, discOrder, supportedExts, ScanScope.Order, cancellationToken);
+            var order = await ProcessDiscoveredOrderAsync(rootFolder, discOrder, supportedExts, ScanScope.Order, cancellationToken);
+            if (rootFolderId.HasValue && rootFolderId.Value > 0)
+            {
+                order.RootFolderId = rootFolderId.Value;
+            }
+            return order;
         }
         catch (OperationCanceledException)
         {
@@ -199,6 +315,7 @@ public class ScanService : IScanService
                 WorkDate = discOrder.Date,
                 OriginalFolderName = discOrder.OriginalCustomerFolderName,
                 RelativePath = discOrder.RelativePath,
+                RootFolderId = rootFolderId,
                 Status = OrderStatus.Error,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow,
@@ -207,12 +324,36 @@ public class ScanService : IScanService
         }
     }
 
-    public async Task<OrderItemScan?> ScanSpecificationAsync(
-        string specRelativePath,
+    public Task<OrderItemScan?> ScanSpecificationAsync(string specRelativePath, CancellationToken cancellationToken = default)
+        => ScanSpecificationInRootAsync(specRelativePath, null, cancellationToken);
+
+    public Task<OrderItemScan?> ScanSpecificationInRootAsync(string specRelativePath, long? requestedRootFolderId,
+        CancellationToken cancellationToken = default)
+        => Task.Run(() => ScanSpecificationInRootCoreAsync(specRelativePath, requestedRootFolderId, cancellationToken), cancellationToken);
+
+    private async Task<OrderItemScan?> ScanSpecificationInRootCoreAsync(
+        string specRelativePath, long? requestedRootFolderId,
         CancellationToken cancellationToken = default)
     {
         var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
         string rootFolder = settings.RootFolder;
+
+        if (_rootFolderRepository != null)
+        {
+            if (requestedRootFolderId.HasValue)
+            {
+                var root = await _rootFolderRepository.GetByIdAsync(requestedRootFolderId.Value, cancellationToken)
+                    ?? throw new InvalidOperationException("Không tìm thấy root của quy cách.");
+                rootFolder = root.FullPath;
+            }
+            else
+            {
+                var roots = await _rootFolderRepository.GetActiveRootsAsync(cancellationToken);
+                var matches = roots.Where(r => _fileSystem.DirectoryExists(_fileSystem.Combine(r.FullPath, specRelativePath))).ToList();
+                if (matches.Count > 1) throw new InvalidOperationException("Quy cách có ở nhiều root. Hãy chọn root trước khi quét.");
+                if (matches.Count == 1) rootFolder = matches[0].FullPath;
+            }
+        }
 
         var discSpec = _structureParser.DiscoverSingleSpecification(rootFolder, specRelativePath);
         if (discSpec == null)
@@ -231,21 +372,49 @@ public class ScanService : IScanService
         CancellationToken cancellationToken = default)
     {
         var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-        string rootFolder = settings.RootFolder;
+        string prefix = $"{year:D4}-{month:D2}";
+        var diskDates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+        IReadOnlyList<RootFolder> activeRoots = Array.Empty<RootFolder>();
+        if (_rootFolderRepository != null)
         {
-            return Array.Empty<string>();
+            activeRoots = await _rootFolderRepository.GetActiveRootsAsync(cancellationToken);
         }
 
-        string prefix = $"{year:D4}-{month:D2}";
-        var diskDates = _structureParser.DiscoverDateFolders(rootFolder)
-            .Where(d => d.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        if (activeRoots.Count > 0)
+        {
+            foreach (var root in activeRoots)
+            {
+                if (!string.IsNullOrWhiteSpace(root.FullPath) && _fileSystem.DirectoryExists(root.FullPath))
+                {
+                    foreach (var d in _structureParser.DiscoverDateFolders(root.FullPath))
+                    {
+                        if (d.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            diskDates.Add(d);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            string rootFolder = settings.RootFolder;
+            if (!string.IsNullOrWhiteSpace(rootFolder) && _fileSystem.DirectoryExists(rootFolder))
+            {
+                foreach (var d in _structureParser.DiscoverDateFolders(rootFolder))
+                {
+                    if (d.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        diskDates.Add(d);
+                    }
+                }
+            }
+        }
 
         if (_orderRepository == null)
         {
-            return diskDates;
+            return diskDates.OrderBy(d => d).ToList();
         }
 
         var scannedDates = await _orderRepository.GetScannedDatesInMonthAsync(prefix, cancellationToken);
@@ -262,19 +431,46 @@ public class ScanService : IScanService
         CancellationToken cancellationToken = default)
     {
         var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-        string rootFolder = settings.RootFolder;
+        var inRangeDates = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+        IReadOnlyList<RootFolder> activeRoots = Array.Empty<RootFolder>();
+        if (_rootFolderRepository != null)
         {
-            throw new DirectoryNotFoundException($"Root folder '{rootFolder}' does not exist or is not configured.");
+            activeRoots = await _rootFolderRepository.GetActiveRootsAsync(cancellationToken);
         }
 
-        var allDates = _structureParser.DiscoverDateFolders(rootFolder);
-        var inRangeDates = allDates
-            .Where(d => string.Compare(d, startDateString, StringComparison.OrdinalIgnoreCase) >= 0 &&
+        if (activeRoots.Count > 0)
+        {
+            foreach (var root in activeRoots)
+            {
+                if (!string.IsNullOrWhiteSpace(root.FullPath) && _fileSystem.DirectoryExists(root.FullPath))
+                {
+                    foreach (var d in _structureParser.DiscoverDateFolders(root.FullPath))
+                    {
+                        if (string.Compare(d, startDateString, StringComparison.OrdinalIgnoreCase) >= 0 &&
+                            string.Compare(d, endDateString, StringComparison.OrdinalIgnoreCase) <= 0)
+                        {
+                            inRangeDates.Add(d);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            string rootFolder = settings.RootFolder;
+            if (!string.IsNullOrWhiteSpace(rootFolder) && _fileSystem.DirectoryExists(rootFolder))
+            {
+                foreach (var d in _structureParser.DiscoverDateFolders(rootFolder))
+                {
+                    if (string.Compare(d, startDateString, StringComparison.OrdinalIgnoreCase) >= 0 &&
                         string.Compare(d, endDateString, StringComparison.OrdinalIgnoreCase) <= 0)
-            .OrderBy(d => d)
-            .ToList();
+                    {
+                        inRangeDates.Add(d);
+                    }
+                }
+            }
+        }
 
         var orders = new List<Order>();
         int totalDates = inRangeDates.Count;
@@ -354,7 +550,25 @@ public class ScanService : IScanService
         Order? existingOrder = null;
         if (_orderRepository != null)
         {
-            existingOrder = await _orderRepository.GetOrderByRelativePathAsync(discOrder.RelativePath, cancellationToken);
+            if (discOrder.RootFolderId.HasValue && discOrder.RootFolderId.Value > 0)
+            {
+                existingOrder = await _orderRepository.GetOrderByRootAndRelativePathAsync(discOrder.RootFolderId.Value, discOrder.RelativePath, cancellationToken);
+            }
+            if (!discOrder.RootFolderId.HasValue)
+            {
+                existingOrder = await _orderRepository.GetOrderByRelativePathAsync(discOrder.RelativePath, cancellationToken);
+            }
+        }
+
+        if (discOrder.DiscoveryError != null)
+        {
+            var failed = existingOrder ?? new Order { WorkDate = discOrder.Date, OriginalFolderName = discOrder.OriginalCustomerFolderName,
+                RelativePath = discOrder.RelativePath, RootFolderId = discOrder.RootFolderId };
+            failed.Status = OrderStatus.Error;
+            // Keep the last known persisted snapshot; display the scoped failure in this result.
+            failed.Items = new List<OrderItemScan> { new() { SpecificationFolderName = discOrder.OriginalCustomerFolderName,
+                ScanStatus = ScanStatus.Failed, ErrorMessage = discOrder.DiscoveryError } };
+            return failed;
         }
 
         var order = existingOrder ?? new Order
@@ -364,8 +578,14 @@ public class ScanService : IScanService
             RelativePath = discOrder.RelativePath,
             OrderKind = discOrder.Kind,
             OrderName = discOrder.OrderName,
+            RootFolderId = discOrder.RootFolderId,
             CreatedAt = DateTimeOffset.UtcNow
         };
+
+        if (discOrder.RootFolderId.HasValue && discOrder.RootFolderId.Value > 0)
+        {
+            order.RootFolderId = discOrder.RootFolderId.Value;
+        }
 
         order.OrderKind = discOrder.Kind;
         order.OrderName = discOrder.OrderName;
@@ -453,6 +673,10 @@ public class ScanService : IScanService
         }
 
         order.Items = scannedItems;
+        order.ThumbnailCandidateRelativePath = scannedItems
+            .FirstOrDefault(i => !string.IsNullOrEmpty(i.ThumbnailCandidateRelativePath))
+            ?.ThumbnailCandidateRelativePath ?? existingOrder?.ThumbnailCandidateRelativePath;
+
         snapshot.Items = scannedItems;
         snapshot.CompletedAt = DateTimeOffset.UtcNow;
 
@@ -479,6 +703,38 @@ public class ScanService : IScanService
             }
         }
 
+        bool filesystemChanged = false;
+        if (lockedCustomerBill != null && (lockedCustomerBill.Status == CustomerBillStatus.Locked || lockedCustomerBill.Status == CustomerBillStatus.Exported))
+        {
+            var targetOrderId = existingOrder?.Id ?? order.Id;
+            var billLinesForOrder = lockedCustomerBill.Lines.Where(l => l.OrderId == targetOrderId).ToList();
+            if (billLinesForOrder.Count != scannedItems.Count)
+            {
+                filesystemChanged = true;
+            }
+            else
+            {
+                var linesBySpec = billLinesForOrder
+                    .Where(l => !string.IsNullOrEmpty(l.SpecificationFolderName))
+                    .ToDictionary(l => l.SpecificationFolderName!, StringComparer.OrdinalIgnoreCase);
+
+                foreach (var item in scannedItems)
+                {
+                    if (!linesBySpec.TryGetValue(item.SpecificationFolderName, out var line))
+                    {
+                        filesystemChanged = true;
+                        break;
+                    }
+                    int scannedQty = item.PrintCount ?? item.SourceCount;
+                    if (line.ScannedQuantity != scannedQty)
+                    {
+                        filesystemChanged = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         if (scannedItems.Count == 0 || hasIssues)
         {
             order.Status = OrderStatus.NeedsReview;
@@ -493,26 +749,37 @@ public class ScanService : IScanService
             order.Status = OrderStatus.Ready;
         }
 
-        order.FilesystemChangedAfterLock = false;
+        order.FilesystemChangedAfterLock = filesystemChanged;
 
         if (_orderRepository != null)
         {
             await _orderRepository.SaveOrderAsync(order, snapshot, cancellationToken);
         }
 
-        // Cách 1: Tự động cập nhật thẳng vào CustomerBill đã lưu
+        // Tự động tạo mới hoặc cập nhật CustomerBill tại thời điểm quét
         if (_customerBillRepository != null && order.Status != OrderStatus.NeedsReview)
         {
-            lockedCustomerBill ??= await _customerBillRepository.GetLockedBillByOrderIdAsync(order.Id, cancellationToken);
+            lockedCustomerBill ??= await _customerBillRepository.GetBillByOrderIdAsync(order.Id, cancellationToken);
             if (lockedCustomerBill == null && !string.IsNullOrWhiteSpace(order.RelativePath))
             {
                 var bills = await _customerBillRepository.GetBillsBySourceFolderPathAsync(order.RelativePath, cancellationToken);
                 lockedCustomerBill = bills.FirstOrDefault();
             }
 
+            if (lockedCustomerBill == null && order.CustomerId.HasValue)
+            {
+                lockedCustomerBill = await _customerBillRepository.GetActiveDraftByCustomerIdAsync(order.CustomerId.Value, cancellationToken);
+            }
+
             if (lockedCustomerBill != null)
             {
-                await SyncCustomerBillWithOrderAsync(order, lockedCustomerBill, cancellationToken);
+                // CRITICAL DATA INTEGRITY:
+                // Only sync automatically if bill is in Draft status.
+                // NEVER silently mutate a Locked or Exported historical bill during rescan!
+                if (lockedCustomerBill.Status == CustomerBillStatus.Draft)
+                {
+                    await SyncCustomerBillWithOrderAsync(order, lockedCustomerBill, cancellationToken);
+                }
             }
         }
 
@@ -549,8 +816,18 @@ public class ScanService : IScanService
 
             if (linesBySpecFolder.TryGetValue(item.SpecificationFolderName, out var line))
             {
+                int oldScanned = line.ScannedQuantity;
                 line.ScannedQuantity = newQty;
-                line.BilledQuantity = newQty;
+
+                // Bảo toàn số lượng sửa tay nếu người dùng đã ghi đè (không tự ý ghi đè mất của người dùng)
+                if (line.BilledQuantity == oldScanned && string.IsNullOrEmpty(line.QuantityOverrideReason))
+                {
+                    line.BilledQuantity = newQty;
+                }
+                else if (string.IsNullOrEmpty(line.QuantityOverrideReason) && line.BilledQuantity != newQty)
+                {
+                    line.QuantityOverrideReason = "Chỉnh sửa thủ công";
+                }
 
                 if (line.BillingMethodSnapshot == BillingMethod.AlbumBasePlusExtra)
                 {
@@ -633,10 +910,23 @@ public class ScanService : IScanService
 
         // Update CustomerBillOrder subtotal
         var billOrder = bill.Orders.FirstOrDefault(o => o.OrderId == order.Id);
-        if (billOrder != null)
+        if (billOrder == null)
         {
-            billOrder.Subtotal = bill.Lines.Where(l => l.OrderId == order.Id && l.IsIncluded).Sum(l => l.LineTotal);
+            billOrder = new CustomerBillOrder
+            {
+                BillId = bill.Id,
+                OrderId = order.Id,
+                OrderNameSnapshot = !string.IsNullOrWhiteSpace(order.OrderName) && order.OrderName != "Khách lẻ"
+                    ? order.OrderName
+                    : order.OriginalFolderName,
+                OrderDateSnapshot = order.WorkDate,
+                SourceFolderPath = order.RelativePath,
+                IsIncluded = true,
+                SortOrder = bill.Orders.Count + 1
+            };
+            bill.Orders.Add(billOrder);
         }
+        billOrder.Subtotal = bill.Lines.Where(l => l.OrderId == order.Id && l.IsIncluded).Sum(l => l.LineTotal);
 
         // Recalculate bill totals
         long prodSubtotal = bill.Lines.Where(l => l.IsIncluded).Sum(l => l.LineTotal);
@@ -653,6 +943,12 @@ public class ScanService : IScanService
         if (jobIds.Count > 0 && _orderRepository != null)
         {
             await _orderRepository.SetCustomerBillIdForItemsAsync(jobIds, bill.Id, cancellationToken);
+        }
+
+        order.Status = OrderStatus.Billed;
+        if (_orderRepository != null && order.Id > 0)
+        {
+            await _orderRepository.UpdateOrderStatusAsync(order.Id, OrderStatus.Billed, cancellationToken);
         }
 
         _logger?.LogInformation("ScanService synchronized bill {BillNumber} (ID {BillId}) with rescanned order {OrderId}. Grand total: {GrandTotal}",
@@ -784,6 +1080,17 @@ public class ScanService : IScanService
             itemScan.CandidatePrintFolderRelativePaths = printResult.CandidatePrintFolderRelativePaths.ToList();
             itemScan.FolderResolutionMode = printResult.ResolutionMode;
 
+            // Resolve candidate image for order thumbnail preview
+            string candidateFolder = (printResult.Status == PrintFolderResolutionStatus.Resolved && !string.IsNullOrEmpty(printResult.SelectedPrintFolderFullPath))
+                ? printResult.SelectedPrintFolderFullPath
+                : discSpec.FullPath;
+
+            itemScan.ThumbnailCandidateRelativePath = FindCandidateImageRelativePath(candidateFolder, rootFolder);
+            if (string.IsNullOrEmpty(itemScan.ThumbnailCandidateRelativePath) && !string.Equals(candidateFolder, discSpec.FullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                itemScan.ThumbnailCandidateRelativePath = FindCandidateImageRelativePath(discSpec.FullPath, rootFolder);
+            }
+
             if (!string.IsNullOrEmpty(printResult.ErrorMessage))
             {
                 itemScan.ErrorMessage = printResult.ErrorMessage;
@@ -843,5 +1150,59 @@ public class ScanService : IScanService
         }
 
         return itemScan;
+    }
+
+    private string? FindCandidateImageRelativePath(string folderFullPath, string rootFolderFullPath)
+    {
+        try
+        {
+            if (!_fileSystem.DirectoryExists(folderFullPath)) return null;
+
+            var files = _fileSystem.EnumerateFiles(folderFullPath).ToList();
+            if (files.Count == 0) return null;
+
+            // Preferred formats for thumbnail: jpg, jpeg, png, bmp
+            var preferredFiles = files.Where(f =>
+            {
+                string ext = _fileSystem.GetExtension(f);
+                return ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase);
+            }).ToList();
+
+            if (preferredFiles.Count > 0)
+            {
+                preferredFiles.Sort(NaturalStringComparer.Instance);
+                return _fileSystem.GetRelativePath(rootFolderFullPath, preferredFiles[0]);
+            }
+
+            // Fallback: other photo formats (psd, psb, tif, raw, etc.) so we can display format badge
+            var otherFiles = files.Where(f =>
+            {
+                string ext = _fileSystem.GetExtension(f);
+                return ext.Equals(".psd", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".psb", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".tif", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".tiff", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".cr2", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".cr3", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".nef", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".arw", StringComparison.OrdinalIgnoreCase) ||
+                       ext.Equals(".dng", StringComparison.OrdinalIgnoreCase);
+            }).ToList();
+
+            if (otherFiles.Count > 0)
+            {
+                otherFiles.Sort(NaturalStringComparer.Instance);
+                return _fileSystem.GetRelativePath(rootFolderFullPath, otherFiles[0]);
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

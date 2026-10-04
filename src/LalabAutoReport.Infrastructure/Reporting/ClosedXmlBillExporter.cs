@@ -25,10 +25,10 @@ public class ClosedXmlBillExporter : IExcelBillExporter
 
     public async Task<string> ExportBillToExcelAsync(CustomerBill bill, string? destinationDirectory = null, CancellationToken cancellationToken = default)
     {
+        var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
         string exportDir = destinationDirectory ?? string.Empty;
         if (string.IsNullOrWhiteSpace(exportDir))
         {
-            var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
             exportDir = settings.BillExportFolder;
         }
 
@@ -42,7 +42,7 @@ public class ClosedXmlBillExporter : IExcelBillExporter
         string fileName = GenerateDeterministicFileName(bill);
         string filePath = Path.Combine(exportDir, fileName);
 
-        GenerateWorkbook(bill, filePath);
+        GenerateWorkbook(bill, filePath, settings);
 
         _logger?.LogInformation("Successfully exported bill {BillNumber} to Excel: {FilePath}", bill.BillNumber, filePath);
 
@@ -55,7 +55,7 @@ public class ClosedXmlBillExporter : IExcelBillExporter
         return $"{bill.BillNumber}_{slug}.xlsx";
     }
 
-    private static void GenerateWorkbook(CustomerBill bill, string destinationFilePath)
+    private static void GenerateWorkbook(CustomerBill bill, string destinationFilePath, AppSettings? settings = null)
     {
         using var workbook = new XLWorkbook();
         
@@ -76,9 +76,17 @@ public class ClosedXmlBillExporter : IExcelBillExporter
 
         string fontName = "Segoe UI";
 
+        string wsName = !string.IsNullOrWhiteSpace(settings?.WorkshopName) 
+            ? settings.WorkshopName.ToUpperInvariant() 
+            : "XƯỞNG IN ẢNH CHUYÊN NGHIỆP";
+        string wsSlogan = !string.IsNullOrWhiteSpace(settings?.WorkshopSlogan) 
+            ? settings.WorkshopSlogan 
+            : string.Empty;
+        string headerBrand = !string.IsNullOrWhiteSpace(wsSlogan) ? $"{wsName} — {wsSlogan}" : wsName;
+
         // Row 1: Brand Accent Header
         ws.Range("A1:I1").Merge();
-        ws.Cell("A1").Value = "LALAB PHOTO PRINTING SERVICE";
+        ws.Cell("A1").Value = headerBrand;
         ws.Cell("A1").Style.Font.FontName = fontName;
         ws.Cell("A1").Style.Font.FontSize = 11;
         ws.Cell("A1").Style.Font.Bold = true;
@@ -87,11 +95,12 @@ public class ClosedXmlBillExporter : IExcelBillExporter
 
         // Row 2: Title
         ws.Range("A2:I2").Merge();
-        ws.Cell("A2").Value = "HÓA ĐƠN BÁN HÀNG & IN ẤN";
+        ws.Cell("A2").Value = "HÓA ĐƠN BÁN HÀNG";
         ws.Cell("A2").Style.Font.FontName = fontName;
         ws.Cell("A2").Style.Font.FontSize = 18;
         ws.Cell("A2").Style.Font.Bold = true;
         ws.Cell("A2").Style.Font.FontColor = textPrimary;
+        ws.Cell("A2").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         ws.Row(2).Height = 32;
 
         // Row 3: Spacer
@@ -415,11 +424,34 @@ public class ClosedXmlBillExporter : IExcelBillExporter
             ws.Row(currentRow).Height = 22;
         }
 
+        // Bank Payment Info Section
+        if (!string.IsNullOrWhiteSpace(settings?.BankAccountNumber))
+        {
+            currentRow += 2;
+            string bankName = VietnameseBanks.GetShortNameOrBin(settings.BankBinOrCode);
+            string owner = !string.IsNullOrWhiteSpace(settings.BankAccountName) ? $" ({settings.BankAccountName.ToUpper()})" : "";
+
+            ws.Range(currentRow, 1, currentRow, 9).Merge();
+            var payCell = ws.Cell(currentRow, 1);
+            payCell.Value = $"Thông tin chuyển khoản: {bankName} — Số TK: {settings.BankAccountNumber}{owner}  |  Nội dung CK: {bill.BillNumber}";
+            payCell.Style.Font.FontName = fontName;
+            payCell.Style.Font.FontSize = 10;
+            payCell.Style.Font.Bold = true;
+            payCell.Style.Font.FontColor = brandBlue;
+            payCell.Style.Fill.BackgroundColor = highlightBlue;
+            payCell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            payCell.Style.Border.OutsideBorderColor = borderLight;
+            ws.Row(currentRow).Height = 24;
+        }
+
         // Footer Thank You
         currentRow += 2;
         ws.Range(currentRow, 1, currentRow, 9).Merge();
         var footerCell = ws.Cell(currentRow, 1);
-        footerCell.Value = "Cảm ơn quý khách đã tin tưởng và ủng hộ xưởng in Lalab!";
+        string footerMsg = !string.IsNullOrWhiteSpace(settings?.InvoiceFooterMessage)
+            ? settings.InvoiceFooterMessage
+            : "Cảm ơn quý khách đã tin tưởng và ủng hộ dịch vụ!";
+        footerCell.Value = footerMsg;
         footerCell.Style.Font.FontName = fontName;
         footerCell.Style.Font.FontSize = 10;
         footerCell.Style.Font.Italic = true;

@@ -17,6 +17,7 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDashboardActive))]
+    [NotifyPropertyChangedFor(nameof(IsInvoicesActive))]
     [NotifyPropertyChangedFor(nameof(IsReportsActive))]
     [NotifyPropertyChangedFor(nameof(IsCustomersActive))]
     [NotifyPropertyChangedFor(nameof(IsPriceListActive))]
@@ -31,6 +32,18 @@ public partial class MainViewModel : ObservableObject
             if (value && ActiveTab != "Dashboard")
             {
                 NavigateToDashboard();
+            }
+        }
+    }
+
+    public bool IsInvoicesActive
+    {
+        get => ActiveTab == "Invoices";
+        set
+        {
+            if (value && ActiveTab != "Invoices")
+            {
+                _ = NavigateToInvoicesAsync();
             }
         }
     }
@@ -90,6 +103,7 @@ public partial class MainViewModel : ObservableObject
     private string _rootFolderText = string.Empty;
 
     public DashboardViewModel DashboardVM { get; } = null!;
+    public InvoicesViewModel InvoicesVM { get; } = null!;
     public ReportsViewModel ReportsVM { get; } = null!;
     public SettingsViewModel SettingsVM { get; } = null!;
     public CustomersViewModel CustomersVM { get; } = null!;
@@ -97,6 +111,7 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         DashboardViewModel dashboardVM,
+        InvoicesViewModel invoicesVM,
         ReportsViewModel reportsVM,
         SettingsViewModel settingsVM,
         CustomersViewModel customersVM,
@@ -105,6 +120,7 @@ public partial class MainViewModel : ObservableObject
         IUpdateService? updateService = null)
     {
         DashboardVM = dashboardVM;
+        InvoicesVM = invoicesVM;
         ReportsVM = reportsVM;
         SettingsVM = settingsVM;
         CustomersVM = customersVM;
@@ -119,6 +135,11 @@ public partial class MainViewModel : ObservableObject
         {
             SettingsVM.SettingsSaved += OnSettingsSaved;
             SettingsVM.DataResetCompleted += OnDataResetCompleted;
+        }
+
+        if (CustomersVM != null)
+        {
+            CustomersVM.ViewCustomerInvoicesRequested += OnViewCustomerInvoicesRequested;
         }
     }
 
@@ -179,6 +200,10 @@ public partial class MainViewModel : ObservableObject
         {
             await PriceListVM.LoadSpecificationsAsync();
         }
+        if (InvoicesVM != null)
+        {
+            await InvoicesVM.LoadInvoicesAsync();
+        }
         if (ReportsVM != null)
         {
             await ReportsVM.LoadReportBillsAsync();
@@ -198,6 +223,35 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = DashboardVM;
         ActiveTab = "Dashboard";
+    }
+
+    [RelayCommand]
+    private async Task NavigateToInvoicesAsync()
+    {
+        CurrentView = InvoicesVM;
+        ActiveTab = "Invoices";
+        if (InvoicesVM != null)
+        {
+            await InvoicesVM.LoadInvoicesAsync();
+        }
+    }
+
+    private async void OnViewCustomerInvoicesRequested(long customerId)
+    {
+        try
+        {
+            CurrentView = InvoicesVM;
+            ActiveTab = "Invoices";
+            if (InvoicesVM != null)
+            {
+                await InvoicesVM.LoadInvoicesAsync();
+                InvoicesVM.FilterByCustomer(customerId, customerId == -1);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error navigating to customer invoices: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -242,5 +296,63 @@ public partial class MainViewModel : ObservableObject
         {
             _ = SettingsVM.LoadSettingsAsync();
         }
+    }
+
+    [RelayCommand]
+    public void OpenGlobalSearch()
+    {
+        var searchService = (System.Windows.Application.Current as App)?.Services?.GetService(typeof(IGlobalSearchService)) as IGlobalSearchService;
+        var billRepo = (System.Windows.Application.Current as App)?.Services?.GetService(typeof(ICustomerBillRepository)) as ICustomerBillRepository;
+        var billingService = (System.Windows.Application.Current as App)?.Services?.GetService(typeof(ICustomerBillingService)) as ICustomerBillingService;
+        var jpegExporter = (System.Windows.Application.Current as App)?.Services?.GetService(typeof(IJpegBillExporter)) as IJpegBillExporter;
+        var excelExporter = (System.Windows.Application.Current as App)?.Services?.GetService(typeof(IExcelBillExporter)) as IExcelBillExporter;
+        var settingsRepo = _settingsRepository;
+
+        if (searchService == null || billRepo == null) return;
+
+        var vm = new GlobalSearchViewModel(searchService, billRepo);
+
+        vm.NavigateToOrderRequested += (workDate, orderCode) =>
+        {
+            if (DateTime.TryParse(workDate, out var date))
+            {
+                DashboardVM.SelectedDate = date;
+            }
+            if (!string.IsNullOrWhiteSpace(orderCode))
+            {
+                DashboardVM.SearchText = orderCode;
+            }
+            ActiveTab = "Dashboard";
+            CurrentView = DashboardVM;
+        };
+
+        vm.OpenBillRequested += bill =>
+        {
+            if (billingService != null && jpegExporter != null)
+            {
+                var reviewVm = new CustomerBillReviewViewModel(
+                    bill,
+                    billingService,
+                    jpegExporter,
+                    excelExporter,
+                    null,
+                    null,
+                    settingsRepo,
+                    null,
+                    billRepo);
+
+                var reviewWin = new Views.CustomerBillReviewWindow(reviewVm)
+                {
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+                reviewWin.ShowDialog();
+            }
+        };
+
+        var searchWin = new Views.GlobalSearchWindow(vm)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        searchWin.ShowDialog();
     }
 }

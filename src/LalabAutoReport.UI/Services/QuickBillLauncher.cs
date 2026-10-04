@@ -116,7 +116,7 @@ public class QuickBillLauncher
 
             Log.Information("Bắt đầu Quick Bill cho thư mục '{Folder}' (Tên khách: '{GuestName}')", folderPath, guestName);
 
-            var result = await _customerBillingService.BuildGuestBillDraftAsync(new[] { folderPath }, guestName);
+            var result = await _customerBillingService.BuildGuestBillDraftAsync(new[] { folderPath }, guestName, persistDraft: false);
 
             var vm = new CustomerBillReviewViewModel(
                 result.Draft,
@@ -124,7 +124,9 @@ public class QuickBillLauncher
                 _jpegBillExporter,
                 _excelBillExporter,
                 result.Warnings,
-                result.BlockingIssues
+                result.BlockingIssues,
+                _settingsRepository,
+                result.SuggestedCustomer
             );
 
             var win = new CustomerBillReviewWindow(vm);

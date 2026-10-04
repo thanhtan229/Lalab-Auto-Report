@@ -172,6 +172,26 @@ public class SqliteProductRepository : IProductRepository
         });
     }
 
+    public async Task UpdateFamilyAliasAsync(long aliasId, string newAliasText, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(newAliasText)) return;
+
+        using var connection = _connectionFactory.CreateConnection();
+        string norm = CustomerNormalizer.Normalize(newAliasText);
+
+        await connection.ExecuteAsync(@"
+            UPDATE product_family_aliases
+            SET alias_text = @AliasText,
+                normalized_alias = @NormalizedAlias
+            WHERE id = @Id;
+        ", new
+        {
+            Id = aliasId,
+            AliasText = newAliasText.Trim(),
+            NormalizedAlias = norm
+        });
+    }
+
     public async Task RemoveFamilyAliasAsync(long aliasId, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
@@ -291,11 +311,13 @@ public class SqliteProductRepository : IProductRepository
 
         long id = await connection.QuerySingleAsync<long>(@"
             INSERT INTO product_variants (
-                family_id, canonical_size, canonical_name, unit_price, included_sheets,
-                base_price, extra_sheet_price, is_active, created_at, updated_at
+                family_id, canonical_size, canonical_name, unit_price, unit_price_studio, unit_price_vip, included_sheets,
+                base_price, base_price_studio, base_price_vip, extra_sheet_price, extra_sheet_price_studio, extra_sheet_price_vip,
+                is_active, created_at, updated_at
             ) VALUES (
-                @FamilyId, @CanonicalSize, @CanonicalName, @UnitPrice, @IncludedSheets,
-                @BasePrice, @ExtraSheetPrice, @IsActive, @CreatedAt, @UpdatedAt
+                @FamilyId, @CanonicalSize, @CanonicalName, @UnitPrice, @UnitPriceStudio, @UnitPriceVip, @IncludedSheets,
+                @BasePrice, @BasePriceStudio, @BasePriceVip, @ExtraSheetPrice, @ExtraSheetPriceStudio, @ExtraSheetPriceVip,
+                @IsActive, @CreatedAt, @UpdatedAt
             );
             SELECT last_insert_rowid();
         ", new
@@ -304,9 +326,15 @@ public class SqliteProductRepository : IProductRepository
             CanonicalSize = canonicalSize,
             CanonicalName = !string.IsNullOrWhiteSpace(variant.CanonicalName) ? variant.CanonicalName.Trim() : canonicalSize,
             UnitPrice = variant.UnitPrice,
+            UnitPriceStudio = variant.UnitPriceStudio,
+            UnitPriceVip = variant.UnitPriceVip,
             IncludedSheets = variant.IncludedSheets,
             BasePrice = variant.BasePrice,
+            BasePriceStudio = variant.BasePriceStudio,
+            BasePriceVip = variant.BasePriceVip,
             ExtraSheetPrice = variant.ExtraSheetPrice,
+            ExtraSheetPriceStudio = variant.ExtraSheetPriceStudio,
+            ExtraSheetPriceVip = variant.ExtraSheetPriceVip,
             IsActive = variant.IsActive ? 1 : 0,
             CreatedAt = DateTimeOffset.UtcNow.ToString("o"),
             UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
@@ -320,22 +348,30 @@ public class SqliteProductRepository : IProductRepository
 
         await connection.ExecuteAsync(@"
             INSERT INTO print_specifications (
-                id, family_id, canonical_size, canonical_name, unit_price, category,
-                billing_method, included_sheets, base_price, extra_sheet_price, is_active, created_at, updated_at
+                id, family_id, canonical_size, canonical_name, unit_price, unit_price_studio, unit_price_vip, category,
+                billing_method, included_sheets, base_price, base_price_studio, base_price_vip,
+                extra_sheet_price, extra_sheet_price_studio, extra_sheet_price_vip, is_active, created_at, updated_at
             ) VALUES (
-                @Id, @FamilyId, @CanonicalSize, @CanonicalName, @UnitPrice, @Category,
-                @BillingMethod, @IncludedSheets, @BasePrice, @ExtraSheetPrice, @IsActive, @CreatedAt, @UpdatedAt
+                @Id, @FamilyId, @CanonicalSize, @CanonicalName, @UnitPrice, @UnitPriceStudio, @UnitPriceVip, @Category,
+                @BillingMethod, @IncludedSheets, @BasePrice, @BasePriceStudio, @BasePriceVip,
+                @ExtraSheetPrice, @ExtraSheetPriceStudio, @ExtraSheetPriceVip, @IsActive, @CreatedAt, @UpdatedAt
             )
             ON CONFLICT(id) DO UPDATE SET
                 family_id = excluded.family_id,
                 canonical_size = excluded.canonical_size,
                 canonical_name = excluded.canonical_name,
                 unit_price = excluded.unit_price,
+                unit_price_studio = excluded.unit_price_studio,
+                unit_price_vip = excluded.unit_price_vip,
                 category = excluded.category,
                 billing_method = excluded.billing_method,
                 included_sheets = excluded.included_sheets,
                 base_price = excluded.base_price,
+                base_price_studio = excluded.base_price_studio,
+                base_price_vip = excluded.base_price_vip,
                 extra_sheet_price = excluded.extra_sheet_price,
+                extra_sheet_price_studio = excluded.extra_sheet_price_studio,
+                extra_sheet_price_vip = excluded.extra_sheet_price_vip,
                 is_active = excluded.is_active,
                 updated_at = excluded.updated_at;
         ", new
@@ -345,11 +381,17 @@ public class SqliteProductRepository : IProductRepository
             CanonicalSize = canonicalSize,
             CanonicalName = variant.CanonicalName,
             UnitPrice = variant.UnitPrice,
+            UnitPriceStudio = variant.UnitPriceStudio,
+            UnitPriceVip = variant.UnitPriceVip,
             Category = family?.category ?? "PhotoPrint",
             BillingMethod = family?.billing_method ?? "FileCount",
             IncludedSheets = variant.IncludedSheets,
             BasePrice = variant.BasePrice,
+            BasePriceStudio = variant.BasePriceStudio,
+            BasePriceVip = variant.BasePriceVip,
             ExtraSheetPrice = variant.ExtraSheetPrice,
+            ExtraSheetPriceStudio = variant.ExtraSheetPriceStudio,
+            ExtraSheetPriceVip = variant.ExtraSheetPriceVip,
             IsActive = variant.IsActive ? 1 : 0,
             CreatedAt = DateTimeOffset.UtcNow.ToString("o"),
             UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
@@ -409,9 +451,15 @@ public class SqliteProductRepository : IProductRepository
             SET canonical_size = @CanonicalSize,
                 canonical_name = @CanonicalName,
                 unit_price = @UnitPrice,
+                unit_price_studio = @UnitPriceStudio,
+                unit_price_vip = @UnitPriceVip,
                 included_sheets = @IncludedSheets,
                 base_price = @BasePrice,
+                base_price_studio = @BasePriceStudio,
+                base_price_vip = @BasePriceVip,
                 extra_sheet_price = @ExtraSheetPrice,
+                extra_sheet_price_studio = @ExtraSheetPriceStudio,
+                extra_sheet_price_vip = @ExtraSheetPriceVip,
                 is_active = @IsActive,
                 updated_at = @UpdatedAt
             WHERE id = @Id;
@@ -421,9 +469,15 @@ public class SqliteProductRepository : IProductRepository
             CanonicalSize = canonicalSize,
             CanonicalName = variant.CanonicalName.Trim(),
             UnitPrice = variant.UnitPrice,
+            UnitPriceStudio = variant.UnitPriceStudio,
+            UnitPriceVip = variant.UnitPriceVip,
             IncludedSheets = variant.IncludedSheets,
             BasePrice = variant.BasePrice,
+            BasePriceStudio = variant.BasePriceStudio,
+            BasePriceVip = variant.BasePriceVip,
             ExtraSheetPrice = variant.ExtraSheetPrice,
+            ExtraSheetPriceStudio = variant.ExtraSheetPriceStudio,
+            ExtraSheetPriceVip = variant.ExtraSheetPriceVip,
             IsActive = variant.IsActive ? 1 : 0,
             UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
         }, transaction: transaction);
@@ -434,9 +488,15 @@ public class SqliteProductRepository : IProductRepository
             SET canonical_size = @CanonicalSize,
                 canonical_name = @CanonicalName,
                 unit_price = @UnitPrice,
+                unit_price_studio = @UnitPriceStudio,
+                unit_price_vip = @UnitPriceVip,
                 included_sheets = @IncludedSheets,
                 base_price = @BasePrice,
+                base_price_studio = @BasePriceStudio,
+                base_price_vip = @BasePriceVip,
                 extra_sheet_price = @ExtraSheetPrice,
+                extra_sheet_price_studio = @ExtraSheetPriceStudio,
+                extra_sheet_price_vip = @ExtraSheetPriceVip,
                 is_active = @IsActive,
                 updated_at = @UpdatedAt
             WHERE id = @Id;
@@ -446,9 +506,15 @@ public class SqliteProductRepository : IProductRepository
             CanonicalSize = canonicalSize,
             CanonicalName = variant.CanonicalName.Trim(),
             UnitPrice = variant.UnitPrice,
+            UnitPriceStudio = variant.UnitPriceStudio,
+            UnitPriceVip = variant.UnitPriceVip,
             IncludedSheets = variant.IncludedSheets,
             BasePrice = variant.BasePrice,
+            BasePriceStudio = variant.BasePriceStudio,
+            BasePriceVip = variant.BasePriceVip,
             ExtraSheetPrice = variant.ExtraSheetPrice,
+            ExtraSheetPriceStudio = variant.ExtraSheetPriceStudio,
+            ExtraSheetPriceVip = variant.ExtraSheetPriceVip,
             IsActive = variant.IsActive ? 1 : 0,
             UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
         }, transaction: transaction);
@@ -714,9 +780,15 @@ public class SqliteProductRepository : IProductRepository
             CanonicalSize = size,
             CanonicalName = spec.CanonicalName,
             UnitPrice = spec.UnitPrice,
+            UnitPriceStudio = spec.UnitPriceStudio,
+            UnitPriceVip = spec.UnitPriceVip,
             IncludedSheets = spec.IncludedSheets,
             BasePrice = spec.BasePrice,
+            BasePriceStudio = spec.BasePriceStudio,
+            BasePriceVip = spec.BasePriceVip,
             ExtraSheetPrice = spec.ExtraSheetPrice,
+            ExtraSheetPriceStudio = spec.ExtraSheetPriceStudio,
+            ExtraSheetPriceVip = spec.ExtraSheetPriceVip,
             IsActive = spec.IsActive
         };
 
@@ -731,9 +803,15 @@ public class SqliteProductRepository : IProductRepository
         {
             variant.CanonicalName = spec.CanonicalName;
             variant.UnitPrice = spec.UnitPrice;
+            variant.UnitPriceStudio = spec.UnitPriceStudio;
+            variant.UnitPriceVip = spec.UnitPriceVip;
             variant.IncludedSheets = spec.IncludedSheets;
             variant.BasePrice = spec.BasePrice;
+            variant.BasePriceStudio = spec.BasePriceStudio;
+            variant.BasePriceVip = spec.BasePriceVip;
             variant.ExtraSheetPrice = spec.ExtraSheetPrice;
+            variant.ExtraSheetPriceStudio = spec.ExtraSheetPriceStudio;
+            variant.ExtraSheetPriceVip = spec.ExtraSheetPriceVip;
             variant.IsActive = spec.IsActive;
             if (!string.IsNullOrWhiteSpace(spec.CanonicalSize))
             {
@@ -805,9 +883,15 @@ public class SqliteProductRepository : IProductRepository
         CanonicalSize = dto.canonical_size,
         CanonicalName = dto.canonical_name,
         UnitPrice = dto.unit_price,
+        UnitPriceStudio = dto.unit_price_studio,
+        UnitPriceVip = dto.unit_price_vip,
         IncludedSheets = dto.included_sheets,
         BasePrice = dto.base_price,
+        BasePriceStudio = dto.base_price_studio,
+        BasePriceVip = dto.base_price_vip,
         ExtraSheetPrice = dto.extra_sheet_price,
+        ExtraSheetPriceStudio = dto.extra_sheet_price_studio,
+        ExtraSheetPriceVip = dto.extra_sheet_price_vip,
         IsActive = dto.is_active == 1,
         CreatedAt = DateTimeOffset.TryParse(dto.created_at, out var ca) ? ca : DateTimeOffset.UtcNow,
         UpdatedAt = DateTimeOffset.TryParse(dto.updated_at, out var ua) ? ua : DateTimeOffset.UtcNow,
@@ -900,11 +984,17 @@ public class SqliteProductRepository : IProductRepository
         CanonicalSize = dto.canonical_size,
         CanonicalName = dto.canonical_name,
         UnitPrice = dto.unit_price,
+        UnitPriceStudio = dto.unit_price_studio,
+        UnitPriceVip = dto.unit_price_vip,
         Category = Enum.TryParse<ProductCategory>(dto.category, out var cat) ? cat : ProductCategory.PhotoPrint,
         BillingMethod = Enum.TryParse<BillingMethod>(dto.billing_method, out var bm) ? bm : BillingMethod.FileCount,
         IncludedSheets = dto.included_sheets,
         BasePrice = dto.base_price,
+        BasePriceStudio = dto.base_price_studio,
+        BasePriceVip = dto.base_price_vip,
         ExtraSheetPrice = dto.extra_sheet_price,
+        ExtraSheetPriceStudio = dto.extra_sheet_price_studio,
+        ExtraSheetPriceVip = dto.extra_sheet_price_vip,
         IsActive = dto.is_active == 1
     };
 
@@ -934,9 +1024,15 @@ public class SqliteProductRepository : IProductRepository
         public string canonical_size { get; set; } = string.Empty;
         public string canonical_name { get; set; } = string.Empty;
         public long unit_price { get; set; }
+        public long? unit_price_studio { get; set; }
+        public long? unit_price_vip { get; set; }
         public int? included_sheets { get; set; }
         public long? base_price { get; set; }
+        public long? base_price_studio { get; set; }
+        public long? base_price_vip { get; set; }
         public long? extra_sheet_price { get; set; }
+        public long? extra_sheet_price_studio { get; set; }
+        public long? extra_sheet_price_vip { get; set; }
         public int is_active { get; set; }
         public string? created_at { get; set; }
         public string? updated_at { get; set; }
@@ -961,11 +1057,17 @@ public class SqliteProductRepository : IProductRepository
         public string? canonical_size { get; set; }
         public string canonical_name { get; set; } = string.Empty;
         public long unit_price { get; set; }
+        public long? unit_price_studio { get; set; }
+        public long? unit_price_vip { get; set; }
         public string category { get; set; } = "PhotoPrint";
         public string billing_method { get; set; } = "FileCount";
         public int? included_sheets { get; set; }
         public long? base_price { get; set; }
+        public long? base_price_studio { get; set; }
+        public long? base_price_vip { get; set; }
         public long? extra_sheet_price { get; set; }
+        public long? extra_sheet_price_studio { get; set; }
+        public long? extra_sheet_price_vip { get; set; }
         public int is_active { get; set; }
     }
 }

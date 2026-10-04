@@ -186,4 +186,46 @@ public class OrderItemDisplayModelTests
         vm.CustomerId.Should().Be(42);
         vm.CanonicalCustomerName.Should().Be("Nguyen Van A");
     }
+
+    [Fact]
+    public void OrderDisplayModel_DeliveredStatusAndTooltip_ToggleCorrectly()
+    {
+        var order = new Order
+        {
+            Id = 1,
+            OriginalFolderName = "TestOrder",
+            IsDelivered = false
+        };
+        var vm = new OrderDisplayModel(order);
+
+        // When not delivered
+        vm.IsDelivered.Should().BeFalse();
+        vm.DeliveredStatusText.Should().Be("Chưa giao");
+        vm.DeliveredButtonTooltip.Should().Contain("Chưa giao hàng");
+        vm.DeliveredButtonTooltip.Should().Contain("ĐÃ GIAO");
+
+        var notifiedProperties = new System.Collections.Generic.List<string>();
+        vm.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName != null) notifiedProperties.Add(e.PropertyName);
+        };
+
+        // When delivered
+        var deliveredTime = new DateTimeOffset(2026, 10, 2, 10, 30, 0, TimeSpan.FromHours(7));
+        vm.DeliveredAt = deliveredTime;
+        vm.DeliveredBy = "Chủ tiệm";
+        vm.IsDelivered = true;
+
+        vm.IsDelivered.Should().BeTrue();
+        vm.DeliveredStatusText.Should().Be("🚚 ĐÃ GIAO");
+        vm.DeliveredButtonTooltip.Should().Contain("Đã giao lúc");
+        vm.DeliveredButtonTooltip.Should().NotContain("Chủ tiệm");
+        vm.DeliveredButtonTooltip.Should().NotContain("Nhân viên");
+        vm.DeliveredButtonTooltip.Should().Contain("hoàn tác");
+        vm.DeliveredDetailText.Should().Be("Đã giao lúc 02/10/2026 10:30");
+
+        notifiedProperties.Should().Contain(nameof(vm.DeliveredButtonTooltip));
+        notifiedProperties.Should().Contain(nameof(vm.DeliveredDetailText));
+        notifiedProperties.Should().Contain(nameof(vm.DeliveredStatusText));
+    }
 }

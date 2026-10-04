@@ -4,7 +4,7 @@
 >
 > Product: **Lalab Auto Report**
 >
-> Primary reference: `PLAN_lalab.md`
+> Primary reference: `docs/archive/PLAN_lalab.md`
 >
 > UX reference: `ux_ui.md`
 
@@ -34,7 +34,7 @@ Never trade correctness for automatic behavior when the filesystem is ambiguous.
 
 Before implementing a feature, read the relevant parts of:
 
-1. `PLAN_lalab.md` — product rules, architecture, domain model, phases and acceptance criteria.
+1. `docs/archive/PLAN_lalab.md` — product rules, architecture, domain model, phases and acceptance criteria.
 2. `ux_ui.md` — interaction design, screen behavior, review flows and visual states.
 3. `AGENTS.md` — execution discipline and coding-agent rules.
 

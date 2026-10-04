@@ -12,8 +12,11 @@ public partial class InputDialog : Window
         Title = title;
         lblPrompt.Text = prompt;
         txtInput.Text = defaultValue;
-        txtInput.SelectAll();
-        txtInput.Focus();
+        Loaded += (_, _) =>
+        {
+            txtInput.Focus();
+            txtInput.SelectAll();
+        };
     }
 
     private void Ok_Click(object sender, RoutedEventArgs e)
@@ -26,12 +29,18 @@ public partial class InputDialog : Window
         DialogResult = false;
     }
 
-    public static string? Show(Window owner, string title, string prompt, string defaultValue = "")
+    public static string? Show(Window? owner, string title, string prompt, string defaultValue = "")
     {
-        var dlg = new InputDialog(title, prompt, defaultValue)
+        var dlg = new InputDialog(title, prompt, defaultValue);
+        var targetOwner = owner ?? Application.Current?.MainWindow;
+        if (targetOwner != null && targetOwner.IsVisible)
         {
-            Owner = owner
-        };
+            dlg.Owner = targetOwner;
+        }
+        else
+        {
+            dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
         return dlg.ShowDialog() == true ? dlg.InputText : null;
     }
 }

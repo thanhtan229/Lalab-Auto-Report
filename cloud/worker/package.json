@@ -1,0 +1,21 @@
+{
+  "name": "lalab-cloud-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker read-replica and API for Lalab Auto Report Mobile 24/7",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "d1:local:migrate": "wrangler d1 migrations apply lalab-db --local"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261002.1",
+    "@types/node": "24.19.1",
+    "typescript": "^5.7.3",
+    "vite": "8.3.2",
+    "vitest": "5.0.3",
+    "wrangler": "4.147.0"
+  }
+}

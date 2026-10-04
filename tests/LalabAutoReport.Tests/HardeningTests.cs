@@ -70,18 +70,15 @@ public class HardeningTests : IDisposable
     }
 
     [Fact]
-    public void PhysicalFileSystemAdapter_HandlesInaccessibleOrMissingPaths_GracefullyWithoutCrashing()
+    public void PhysicalFileSystemAdapter_ReportsMissingEnumerationInsteadOfEmptyObservation()
     {
         var nonExistentPath = Path.Combine(_tempRoot, "DoesNotExist_" + Guid.NewGuid().ToString("N"));
 
         Assert.False(_fileSystem.DirectoryExists(nonExistentPath));
         Assert.False(_fileSystem.FileExists(Path.Combine(nonExistentPath, "file.jpg")));
 
-        var dirs = _fileSystem.EnumerateDirectories(nonExistentPath);
-        Assert.Empty(dirs);
-
-        var files = _fileSystem.EnumerateFiles(nonExistentPath);
-        Assert.Empty(files);
+        Assert.Throws<DirectoryNotFoundException>(() => _fileSystem.EnumerateDirectories(nonExistentPath));
+        Assert.Throws<DirectoryNotFoundException>(() => _fileSystem.EnumerateFiles(nonExistentPath));
     }
 
     [Fact]
@@ -112,7 +109,7 @@ public class HardeningTests : IDisposable
         using var cts = new CancellationTokenSource();
         cts.Cancel(); // Cancel immediately
 
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
         {
             await scanService.ScanDateAsync(date, cancellationToken: cts.Token);
         });
@@ -196,6 +193,24 @@ public class HardeningTests : IDisposable
         var backups = await _backupService.GetBackupsAsync();
         Assert.NotEmpty(backups);
         Assert.Contains(backups, b => b.FileName == backupInfo.FileName);
+    }
+
+    [Fact]
+    public async Task DatabaseBackupService_WithSecondaryBackupFolder_CopiesBackupFileToSecondaryLocation()
+    {
+        string secondaryDir = Path.Combine(_tempRoot, "SecondaryBackupFolder_NAS");
+        var settingsRepo = new SqliteSettingsRepository(_connectionFactory);
+        var settings = await settingsRepo.GetSettingsAsync();
+        settings.SecondaryBackupFolder = secondaryDir;
+        await settingsRepo.SaveSettingsAsync(settings);
+
+        var backupServiceWithSettings = new DatabaseBackupService(_connectionFactory, settingsRepo);
+        var backupInfo = await backupServiceWithSettings.CreateBackupAsync();
+
+        Assert.True(File.Exists(backupInfo.BackupPath));
+        string expectedSecondaryFile = Path.Combine(secondaryDir, backupInfo.FileName);
+        Assert.True(File.Exists(expectedSecondaryFile));
+        Assert.Equal(new FileInfo(backupInfo.BackupPath).Length, new FileInfo(expectedSecondaryFile).Length);
     }
 
     [Fact]

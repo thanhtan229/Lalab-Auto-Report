@@ -53,14 +53,16 @@ public class SqliteFolderPrintRepository : IFolderPrintRepository
 
         using var connection = _connectionFactory.CreateConnection();
         await connection.ExecuteAsync(@"
-            INSERT INTO folder_print_statuses (folder_path, normalized_path, status, marked_at, marked_by, order_id, created_at, updated_at)
-            VALUES (@FolderPath, @NormalizedPath, @Status, @MarkedAt, @MarkedBy, @OrderId, @CreatedAt, @UpdatedAt)
+            INSERT INTO folder_print_statuses (folder_path, normalized_path, status, marked_at, marked_by, order_id, printed_sub_count, total_sub_count, created_at, updated_at)
+            VALUES (@FolderPath, @NormalizedPath, @Status, @MarkedAt, @MarkedBy, @OrderId, @PrintedSubCount, @TotalSubCount, @CreatedAt, @UpdatedAt)
             ON CONFLICT(normalized_path) DO UPDATE SET
                 folder_path = excluded.folder_path,
                 status = excluded.status,
                 marked_at = excluded.marked_at,
                 marked_by = excluded.marked_by,
                 order_id = COALESCE(excluded.order_id, folder_print_statuses.order_id),
+                printed_sub_count = excluded.printed_sub_count,
+                total_sub_count = excluded.total_sub_count,
                 updated_at = excluded.updated_at;
         ", new
         {
@@ -70,6 +72,8 @@ public class SqliteFolderPrintRepository : IFolderPrintRepository
             MarkedAt = record.MarkedAt.ToString("o"),
             MarkedBy = record.MarkedBy,
             OrderId = record.AssociatedOrderId,
+            PrintedSubCount = record.PrintedSubCount,
+            TotalSubCount = record.TotalSubCount,
             CreatedAt = record.CreatedAt.ToString("o"),
             UpdatedAt = record.UpdatedAt.ToString("o")
         });
@@ -118,6 +122,8 @@ public class SqliteFolderPrintRepository : IFolderPrintRepository
             MarkedAt = DateTimeOffset.Parse(dto.marked_at),
             MarkedBy = dto.marked_by,
             AssociatedOrderId = dto.order_id,
+            PrintedSubCount = dto.printed_sub_count,
+            TotalSubCount = dto.total_sub_count,
             CreatedAt = DateTimeOffset.Parse(dto.created_at),
             UpdatedAt = DateTimeOffset.Parse(dto.updated_at)
         };
@@ -132,6 +138,8 @@ public class SqliteFolderPrintRepository : IFolderPrintRepository
         public string marked_at { get; set; } = string.Empty;
         public string marked_by { get; set; } = string.Empty;
         public long? order_id { get; set; }
+        public int? printed_sub_count { get; set; }
+        public int? total_sub_count { get; set; }
         public string created_at { get; set; } = string.Empty;
         public string updated_at { get; set; } = string.Empty;
     }

@@ -34,7 +34,8 @@ public class ExcelBillExporterTests : IDisposable
         {
             RootFolder = _tempRoot,
             BillExportFolder = Path.Combine(_tempRoot, "Bills"),
-            SupportedExtensions = new() { ".jpg", ".jpeg", ".png" }
+            SupportedExtensions = new() { ".jpg", ".jpeg", ".png" },
+            WorkshopName = "LALAB PHOTO WORKSHOP"
         }).GetAwaiter().GetResult();
 
         _excelExporter = new ClosedXmlBillExporter(_settingsRepo);
@@ -163,7 +164,9 @@ public class ExcelBillExporterTests : IDisposable
         wb.Worksheets.Count.Should().BeGreaterThan(0);
 
         var ws = wb.Worksheets.Worksheet(1);
-        ws.Cell("A1").GetString().Should().Contain("LALAB");
+        ws.Cell("A1").GetString().Should().NotBeNullOrWhiteSpace();
+        ws.Cell("A2").GetString().Should().Be("HÓA ĐƠN BÁN HÀNG");
+        ws.Cell("A2").Style.Alignment.Horizontal.Should().Be(XLAlignmentHorizontalValues.Center);
         ws.Cell("B4").GetString().Should().Be("BILL-20260929-002");
         ws.Cell("B5").GetString().Should().Contain("Studio Mai Vàng");
 

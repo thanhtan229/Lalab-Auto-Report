@@ -86,13 +86,15 @@ public class SqliteCustomerRepository : ICustomerRepository
         using var transaction = connection.BeginTransaction();
 
         long id = await connection.QuerySingleAsync<long>(@"
-            INSERT INTO customers (canonical_name, phone, note, created_at, updated_at)
-            VALUES (@CanonicalName, @Phone, @Note, @CreatedAt, @UpdatedAt);
+            INSERT INTO customers (canonical_name, phone, address, price_tier, note, created_at, updated_at)
+            VALUES (@CanonicalName, @Phone, @Address, @PriceTier, @Note, @CreatedAt, @UpdatedAt);
             SELECT last_insert_rowid();
         ", new
         {
             CanonicalName = customer.CanonicalName,
             Phone = customer.Phone,
+            Address = customer.Address,
+            PriceTier = customer.PriceTier.ToString(),
             Note = customer.Note,
             CreatedAt = DateTimeOffset.UtcNow.ToString("o"),
             UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
@@ -127,6 +129,8 @@ public class SqliteCustomerRepository : ICustomerRepository
             UPDATE customers
             SET canonical_name = @CanonicalName,
                 phone = @Phone,
+                address = @Address,
+                price_tier = @PriceTier,
                 note = @Note,
                 updated_at = @UpdatedAt
             WHERE id = @Id
@@ -135,6 +139,8 @@ public class SqliteCustomerRepository : ICustomerRepository
             Id = customer.Id,
             CanonicalName = customer.CanonicalName,
             Phone = customer.Phone,
+            Address = customer.Address,
+            PriceTier = customer.PriceTier.ToString(),
             Note = customer.Note,
             UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
         });
@@ -283,6 +289,8 @@ public class SqliteCustomerRepository : ICustomerRepository
         Id = dto.id,
         CanonicalName = dto.canonical_name,
         Phone = dto.phone,
+        Address = dto.address,
+        PriceTier = Enum.TryParse<PriceTier>(dto.price_tier, out var pt) ? pt : PriceTier.Retail,
         Note = dto.note,
         CreatedAt = DateTimeOffset.Parse(dto.created_at),
         UpdatedAt = DateTimeOffset.Parse(dto.updated_at)
@@ -302,6 +310,8 @@ public class SqliteCustomerRepository : ICustomerRepository
         public long id { get; set; }
         public string canonical_name { get; set; } = string.Empty;
         public string? phone { get; set; }
+        public string? address { get; set; }
+        public string? price_tier { get; set; }
         public string? note { get; set; }
         public string created_at { get; set; } = string.Empty;
         public string updated_at { get; set; } = string.Empty;

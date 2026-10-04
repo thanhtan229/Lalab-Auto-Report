@@ -23,6 +23,7 @@ public class CustomerBillingService : ICustomerBillingService
     private readonly IPrintSpecificationResolver? _specificationResolver;
     private readonly ICustomerResolver? _customerResolver;
     private readonly ILogger<CustomerBillingService>? _logger;
+    private readonly IRootFolderRepository? _rootFolderRepository;
 
     public CustomerBillingService(
         ICustomerRepository customerRepository,
@@ -36,7 +37,8 @@ public class CustomerBillingService : ICustomerBillingService
         ISettingsRepository? settingsRepository = null,
         IPrintSpecificationResolver? specificationResolver = null,
         ICustomerResolver? customerResolver = null,
-        ILogger<CustomerBillingService>? logger = null)
+        ILogger<CustomerBillingService>? logger = null,
+        IRootFolderRepository? rootFolderRepository = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -50,6 +52,7 @@ public class CustomerBillingService : ICustomerBillingService
         _specificationResolver = specificationResolver;
         _customerResolver = customerResolver;
         _logger = logger;
+        _rootFolderRepository = rootFolderRepository;
     }
 
     public async Task<CustomerUnbilledSummary> GetCustomerUnbilledSummaryAsync(long customerId, CancellationToken cancellationToken = default)
@@ -87,7 +90,7 @@ public class CustomerBillingService : ICustomerBillingService
 
                 foreach (var item in unbilledItems)
                 {
-                    estimatedTotal += EstimateItemTotal(item);
+                    estimatedTotal += EstimateItemTotal(item, customer.PriceTier);
                 }
             }
         }
@@ -128,15 +131,17 @@ public class CustomerBillingService : ICustomerBillingService
             {
                 try
                 {
-                    var fresh = await _scanService.ScanOrderAsync(order.RelativePath, null, cancellationToken);
+                    var fresh = await _scanService.ScanOrderInRootAsync(order.RelativePath, order.RootFolderId, null, cancellationToken);
                     if (fresh != null)
                     {
                         orderToProcess = fresh;
                     }
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     _logger?.LogWarning(ex, "Failed to rescan order {RelativePath}", order.RelativePath);
+                    throw new InvalidOperationException($"Không xác minh được '{order.RelativePath}': {ex.Message}", ex);
                 }
             }
 
@@ -268,8 +273,11 @@ public class CustomerBillingService : ICustomerBillingService
                     billedQty = 1;
                     sheetCount = scannedQty;
                     includedSheets = spec?.IncludedSheets ?? 10;
-                    basePrice = spec?.BasePrice ?? 0;
-                    extraSheetPrice = spec?.ExtraSheetPrice ?? 0;
+                    var (albumBase, albumExtra) = spec != null 
+                        ? spec.GetEffectiveAlbumPrices(customer.PriceTier) 
+                        : (0L, 0L);
+                    basePrice = albumBase;
+                    extraSheetPrice = albumExtra;
                     extraSheets = Math.Max(0, sheetCount.Value - includedSheets.Value);
 
                     if (sheetCount == 0)
@@ -300,7 +308,7 @@ public class CustomerBillingService : ICustomerBillingService
                         qtyOverrideReason = existingLine.QuantityOverrideReason ?? "Chỉnh sửa thủ công";
                     }
 
-                    configuredUnitPrice = spec?.UnitPrice ?? 0;
+                    configuredUnitPrice = spec?.GetEffectiveUnitPrice(customer.PriceTier) ?? 0;
                     billedUnitPrice = existingLine?.BilledUnitPrice ?? configuredUnitPrice;
                     if (existingLine != null && existingLine.BilledUnitPrice != configuredUnitPrice)
                     {
@@ -446,8 +454,13 @@ public class CustomerBillingService : ICustomerBillingService
         return bill;
     }
 
+    public Task<CustomerBill?> GetBillSnapshotAsync(long billId, CancellationToken cancellationToken = default)
+        => _customerBillRepository.GetByIdAsync(billId, cancellationToken);
+
     public async Task<CustomerBill> LockBillAsync(CustomerBill draft, CancellationToken cancellationToken = default)
     {
+        if (draft.Status != CustomerBillStatus.Draft)
+            throw new InvalidOperationException("Hãy mở lại hóa đơn trước khi khóa một bản sửa đổi.");
         RecalculateTotals(draft);
 
         var includedOrderIds = draft.Orders.Where(o => o.IsIncluded).Select(o => o.OrderId).ToHashSet();
@@ -476,6 +489,32 @@ public class CustomerBillingService : ICustomerBillingService
             if (adj.Amount < 0)
             {
                 throw new InvalidOperationException($"Số tiền điều chỉnh '{adj.Label}' không được âm.");
+            }
+        }
+
+        // Verify exactly the included physical orders, retaining reviewed quantities/prices.
+        // Rescan creates a new observation; rebind its job IDs only after comparison succeeds.
+        if (_scanService != null)
+        {
+            foreach (long orderId in includedOrderIds)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var order = await _orderRepository.GetOrderByIdAsync(orderId, cancellationToken)
+                    ?? throw new InvalidOperationException("Đơn hàng không còn tồn tại. Hãy duyệt lại bill.");
+                var fresh = await _scanService.ScanOrderInRootAsync(order.RelativePath, order.RootFolderId, null, cancellationToken);
+                if (fresh == null || fresh.Status == OrderStatus.Error)
+                    throw new InvalidOperationException($"Không xác minh được '{order.RelativePath}'. Hãy quét và duyệt lại.");
+                foreach (var line in draft.Lines.Where(l => l.OrderId == orderId))
+                {
+                    var item = fresh.Items.FirstOrDefault(i => string.Equals(i.SpecificationFolderName,
+                        line.SpecificationFolderName, StringComparison.OrdinalIgnoreCase));
+                    if (line.IsIncluded && (item == null || item.ScanStatus == ScanStatus.Failed ||
+                        item.PrintFolderStatus != PrintFolderResolutionStatus.Resolved ||
+                        line.ScannedQuantity != item.PrintCount ||
+                        !string.Equals(line.FinalPrintFolderPath, item.SelectedPrintFolderRelativePath, StringComparison.OrdinalIgnoreCase)))
+                        throw new InvalidOperationException($"Dữ liệu '{order.RelativePath}/{line.SpecificationFolderName}' đã thay đổi hoặc chưa đọc đủ. Hãy quét và duyệt lại trước khi chốt.");
+                    if (item != null) line.ProductJobId = item.Id;
+                }
             }
         }
 
@@ -548,7 +587,7 @@ public class CustomerBillingService : ICustomerBillingService
         if (order == null) return;
 
         // 1. Identify which bill(s) contain this order
-        CustomerBill? bill = await _customerBillRepository.GetLockedBillByOrderIdAsync(orderId, cancellationToken);
+        CustomerBill? bill = await _customerBillRepository.GetBillByOrderIdAsync(orderId, cancellationToken);
         if (bill == null && !string.IsNullOrWhiteSpace(order.RelativePath))
         {
             var bills = await _customerBillRepository.GetBillsBySourceFolderPathAsync(order.RelativePath, cancellationToken);
@@ -557,6 +596,8 @@ public class CustomerBillingService : ICustomerBillingService
 
         if (bill != null)
         {
+            if (bill.Status != CustomerBillStatus.Draft)
+                throw new InvalidOperationException("Hãy mở lại hóa đơn trước khi tách đơn.");
             // Remove order and lines belonging to this order
             bill.Orders.RemoveAll(o => o.OrderId == orderId);
             bill.Lines.RemoveAll(l => l.OrderId == orderId);
@@ -596,12 +637,178 @@ public class CustomerBillingService : ICustomerBillingService
         await _orderRepository.UpdateOrderStatusAsync(orderId, targetStatus, cancellationToken);
     }
 
+    public async Task<CustomerBill> SplitOrdersToNewBillAsync(long currentBillId, IReadOnlyList<long> orderIdsToMove, CancellationToken cancellationToken = default)
+    {
+        if (orderIdsToMove == null || orderIdsToMove.Count == 0)
+        {
+            throw new ArgumentException("Danh sách đơn hàng cần tách không được rỗng.", nameof(orderIdsToMove));
+        }
+
+        var currentBill = await _customerBillRepository.GetByIdAsync(currentBillId, cancellationToken);
+        if (currentBill == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy hóa đơn ID {currentBillId}.");
+        }
+
+        if (currentBill.Status == CustomerBillStatus.Locked || currentBill.Status == CustomerBillStatus.Exported)
+        {
+            throw new InvalidOperationException("Hóa đơn đã bị khóa hoặc đã xuất. Vui lòng mở khóa (Reopen) hóa đơn trước khi tách đơn.");
+        }
+
+        var expectedUpdatedAt = currentBill.UpdatedAt;
+        var ordersToMoveSet = new HashSet<long>(orderIdsToMove);
+        var movingOrders = currentBill.Orders.Where(o => ordersToMoveSet.Contains(o.OrderId)).ToList();
+
+        if (movingOrders.Count != ordersToMoveSet.Count)
+        {
+            throw new InvalidOperationException("Không tìm thấy đơn hàng nào cần tách trong hóa đơn hiện tại.");
+        }
+
+        if (movingOrders.Count >= currentBill.Orders.Count)
+        {
+            throw new InvalidOperationException("Không thể tách toàn bộ đơn hàng sang hóa đơn mới. Vui lòng giữ lại ít nhất 1 đơn hàng trong hóa đơn gốc.");
+        }
+
+        var movingLines = currentBill.Lines.Where(l => ordersToMoveSet.Contains(l.OrderId)).ToList();
+
+        // 1. Generate next unique bill number
+        string dateForNumber = currentBill.PeriodEnd ?? DateTime.UtcNow.ToString("yyyy-MM-dd");
+        string newBillNumber = await _customerBillRepository.GenerateNextBillNumberAsync(dateForNumber, cancellationToken);
+
+        // 2. Identify date range for the new bill
+        var movingOrderDates = movingOrders
+            .Select(o => o.OrderDateSnapshot)
+            .Where(d => !string.IsNullOrEmpty(d))
+            .ToList();
+
+        string newPeriodStart = (movingOrderDates.Count > 0 ? movingOrderDates.Min() : currentBill.PeriodStart) ?? currentBill.PeriodStart ?? string.Empty;
+        string newPeriodEnd = (movingOrderDates.Count > 0 ? movingOrderDates.Max() : currentBill.PeriodEnd) ?? currentBill.PeriodEnd ?? string.Empty;
+
+        // 3. Create new bill
+        var newBill = new CustomerBill
+        {
+            BillNumber = newBillNumber,
+            CustomerId = currentBill.CustomerId,
+            CustomerNameSnapshot = currentBill.CustomerNameSnapshot,
+            PhoneSnapshot = currentBill.PhoneSnapshot,
+            ShippingAddressSnapshot = currentBill.ShippingAddressSnapshot,
+            Note = currentBill.Note,
+            BillType = currentBill.BillType,
+            Status = currentBill.Status,
+            PeriodStart = newPeriodStart,
+            PeriodEnd = newPeriodEnd,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        // Transfer orders and lines
+        int sortOrder = 0;
+        foreach (var order in movingOrders)
+        {
+            sortOrder++;
+            newBill.Orders.Add(new CustomerBillOrder
+            {
+                OrderId = order.OrderId,
+                OrderCodeSnapshot = order.OrderCodeSnapshot,
+                OriginalFolderNameSnapshot = order.OriginalFolderNameSnapshot,
+                OrderNameSnapshot = order.OrderNameSnapshot,
+                OrderDateSnapshot = order.OrderDateSnapshot,
+                SourceFolderPath = order.SourceFolderPath,
+                Subtotal = order.Subtotal,
+                IsIncluded = order.IsIncluded,
+                IsFromPreviousPeriod = order.IsFromPreviousPeriod,
+                SortOrder = sortOrder
+            });
+        }
+
+        int lineSort = 0;
+        foreach (var line in movingLines)
+        {
+            lineSort++;
+            newBill.Lines.Add(new CustomerBillLine
+            {
+                OrderId = line.OrderId,
+                ProductJobId = line.ProductJobId,
+                ProductSpecificationId = line.ProductSpecificationId,
+                SpecificationFolderName = line.SpecificationFolderName,
+                ProductNameSnapshot = line.ProductNameSnapshot,
+                VariantSnapshot = line.VariantSnapshot,
+                BillingMethodSnapshot = line.BillingMethodSnapshot,
+                ScannedQuantity = line.ScannedQuantity,
+                BilledQuantity = line.BilledQuantity,
+                QuantityOverrideReason = line.QuantityOverrideReason,
+                SheetCount = line.SheetCount,
+                IncludedSheetsSnapshot = line.IncludedSheetsSnapshot,
+                ExtraSheetCount = line.ExtraSheetCount,
+                BasePriceSnapshot = line.BasePriceSnapshot,
+                ExtraSheetPriceSnapshot = line.ExtraSheetPriceSnapshot,
+                ConfiguredUnitPrice = line.ConfiguredUnitPrice,
+                BilledUnitPrice = line.BilledUnitPrice,
+                PriceOverrideReason = line.PriceOverrideReason,
+                LineTotal = line.LineTotal,
+                IsIncluded = line.IsIncluded,
+                SortOrder = lineSort,
+                FinalPrintFolderPath = line.FinalPrintFolderPath,
+                FolderResolutionModeSnapshot = line.FolderResolutionModeSnapshot,
+                IssueMessage = line.IssueMessage,
+                Note = line.Note
+            });
+        }
+
+        // Transfer Guest source folders if applicable
+        var movingOrderPaths = new HashSet<string>(movingOrders.Select(o => o.SourceFolderPath).Where(p => !string.IsNullOrEmpty(p))!, StringComparer.OrdinalIgnoreCase);
+        var movingSourceFolders = currentBill.SourceFolders
+            .Where(sf => movingOrderPaths.Contains(sf.FolderPath) || movingOrderPaths.Contains(sf.NormalizedFolderPath))
+            .ToList();
+
+        foreach (var sf in movingSourceFolders)
+        {
+            newBill.SourceFolders.Add(new GuestBillSourceFolder
+            {
+                FolderPath = sf.FolderPath,
+                NormalizedFolderPath = sf.NormalizedFolderPath,
+                CreatedAt = sf.CreatedAt
+            });
+        }
+
+        RecalculateTotals(newBill);
+
+        // 4. Remove moving items from original bill and recalculate
+        currentBill.Orders.RemoveAll(o => ordersToMoveSet.Contains(o.OrderId));
+        currentBill.Lines.RemoveAll(l => ordersToMoveSet.Contains(l.OrderId));
+        currentBill.SourceFolders.RemoveAll(sf => movingOrderPaths.Contains(sf.FolderPath) || movingOrderPaths.Contains(sf.NormalizedFolderPath));
+
+        var remainingOrderDates = currentBill.Orders
+            .Select(o => o.OrderDateSnapshot)
+            .Where(d => !string.IsNullOrEmpty(d))
+            .ToList();
+        if (remainingOrderDates.Count > 0)
+        {
+            currentBill.PeriodStart = remainingOrderDates.Min()!;
+            currentBill.PeriodEnd = remainingOrderDates.Max()!;
+        }
+
+        RecalculateTotals(currentBill);
+        await _customerBillRepository.SplitBillAtomicAsync(currentBill, newBill, orderIdsToMove,
+            expectedUpdatedAt, cancellationToken);
+
+        _logger?.LogInformation(
+            "Tách thành công {Count} đơn từ hóa đơn {OriginalBill} sang hóa đơn mới {NewBill} (ID {NewBillId}) cho khách hàng '{Customer}'.",
+            movingOrders.Count, currentBill.BillNumber, newBill.BillNumber, newBill.Id, currentBill.CustomerNameSnapshot);
+
+        return newBill;
+    }
+
     public async Task SyncBillWithScannedOrderAsync(Order scannedOrder, CancellationToken cancellationToken = default)
     {
         if (scannedOrder == null) return;
 
         // Find associated bill
-        CustomerBill? bill = await _customerBillRepository.GetLockedBillByOrderIdAsync(scannedOrder.Id, cancellationToken);
+        CustomerBill? bill = await _customerBillRepository.GetBillByOrderIdAsync(scannedOrder.Id, cancellationToken);
+        if (bill == null)
+        {
+            bill = await _customerBillRepository.GetLockedBillByOrderIdAsync(scannedOrder.Id, cancellationToken);
+        }
         if (bill == null && !string.IsNullOrWhiteSpace(scannedOrder.RelativePath))
         {
             var bills = await _customerBillRepository.GetBillsBySourceFolderPathAsync(scannedOrder.RelativePath, cancellationToken);
@@ -609,6 +816,21 @@ public class CustomerBillingService : ICustomerBillingService
         }
 
         if (bill == null) return;
+
+        // If the bill is already Locked or Exported, do NOT mutate it!
+        if (bill.Status == CustomerBillStatus.Locked || bill.Status == CustomerBillStatus.Exported)
+        {
+            _logger?.LogWarning("Attempted to sync scanned order {OrderId} with bill {BillNumber}, but bill is {Status}. Skipping mutation.",
+                scannedOrder.Id, bill.BillNumber, bill.Status);
+            return;
+        }
+
+        PriceTier billCustomerTier = PriceTier.Retail;
+        if (bill.CustomerId.HasValue)
+        {
+            var cust = await _customerRepository.GetByIdAsync(bill.CustomerId.Value, cancellationToken);
+            if (cust != null) billCustomerTier = cust.PriceTier;
+        }
 
         // Sync lines for this order
         var orderLines = bill.Lines.Where(l => l.OrderId == scannedOrder.Id).ToList();
@@ -657,9 +879,8 @@ public class CustomerBillingService : ICustomerBillingService
                 }
 
                 var billingMethod = spec?.BillingMethod ?? BillingMethod.FileCount;
-                long unitPrice = spec?.UnitPrice ?? 0;
-                long basePrice = spec?.BasePrice ?? 0;
-                long extraSheetPrice = spec?.ExtraSheetPrice ?? 0;
+                long unitPrice = spec?.GetEffectiveUnitPrice(billCustomerTier) ?? 0;
+                var (basePrice, extraSheetPrice) = spec?.GetEffectiveAlbumPrices(billCustomerTier) ?? (0L, 0L);
                 int includedSheets = spec?.IncludedSheets ?? 10;
 
                 var newLine = new CustomerBillLine
@@ -762,10 +983,16 @@ public class CustomerBillingService : ICustomerBillingService
         return warnings;
     }
 
-    public async Task<CustomerBillDraftResult> BuildGuestBillDraftAsync(
+    public Task<CustomerBillDraftResult> BuildGuestBillDraftAsync(IReadOnlyList<string> sourceFolderPaths,
+        string? customGuestName = null, long? existingDraftId = null, bool persistDraft = false,
+        CancellationToken cancellationToken = default)
+        => Task.Run(() => BuildGuestBillDraftCoreAsync(sourceFolderPaths, customGuestName, existingDraftId, persistDraft, cancellationToken), cancellationToken);
+
+    private async Task<CustomerBillDraftResult> BuildGuestBillDraftCoreAsync(
         IReadOnlyList<string> sourceFolderPaths,
         string? customGuestName = null,
         long? existingDraftId = null,
+        bool persistDraft = false,
         CancellationToken cancellationToken = default)
     {
         if (sourceFolderPaths == null || sourceFolderPaths.Count == 0)
@@ -830,6 +1057,8 @@ public class CustomerBillingService : ICustomerBillingService
         if (existingDraftId.HasValue && existingDraftId.Value > 0)
         {
             existingDraft = await _customerBillRepository.GetByIdAsync(existingDraftId.Value, cancellationToken);
+            if (existingDraft != null && existingDraft.Status != CustomerBillStatus.Draft)
+                throw new InvalidOperationException("Hãy mở lại hóa đơn trước khi quét lại bản nháp.");
         }
 
         var existingLinesByJobId = existingDraft?.Lines.ToDictionary(l => l.ProductJobId) ?? new();
@@ -851,6 +1080,15 @@ public class CustomerBillingService : ICustomerBillingService
         {
             if (string.IsNullOrWhiteSpace(sourceFolderPath)) continue;
 
+            long? sourceRootId = null;
+            if (_rootFolderRepository != null)
+            {
+                var roots = await _rootFolderRepository.GetAllAsync(cancellationToken);
+                var sourceRoot = roots.Where(r => PathNormalizer.Normalize(sourceFolderPath).StartsWith(
+                    PathNormalizer.Normalize(r.FullPath).TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(r => r.FullPath.Length).FirstOrDefault();
+                if (sourceRoot != null) { rootFolder = sourceRoot.FullPath; sourceRootId = sourceRoot.Id; }
+            }
             IReadOnlyList<DiscoveredOrder> discoveredOrders;
             if (_structureParser != null)
             {
@@ -869,7 +1107,9 @@ public class CustomerBillingService : ICustomerBillingService
                 Order? existingOrder = null;
                 if (_orderRepository != null && !string.IsNullOrWhiteSpace(discOrder.RelativePath))
                 {
-                    existingOrder = await _orderRepository.GetOrderByRelativePathAsync(discOrder.RelativePath, cancellationToken);
+                    existingOrder = sourceRootId.HasValue
+                        ? await _orderRepository.GetOrderByRootAndRelativePathAsync(sourceRootId.Value, discOrder.RelativePath, cancellationToken)
+                        : await _orderRepository.GetOrderByRelativePathAsync(discOrder.RelativePath, cancellationToken);
                 }
 
                 // Preserve customer if already assigned, or resolve via customer resolver
@@ -887,6 +1127,7 @@ public class CustomerBillingService : ICustomerBillingService
 
                 var order = existingOrder ?? new Order
                 {
+                    RootFolderId = sourceRootId,
                     WorkDate = discOrder.Date,
                     OriginalFolderName = discOrder.OriginalCustomerFolderName,
                     RelativePath = discOrder.RelativePath,
@@ -1083,14 +1324,18 @@ public class CustomerBillingService : ICustomerBillingService
                     long lineTotal;
 
                     var billingMethod = spec?.BillingMethod ?? BillingMethod.FileCount;
+                    var effectiveTier = order.Customer?.PriceTier ?? matchedCustomerForBill?.PriceTier ?? PriceTier.Retail;
 
                     if (billingMethod == BillingMethod.AlbumBasePlusExtra)
                     {
                         billedQty = 1;
                         sheetCount = scannedQty;
                         includedSheets = spec?.IncludedSheets ?? 10;
-                        basePrice = spec?.BasePrice ?? 0;
-                        extraSheetPrice = spec?.ExtraSheetPrice ?? 0;
+                        var (albumBase, albumExtra) = spec != null
+                            ? spec.GetEffectiveAlbumPrices(effectiveTier)
+                            : (0L, 0L);
+                        basePrice = albumBase;
+                        extraSheetPrice = albumExtra;
                         extraSheets = Math.Max(0, sheetCount.Value - includedSheets.Value);
 
                         if (sheetCount == 0)
@@ -1120,7 +1365,7 @@ public class CustomerBillingService : ICustomerBillingService
                             qtyOverrideReason = existingLine.QuantityOverrideReason ?? "Chỉnh sửa thủ công";
                         }
 
-                        configuredUnitPrice = spec?.UnitPrice ?? 0;
+                        configuredUnitPrice = spec?.GetEffectiveUnitPrice(effectiveTier) ?? 0;
                         billedUnitPrice = existingLine?.BilledUnitPrice ?? configuredUnitPrice;
                         if (existingLine != null && existingLine.BilledUnitPrice != configuredUnitPrice)
                         {
@@ -1262,8 +1507,11 @@ public class CustomerBillingService : ICustomerBillingService
             warnings.Add($"Phát hiện khách hàng quen '{matchedCustomerForBill.CanonicalName}' có tên trùng với khách lẻ này. Bạn có thể bấm nút chuyển đổi nếu muốn gán vào khách quen.");
         }
 
-        // Persist draft
-        await _customerBillRepository.SaveBillAsync(draft, cancellationToken);
+        // Persist draft only if requested or if updating an existing persisted draft
+        if (persistDraft || (existingDraftId.HasValue && existingDraftId.Value > 0))
+        {
+            await _customerBillRepository.SaveBillAsync(draft, cancellationToken);
+        }
 
         return new CustomerBillDraftResult(draft, warnings, blockingIssues, matchedCustomerForBill);
     }
@@ -1280,6 +1528,9 @@ public class CustomerBillingService : ICustomerBillingService
         {
             throw new KeyNotFoundException($"Không tìm thấy bill ID {billId}.");
         }
+
+        if (bill.Status != CustomerBillStatus.Draft)
+            throw new InvalidOperationException("Hãy mở lại hóa đơn trước khi đổi khách hàng.");
 
         string trimmedName = customerCanonicalName.Trim();
         string normalizedName = CustomerNormalizer.Normalize(trimmedName);
@@ -1336,21 +1587,20 @@ public class CustomerBillingService : ICustomerBillingService
         return item.CustomerBillId.HasValue && item.CustomerBillId.Value > 0;
     }
 
-    private static long EstimateItemTotal(OrderItemScan item)
+    private static long EstimateItemTotal(OrderItemScan item, PriceTier tier = PriceTier.Retail)
     {
         if (item.PrintSpecification?.BillingMethod == BillingMethod.AlbumBasePlusExtra)
         {
             int sheets = item.PrintCount ?? item.SourceCount;
             int inc = item.PrintSpecification.IncludedSheets ?? 10;
-            long baseP = item.PrintSpecification.BasePrice ?? 0;
-            long extraP = item.PrintSpecification.ExtraSheetPrice ?? 0;
+            var (baseP, extraP) = item.PrintSpecification.GetEffectiveAlbumPrices(tier);
             int extraSheets = Math.Max(0, sheets - inc);
             return baseP + (extraSheets * extraP);
         }
         else
         {
             int qty = item.BillQuantity ?? item.PrintCount ?? item.SourceCount;
-            long price = item.PrintSpecification?.UnitPrice ?? 0;
+            long price = item.PrintSpecification?.GetEffectiveUnitPrice(tier) ?? 0;
             return qty * price;
         }
     }

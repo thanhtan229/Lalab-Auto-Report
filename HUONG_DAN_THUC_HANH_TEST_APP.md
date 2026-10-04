@@ -69,7 +69,7 @@ Mục tiêu cốt lõi:
 
 ### 1. Khởi chạy ứng dụng
 Nhấp đúp vào file `CHAY_APP.bat` (hoặc `DEV_START.bat`) trong thư mục dự án:
-`d:\___TOOLS\__TINIX\Lalab Auto Report Antigravity\CHAY_APP.bat`
+`d:\___TOOLS\__TINIX\LalabReport\CHAY_APP.bat`
 
 ### 2. Tự động tạo dữ liệu mẫu và nạp bảng giá (1 Lệnh duy nhất)
 Mở cửa sổ **PowerShell** tại thư mục dự án và chạy:
@@ -88,7 +88,7 @@ powershell -ExecutionPolicy Bypass -File .\tao_thu_muc_test_mau.ps1
 1. Trên menu bên trái của ứng dụng, chọn **⚙️ Cài đặt hệ thống**.
 2. Tại ô **Thư mục gốc chứa ảnh (Root Folder)**:
    - Bấm nút **📂 Chọn thư mục...**
-   - Trỏ tới: `d:\___TOOLS\__TINIX\Lalab Auto Report Antigravity\TEST_DATA_LALAB`
+   - Trỏ tới: `d:\___TOOLS\__TINIX\LalabReport\TEST_DATA_LALAB`
 3. Kiểm tra mục **Định dạng file ảnh hỗ trợ**:
    - `.jpg, .jpeg, .png, .tif, .tiff, .bmp, .webp, .heic`
 4. Bấm **💾 Lưu Cài Đặt**. Thông báo hiển thị: *"Đã lưu cài đặt thành công!"*.

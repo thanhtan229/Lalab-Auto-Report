@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LalabAutoReport.Core.Domain;
 using LalabAutoReport.Core.Interfaces;
+using LalabAutoReport.Core.Services;
 using LalabAutoReport.UI.Views;
 
 namespace LalabAutoReport.UI.ViewModels;
@@ -26,14 +27,20 @@ public partial class DashboardViewModel : ObservableObject
     private readonly IJpegBillExporter? _jpegBillExporter;
     private readonly IExcelBillExporter? _excelBillExporter;
     private readonly ICustomerRepository? _customerRepository;
+    private readonly IRootFolderRepository? _rootFolderRepository;
+    private readonly IThumbnailService? _thumbnailService;
 
     private CancellationTokenSource? _scanCts;
+    private CancellationTokenSource? _thumbnailCts;
 
     [ObservableProperty]
     private DateTime _selectedDate = DateTime.Today;
 
     [ObservableProperty]
     private string _formattedDateString = DateTime.Today.ToString("yyyy-MM-dd");
+
+    [ObservableProperty]
+    private bool _showOrderThumbnails = true;
 
     [ObservableProperty]
     private bool _isScanning;
@@ -52,6 +59,17 @@ public partial class DashboardViewModel : ObservableObject
 
     [ObservableProperty]
     private string _currentFilter = "All"; // "All", "NeedsReview", "Ready"
+
+    public record RootFolderFilterOption(long? Id, string Name);
+    public ObservableCollection<RootFolderFilterOption> RootFolderFilterOptions { get; } = new();
+
+    [ObservableProperty]
+    private long? _selectedRootFolderId;
+
+    partial void OnSelectedRootFolderIdChanged(long? value)
+    {
+        ApplyFilter();
+    }
 
     [ObservableProperty]
     private ObservableCollection<OrderDisplayModel> _allOrders = new();
@@ -77,7 +95,22 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty]
     private int _billedCount;
 
+    [ObservableProperty]
+    private int _deliveredCount;
+
+    [ObservableProperty]
+    private int _undeliveredCount;
+
+    [ObservableProperty]
+    private bool _isPreviewPopupOpen;
+
+    [ObservableProperty]
+    private OrderDisplayModel? _previewOrder;
+
     private readonly IAutoScanCoordinator? _autoScanCoordinator;
+    private readonly IShippingLabelExporter? _shippingLabelExporter;
+    private readonly IPrintStatusService? _printStatusService;
+    private readonly ICloudSyncService? _cloudSyncService;
 
     public int LockedCount => BilledCount;
 
@@ -92,7 +125,12 @@ public partial class DashboardViewModel : ObservableObject
         IJpegBillExporter? jpegBillExporter = null,
         ICustomerRepository? customerRepository = null,
         IExcelBillExporter? excelBillExporter = null,
-        IAutoScanCoordinator? autoScanCoordinator = null)
+        IAutoScanCoordinator? autoScanCoordinator = null,
+        IRootFolderRepository? rootFolderRepository = null,
+        IThumbnailService? thumbnailService = null,
+        IShippingLabelExporter? shippingLabelExporter = null,
+        IPrintStatusService? printStatusService = null,
+        ICloudSyncService? cloudSyncService = null)
     {
         _scanService = scanService;
         _settingsRepository = settingsRepository;
@@ -105,6 +143,22 @@ public partial class DashboardViewModel : ObservableObject
         _excelBillExporter = excelBillExporter;
         _customerRepository = customerRepository;
         _autoScanCoordinator = autoScanCoordinator;
+        _rootFolderRepository = rootFolderRepository;
+        _thumbnailService = thumbnailService;
+        _shippingLabelExporter = shippingLabelExporter;
+        _printStatusService = printStatusService;
+        _cloudSyncService = cloudSyncService;
+
+        if (_printStatusService != null)
+        {
+            _printStatusService.PrintStatusChanged += (path, status) =>
+            {
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    UpdateOrderPrintStateFromPath(path, status);
+                });
+            };
+        }
 
         if (_autoScanCoordinator != null)
         {
@@ -127,6 +181,11 @@ public partial class DashboardViewModel : ObservableObject
 
         SelectedDate = DateTime.Today;
         FormattedDateString = SelectedDate.ToString("yyyy-MM-dd");
+    }
+
+    private ICloudSyncService? ResolveCloudSyncService()
+    {
+        return _cloudSyncService ?? (Application.Current as App)?.Services?.GetService(typeof(ICloudSyncService)) as ICloudSyncService;
     }
 
     [RelayCommand]
@@ -215,30 +274,12 @@ public partial class DashboardViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private void OpenQuickBill()
-    {
-        if (_customerBillingService == null || _customerBillRepository == null || _jpegBillExporter == null)
-            return;
 
-        var vm = new QuickBillSetupViewModel(
-            _customerBillingService,
-            _customerBillRepository,
-            _jpegBillExporter,
-            _settingsRepository,
-            _excelBillExporter
-        );
 
-        var win = new Views.QuickBillSetupWindow(vm)
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
-
-        win.ShowDialog();
-    }
 
     partial void OnSelectedDateChanged(DateTime value)
     {
+        _thumbnailCts?.Cancel();
         FormattedDateString = value.ToString("yyyy-MM-dd");
         _ = LoadOrdersForSelectedDateAsync();
     }
@@ -257,7 +298,48 @@ public partial class DashboardViewModel : ObservableObject
     {
         try
         {
+            var settings = await _settingsRepository.GetSettingsAsync();
+            ShowOrderThumbnails = settings.ShowOrderThumbnails;
+
             var dbOrders = await _orderRepository.GetOrdersByDateAsync(FormattedDateString);
+
+            var exportedOrderIds = new HashSet<long>();
+            var exportedBillIds = new HashSet<long>();
+            var exportedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (_customerBillRepository != null)
+            {
+                try
+                {
+                    var dateBills = await _customerBillRepository.GetBillsByDateAsync(FormattedDateString);
+                    foreach (var bill in dateBills)
+                    {
+                        bool isExported = bill.Status == CustomerBillStatus.Exported ||
+                                          (!string.IsNullOrWhiteSpace(bill.ExportFilePath) && File.Exists(bill.ExportFilePath));
+                        if (isExported)
+                        {
+                            exportedBillIds.Add(bill.Id);
+                            foreach (var bo in bill.Orders)
+                            {
+                                exportedOrderIds.Add(bo.OrderId);
+                                if (!string.IsNullOrWhiteSpace(bo.SourceFolderPath))
+                                    exportedPaths.Add(bo.SourceFolderPath);
+                            }
+                            foreach (var sf in bill.SourceFolders)
+                            {
+                                if (!string.IsNullOrWhiteSpace(sf.FolderPath))
+                                    exportedPaths.Add(sf.FolderPath);
+                                if (!string.IsNullOrWhiteSpace(sf.NormalizedFolderPath))
+                                    exportedPaths.Add(sf.NormalizedFolderPath);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Non-fatal if bill query encounters error
+                }
+            }
+
             AllOrders.Clear();
             foreach (var order in dbOrders)
             {
@@ -272,8 +354,35 @@ public partial class DashboardViewModel : ObservableObject
                         _ = _orderRepository.UpdateOrderStatusAsync(order.Id, OrderStatus.Ready);
                     }
                 }
-                AllOrders.Add(new OrderDisplayModel(order));
+
+                var display = new OrderDisplayModel(order);
+                if (exportedOrderIds.Contains(order.Id) ||
+                    order.Items.Any(i => i.CustomerBillId.HasValue && exportedBillIds.Contains(i.CustomerBillId.Value)) ||
+                    (!string.IsNullOrWhiteSpace(order.RelativePath) && exportedPaths.Contains(order.RelativePath)) ||
+                    (!string.IsNullOrWhiteSpace(order.OriginalFolderName) && exportedPaths.Contains(order.OriginalFolderName)))
+                {
+                    display.IsBillExported = true;
+                }
+
+                AllOrders.Add(display);
             }
+
+            if (_rootFolderRepository != null)
+            {
+                var roots = await _rootFolderRepository.GetAllAsync();
+                if (RootFolderFilterOptions.Count != roots.Count + 1)
+                {
+                    long? prevSelected = SelectedRootFolderId;
+                    RootFolderFilterOptions.Clear();
+                    RootFolderFilterOptions.Add(new RootFolderFilterOption(null, "📁 Tất cả các kho"));
+                    foreach (var r in roots)
+                    {
+                        RootFolderFilterOptions.Add(new RootFolderFilterOption(r.Id, $"📁 {r.Name}"));
+                    }
+                    SelectedRootFolderId = prevSelected;
+                }
+            }
+
             ApplyFilter();
             UpdateSummary();
         }
@@ -333,11 +442,29 @@ public partial class DashboardViewModel : ObservableObject
             ScanProgressPercent = p.TotalItems > 0 ? (int)((double)p.CompletedItems / p.TotalItems * 100) : 0;
         });
 
+        _thumbnailService?.Pause();
         try
         {
             var scannedOrders = await _scanService.ScanDateAsync(FormattedDateString, progress, _scanCts.Token);
             await LoadOrdersForSelectedDateAsync();
             StatusMessage = $"Quét thành công ngày {FormattedDateString}: {scannedOrders.Count} đơn hàng.";
+
+            // Trigger non-blocking cloud sync in background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var syncService = ResolveCloudSyncService();
+                    if (syncService != null)
+                    {
+                        await syncService.SyncDateAsync(FormattedDateString);
+                    }
+                }
+                catch
+                {
+                    // Non-blocking fire-and-forget
+                }
+            });
         }
         catch (OperationCanceledException)
         {
@@ -351,6 +478,7 @@ public partial class DashboardViewModel : ObservableObject
         {
             IsScanning = false;
             ScanProgressText = string.Empty;
+            _thumbnailService?.Resume();
         }
     }
 
@@ -378,6 +506,7 @@ public partial class DashboardViewModel : ObservableObject
             ScanProgressPercent = p.TotalItems > 0 ? (int)((double)p.CompletedItems / p.TotalItems * 100) : 0;
         });
 
+        _thumbnailService?.Pause();
         try
         {
             var scanned = await _scanService.ScanMissingDaysAsync(SelectedDate.Year, SelectedDate.Month, progress, _scanCts.Token);
@@ -385,6 +514,23 @@ public partial class DashboardViewModel : ObservableObject
             StatusMessage = scanned.Count > 0
                 ? $"Đã quét bổ sung {scanned.Count} đơn hàng từ các ngày còn thiếu."
                 : $"Tất cả các ngày trong tháng {SelectedDate:MM/yyyy} đã được quét đầy đủ!";
+
+            // Trigger non-blocking cloud sync in background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var syncService = ResolveCloudSyncService();
+                    if (syncService != null)
+                    {
+                        await syncService.SyncDateAsync(FormattedDateString);
+                    }
+                }
+                catch
+                {
+                    // Non-blocking fire-and-forget
+                }
+            });
         }
         catch (OperationCanceledException)
         {
@@ -398,6 +544,7 @@ public partial class DashboardViewModel : ObservableObject
         {
             IsScanning = false;
             ScanProgressText = string.Empty;
+            _thumbnailService?.Resume();
         }
     }
 
@@ -412,10 +559,11 @@ public partial class DashboardViewModel : ObservableObject
     {
         if (orderDisplay == null || IsScanning) return;
 
+        _thumbnailService?.Pause();
         try
         {
             StatusMessage = $"Đang quét lại đơn hàng {orderDisplay.OriginalFolderName}...";
-            var updated = await _scanService.ScanOrderAsync(orderDisplay.RelativePath);
+            var updated = await _scanService.ScanOrderInRootAsync(orderDisplay.RelativePath, orderDisplay.RootFolderId);
             if (updated != null)
             {
                 int index = AllOrders.IndexOf(orderDisplay);
@@ -431,11 +579,71 @@ public partial class DashboardViewModel : ObservableObject
                 ApplyFilter();
                 UpdateSummary();
                 StatusMessage = $"Đã quét lại thành công {orderDisplay.OriginalFolderName}.";
+
+                if (updated.FilesystemChangedAfterLock && _customerBillRepository != null && _customerBillingService != null)
+                {
+                    CustomerBill? bill = await _customerBillRepository.GetLockedBillByOrderIdAsync(updated.Id);
+                    if (bill == null && !string.IsNullOrWhiteSpace(updated.RelativePath))
+                    {
+                        var bills = await _customerBillRepository.GetBillsBySourceFolderPathAsync(updated.RelativePath);
+                        bill = bills.FirstOrDefault();
+                    }
+
+                    if (bill != null)
+                    {
+                        var answer = MessageBox.Show(
+                            $"Đơn hàng '{orderDisplay.FullOrderDisplayName}' đã có hóa đơn ({bill.BillNumber}), nhưng số lượng file trên đĩa đã thay đổi so với hóa đơn cũ.\n\nBạn có muốn cập nhật lại hóa đơn theo số lượng file mới không?",
+                            "Phát hiện file thay đổi",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question
+                        );
+
+                        if (answer == MessageBoxResult.Yes)
+                        {
+                            await _customerBillingService.ReopenBillAsync(bill.Id, "Cập nhật theo file mới sau khi quét lại");
+                            await _customerBillingService.SyncBillWithScannedOrderAsync(updated);
+                            updated.FilesystemChangedAfterLock = false;
+                            if (_orderRepository != null)
+                            {
+                                await _orderRepository.SetFilesystemChangedAfterLockAsync(updated.Id, false);
+                            }
+                            newDisplay.FilesystemChangedAfterLock = false;
+                            ApplyFilter();
+                            UpdateSummary();
+                            StatusMessage = $"Đã cập nhật hóa đơn {bill.BillNumber} theo số lượng file mới.";
+                        }
+                        else
+                        {
+                            StatusMessage = $"Giữ nguyên hóa đơn {bill.BillNumber} như cũ.";
+                        }
+                    }
+                }
+
+                // Trigger non-blocking cloud sync in background
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var syncService = ResolveCloudSyncService();
+                        if (syncService != null)
+                        {
+                            await syncService.SyncDateAsync(FormattedDateString);
+                        }
+                    }
+                    catch
+                    {
+                        // Non-blocking fire-and-forget
+                    }
+                });
             }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Lỗi quét lại đơn: {ex.Message}";
+        }
+        finally
+        {
+            _thumbnailService?.Resume();
         }
     }
 
@@ -483,62 +691,82 @@ public partial class DashboardViewModel : ObservableObject
         if (orderDisplay == null || IsScanning) return;
         if (_customerBillingService == null || _customerBillRepository == null || _jpegBillExporter == null) return;
 
-        if (orderDisplay.IsBilled)
-        {
-            await ViewBillAsync(orderDisplay);
-            return;
-        }
-
-        await ComputeBillForOrderAsync(orderDisplay);
+        await ViewOrComputeBillForOrderAsync(orderDisplay);
     }
 
-    private async Task ViewBillAsync(OrderDisplayModel orderDisplay)
+    private async Task ViewOrComputeBillForOrderAsync(OrderDisplayModel orderDisplay)
     {
         try
         {
             StatusMessage = $"Đang mở hóa đơn cho {orderDisplay.FullOrderDisplayName}...";
 
-            CustomerBill? bill = await _customerBillRepository!.GetLockedBillByOrderIdAsync(orderDisplay.Id);
+            CustomerBill? bill = await _customerBillRepository!.GetBillByOrderIdAsync(orderDisplay.Id);
 
             if (bill == null && !string.IsNullOrWhiteSpace(orderDisplay.RelativePath))
             {
                 var billsByPath = await _customerBillRepository.GetBillsBySourceFolderPathAsync(orderDisplay.RelativePath);
-                bill = billsByPath.FirstOrDefault(b => b.Status != CustomerBillStatus.Draft) ?? billsByPath.FirstOrDefault();
+                bill = billsByPath.FirstOrDefault();
             }
 
             if (bill == null && orderDisplay.Order.CustomerId.HasValue)
             {
-                bill = await _customerBillRepository.GetLastLockedOrExportedBillByCustomerIdAsync(orderDisplay.Order.CustomerId.Value);
+                bill = await _customerBillRepository.GetActiveDraftByCustomerIdAsync(orderDisplay.Order.CustomerId.Value);
             }
 
-            if (bill == null)
+            if (bill != null)
             {
-                MessageBox.Show(
-                    $"Không tìm thấy bản lưu hóa đơn đã khóa cho đơn hàng '{orderDisplay.FullOrderDisplayName}'.\nĐơn có thể đã được tính trong một phiên làm việc khác.",
-                    "Không Tìm Thấy Hóa Đơn",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                if (orderDisplay.FilesystemChangedAfterLock && (bill.Status == CustomerBillStatus.Locked || bill.Status == CustomerBillStatus.Exported))
+                {
+                    var answer = MessageBox.Show(
+                        $"Hóa đơn ({bill.BillNumber}) của đơn hàng '{orderDisplay.FullOrderDisplayName}' đã được tính/xuất trước đó, nhưng số lượng file trên đĩa đã thay đổi so với hóa đơn cũ.\n\nBạn có muốn cập nhật lại hóa đơn theo số lượng file mới không?",
+                        "Phát hiện file thay đổi",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question
+                    );
+
+                    if (answer == MessageBoxResult.Yes)
+                    {
+                        await _customerBillingService!.ReopenBillAsync(bill.Id, "Cập nhật theo file mới từ giao diện xem bill");
+                        await _customerBillingService.SyncBillWithScannedOrderAsync(orderDisplay.Order);
+                        orderDisplay.FilesystemChangedAfterLock = false;
+                        orderDisplay.Order.FilesystemChangedAfterLock = false;
+                        if (_orderRepository != null)
+                        {
+                            await _orderRepository.SetFilesystemChangedAfterLockAsync(orderDisplay.Id, false);
+                        }
+                        bill = await _customerBillRepository.GetByIdAsync(bill.Id) ?? bill;
+                        StatusMessage = $"Đã cập nhật hóa đơn {bill.BillNumber} theo số lượng file mới.";
+                    }
+                    else
+                    {
+                        StatusMessage = $"Giữ nguyên hóa đơn {bill.BillNumber} như cũ.";
+                    }
+                }
+
+                var vm = new CustomerBillReviewViewModel(
+                    bill,
+                    _customerBillingService!,
+                    _jpegBillExporter!,
+                    _excelBillExporter,
+                    settingsRepository: _settingsRepository,
+                    customerBillRepository: _customerBillRepository,
+                    shippingLabelExporter: _shippingLabelExporter
+                );
+
+                var win = new CustomerBillReviewWindow(vm)
+                {
+                    Owner = Application.Current?.MainWindow
+                };
+
+                win.ShowDialog();
+
+                await LoadOrdersForSelectedDateAsync();
+                StatusMessage = $"Đã xem xong hóa đơn {bill.BillNumber}.";
                 return;
             }
 
-            var vm = new CustomerBillReviewViewModel(
-                bill,
-                _customerBillingService!,
-                _jpegBillExporter!,
-                _excelBillExporter,
-                settingsRepository: _settingsRepository
-            );
-
-            var win = new CustomerBillReviewWindow(vm)
-            {
-                Owner = Application.Current?.MainWindow
-            };
-
-            win.ShowDialog();
-
-            // Refresh data in case bill was reopened
-            await LoadOrdersForSelectedDateAsync();
-            StatusMessage = $"Đã xem xong hóa đơn {bill.BillNumber}.";
+            // Nếu chưa có bill lưu trong DB, tự động tạo mới/chuẩn bị draft
+            await ComputeBillForOrderAsync(orderDisplay);
         }
         catch (Exception ex)
         {
@@ -649,12 +877,19 @@ public partial class DashboardViewModel : ObservableObject
             // 3. Tính bill cho Khách lẻ
             if (orderDisplay.IsGuest || !orderDisplay.HasCustomer)
             {
-                var settings = await _settingsRepository.GetSettingsAsync();
-                string fullFolderPath = _fileSystem.Combine(settings.RootFolder, orderDisplay.RelativePath);
+                string rootDir = await ResolveOrderRootDirAsync(orderDisplay);
+                string fullFolderPath = _fileSystem.Combine(rootDir, orderDisplay.RelativePath);
 
                 if (!_fileSystem.DirectoryExists(fullFolderPath))
                 {
-                    MessageBox.Show($"Thư mục không tồn tại trên ổ đĩa:\n\n{fullFolderPath}", "Lỗi Thư Mục", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(
+                        $"Thư mục ảnh không tồn tại trên ổ đĩa:\n\n{fullFolderPath}\n\n" +
+                        "💡 Lưu ý: Có thể thư mục ảnh đã được xưởng dọn dẹp để giải phóng dung lượng ổ cứng, hoặc ổ đĩa chứa kho này chưa được kết nối.\n\n" +
+                        "Toàn bộ thông tin đơn hàng và hóa đơn lưu trên ứng dụng vẫn được BẢO TOÀN NGUYÊN VẸN 100%.",
+                        "Thư Mục Không Tồn Tại Trên Ổ Đĩa",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information
+                    );
                     return;
                 }
 
@@ -713,7 +948,7 @@ public partial class DashboardViewModel : ObservableObject
         try
         {
             StatusMessage = $"Đang quét lại quy cách {itemDisplay.SpecName}...";
-            var updated = await _scanService.ScanSpecificationAsync(itemDisplay.SpecRelativePath);
+            var updated = await _scanService.ScanSpecificationInRootAsync(itemDisplay.SpecRelativePath, itemDisplay.ParentOrder.RootFolderId);
             if (updated != null)
             {
                 itemDisplay.PrintCount = updated.PrintCount;
@@ -751,7 +986,7 @@ public partial class DashboardViewModel : ObservableObject
         if (param is (OrderItemDisplayModel item, string candidateRelativePath))
         {
             var settings = await _settingsRepository.GetSettingsAsync();
-            string fullPath = _fileSystem.Combine(settings.RootFolder, candidateRelativePath);
+            string fullPath = _fileSystem.Combine(await ResolveOrderRootDirAsync(item.ParentOrder), candidateRelativePath);
             var supported = new HashSet<string>(settings.SupportedExtensions, StringComparer.OrdinalIgnoreCase);
 
             int count = 0;
@@ -770,6 +1005,39 @@ public partial class DashboardViewModel : ObservableObject
         }
     }
 
+    private async Task<string> ResolveOrderRootDirAsync(OrderDisplayModel? order)
+    {
+        var settings = await _settingsRepository.GetSettingsAsync();
+        string rootDir = settings.RootFolder;
+        if (order?.RootFolderId.HasValue == true)
+        {
+            var root = _rootFolderRepository == null ? null : await _rootFolderRepository.GetByIdAsync(order.RootFolderId.Value);
+            if (root == null || string.IsNullOrWhiteSpace(root.FullPath))
+                throw new InvalidOperationException($"Không tìm thấy kho #{order.RootFolderId}; không dùng kho khác thay thế.");
+            rootDir = root.FullPath;
+        }
+        return rootDir;
+    }
+
+    private void TryOpenDirectory(string fullPath, string entityDescription)
+    {
+        if (_fileSystem.DirectoryExists(fullPath))
+        {
+            _fileSystem.OpenDirectoryInShell(fullPath);
+        }
+        else
+        {
+            MessageBox.Show(
+                $"{entityDescription} không tồn tại trên ổ đĩa:\n\n{fullPath}\n\n" +
+                "💡 Lưu ý: Có thể thư mục ảnh đã được xưởng dọn dẹp để giải phóng dung lượng ổ cứng, hoặc ổ đĩa chứa kho này chưa được kết nối.\n\n" +
+                "Toàn bộ thông tin đơn hàng, số lượng và hóa đơn lưu trên ứng dụng vẫn được BẢO TOÀN NGUYÊN VẸN 100%.",
+                "Thư Mục Không Tồn Tại Trên Ổ Đĩa",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information
+            );
+        }
+    }
+
     [RelayCommand]
     private async Task OpenDateFolderAsync()
     {
@@ -778,43 +1046,63 @@ public partial class DashboardViewModel : ObservableObject
         if (_fileSystem.DirectoryExists(dateFolder))
         {
             _fileSystem.OpenDirectoryInShell(dateFolder);
+            return;
         }
-        else
+
+        if (_rootFolderRepository != null)
         {
-            StatusMessage = $"Thư mục ngày chưa tồn tại: '{dateFolder}'";
+            var activeRoots = await _rootFolderRepository.GetActiveRootsAsync();
+            foreach (var root in activeRoots)
+            {
+                string path = _fileSystem.Combine(root.FullPath, FormattedDateString);
+                if (_fileSystem.DirectoryExists(path))
+                {
+                    _fileSystem.OpenDirectoryInShell(path);
+                    return;
+                }
+            }
         }
+
+        TryOpenDirectory(dateFolder, $"Thư mục ngày '{FormattedDateString}'");
     }
 
     [RelayCommand]
     private async Task OpenOrderFolderAsync(OrderDisplayModel? order)
     {
         if (order == null) return;
-        var settings = await _settingsRepository.GetSettingsAsync();
-        string fullPath = _fileSystem.Combine(settings.RootFolder, order.RelativePath);
-        _fileSystem.OpenDirectoryInShell(fullPath);
+        string rootDir = await ResolveOrderRootDirAsync(order);
+        string fullPath = _fileSystem.Combine(rootDir, order.RelativePath);
+        TryOpenDirectory(fullPath, $"Thư mục đơn hàng '{order.OriginalFolderName}'");
     }
 
     [RelayCommand]
     private async Task OpenSourceFolderAsync(OrderItemDisplayModel? item)
     {
         if (item == null) return;
-        var settings = await _settingsRepository.GetSettingsAsync();
-        string fullPath = _fileSystem.Combine(settings.RootFolder, item.SpecRelativePath);
-        _fileSystem.OpenDirectoryInShell(fullPath);
+        var order = AllOrders.FirstOrDefault(o => o.Order.Id == item.Item.OrderId);
+        string rootDir = await ResolveOrderRootDirAsync(order);
+        string fullPath = _fileSystem.Combine(rootDir, item.SpecRelativePath);
+        TryOpenDirectory(fullPath, $"Thư mục ảnh gốc '{item.SpecName}'");
     }
 
     [RelayCommand]
     private async Task OpenPrintFolderAsync(OrderItemDisplayModel? item)
     {
         if (item == null || string.IsNullOrWhiteSpace(item.SelectedPrintFolderRelativePath)) return;
-        var settings = await _settingsRepository.GetSettingsAsync();
-        string fullPath = _fileSystem.Combine(settings.RootFolder, item.SelectedPrintFolderRelativePath);
-        _fileSystem.OpenDirectoryInShell(fullPath);
+        var order = AllOrders.FirstOrDefault(o => o.Order.Id == item.Item.OrderId);
+        string rootDir = await ResolveOrderRootDirAsync(order);
+        string fullPath = _fileSystem.Combine(rootDir, item.SelectedPrintFolderRelativePath);
+        TryOpenDirectory(fullPath, $"Thư mục ảnh in '{item.SpecName}'");
     }
 
     private void ApplyFilter()
     {
         var filtered = AllOrders.AsEnumerable();
+
+        if (SelectedRootFolderId.HasValue)
+        {
+            filtered = filtered.Where(o => o.RootFolderId == SelectedRootFolderId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
@@ -824,6 +1112,7 @@ public partial class DashboardViewModel : ObservableObject
                 (!string.IsNullOrWhiteSpace(o.OrderCode) && o.OrderCode.ToLowerInvariant().Contains(s)) ||
                 (!string.IsNullOrWhiteSpace(o.OrderName) && o.OrderName.ToLowerInvariant().Contains(s)) ||
                 (o.CanonicalCustomerName != null && o.CanonicalCustomerName.ToLowerInvariant().Contains(s)) ||
+                (!string.IsNullOrWhiteSpace(o.Note) && o.Note.ToLowerInvariant().Contains(s)) ||
                 o.Items.Any(i => i.SpecName.ToLowerInvariant().Contains(s)));
         }
 
@@ -839,6 +1128,14 @@ public partial class DashboardViewModel : ObservableObject
         {
             filtered = filtered.Where(o => o.Status == OrderStatus.Locked || o.Status == OrderStatus.Billed || o.IsBilled);
         }
+        else if (CurrentFilter == "Delivered")
+        {
+            filtered = filtered.Where(o => o.IsDelivered);
+        }
+        else if (CurrentFilter == "Undelivered")
+        {
+            filtered = filtered.Where(o => !o.IsDelivered);
+        }
 
         FilteredOrders.Clear();
         foreach (var order in filtered)
@@ -847,6 +1144,56 @@ public partial class DashboardViewModel : ObservableObject
         }
 
         HasOrders = FilteredOrders.Count > 0;
+        TriggerThumbnailLoadingForVisibleOrders();
+    }
+
+    public void TriggerThumbnailLoadingForVisibleOrders()
+    {
+        if (_thumbnailService == null || !ShowOrderThumbnails) return;
+
+        _thumbnailCts?.Cancel();
+        _thumbnailCts = new CancellationTokenSource();
+        var ct = _thumbnailCts.Token;
+
+        var ordersToLoad = FilteredOrders.ToList();
+        if (ordersToLoad.Count == 0) return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var settings = await _settingsRepository.GetSettingsAsync(ct);
+                string? defaultRoot = settings.RootFolder;
+
+                foreach (var order in ordersToLoad)
+                {
+                    if (ct.IsCancellationRequested) break;
+
+                    string root = defaultRoot ?? string.Empty;
+                    if (order.RootFolderId.HasValue && _rootFolderRepository != null)
+                    {
+                        var rf = await _rootFolderRepository.GetByIdAsync(order.RootFolderId.Value, ct);
+                        if (rf != null && !string.IsNullOrWhiteSpace(rf.FullPath))
+                        {
+                            root = rf.FullPath;
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(root))
+                    {
+                        await order.LoadThumbnailAsync(_thumbnailService, root, ct);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal when scrolling or changing view
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Thumbnail loading error: {ex.Message}");
+            }
+        }, ct);
     }
 
     private void UpdateSummary()
@@ -856,5 +1203,303 @@ public partial class DashboardViewModel : ObservableObject
         NeedsReviewCount = AllOrders.Count(o => o.HasIssues);
         ReadyCount = AllOrders.Count(o => o.Status == OrderStatus.Ready && !o.HasIssues);
         BilledCount = AllOrders.Count(o => o.Status == OrderStatus.Locked || o.Status == OrderStatus.Billed || o.IsBilled);
+        DeliveredCount = AllOrders.Count(o => o.IsDelivered);
+        UndeliveredCount = TotalOrders - DeliveredCount;
+    }
+
+    private void UpdateOrderPrintStateFromPath(string path, PrintStatus status)
+    {
+        string norm = PathNormalizer.Normalize(path);
+        foreach (var order in AllOrders)
+        {
+            string orderNorm = PathNormalizer.Normalize(order.Order.RelativePath);
+            if (norm.EndsWith(orderNorm, StringComparison.OrdinalIgnoreCase))
+            {
+                order.PrintProgress = status;
+                order.IsPrinted = status == PrintStatus.Printed;
+                order.NotifyPrintProgressChanged();
+            }
+
+            foreach (var item in order.Items)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Item.SpecificationRelativePath))
+                {
+                    string itemNorm = PathNormalizer.Normalize(item.Item.SpecificationRelativePath);
+                    if (norm.EndsWith(itemNorm, StringComparison.OrdinalIgnoreCase))
+                    {
+                        item.IsPrinted = status == PrintStatus.Printed;
+                        order.NotifyPrintProgressChanged();
+                    }
+                }
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleDeliveredAsync(OrderDisplayModel? order)
+    {
+        if (order == null) return;
+
+        bool newStatus = !order.IsDelivered;
+
+        if (newStatus && order.Items.Count > 1 && order.PrintedItemsCount < order.TotalItemsCount)
+        {
+            var confirm = MessageBox.Show(
+                $"Đơn hàng {order.DisplayOrderCode} mới in xong {order.PrintedItemsCount}/{order.TotalItemsCount} sản phẩm (còn {order.TotalItemsCount - order.PrintedItemsCount} sản phẩm chưa đánh dấu ĐÃ IN).\n\nBạn có chắc chắn muốn chuyển sang trạng thái ĐÃ GIAO không?",
+                "Xác nhận giao hàng",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
+        DateTimeOffset? deliveredAt = newStatus ? DateTimeOffset.Now : null;
+        string? deliveredBy = null;
+
+        await _orderRepository.UpdateOrderDeliveredStatusAsync(order.Id, newStatus, deliveredAt, deliveredBy);
+        order.HasPendingCloudChanges = (await _orderRepository.GetOrderByIdAsync(order.Id))?.HasPendingCloudChanges == true;
+        order.IsDelivered = newStatus;
+        order.DeliveredAt = deliveredAt;
+        order.DeliveredBy = deliveredBy;
+
+        UpdateSummary();
+        ApplyFilter();
+        StatusMessage = newStatus 
+            ? $"Đã đánh dấu ĐÃ GIAO đơn hàng {order.DisplayOrderCode} ({deliveredAt:dd/MM/yyyy HH:mm})."
+            : $"Đã chuyển về Chưa giao đơn hàng {order.DisplayOrderCode}.";
+    }
+
+    [RelayCommand]
+    private async Task ToggleItemPrintedAsync(OrderItemDisplayModel? item)
+    {
+        if (item == null) return;
+
+        try
+        {
+            var printService = _printStatusService ?? (Application.Current as App)?.Services?.GetService(typeof(IPrintStatusService)) as IPrintStatusService;
+            if (printService == null) return;
+
+            string rootFolder = string.Empty;
+            if (_settingsRepository != null)
+            {
+                var settings = await _settingsRepository.GetSettingsAsync();
+                rootFolder = await ResolveOrderRootDirAsync(item.ParentOrder);
+            }
+
+            string subPath = !string.IsNullOrWhiteSpace(rootFolder) && !string.IsNullOrWhiteSpace(item.Item.SpecificationRelativePath)
+                ? Path.Combine(rootFolder, item.Item.SpecificationRelativePath)
+                : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(subPath) || !Directory.Exists(subPath))
+            {
+                item.IsPrinted = !item.IsPrinted;
+                return;
+            }
+
+            var toggleResult = await printService.ToggleStatusAsync(subPath, "DashboardUI");
+            item.IsPrinted = toggleResult.IsPrinted;
+            item.PrintedAt = item.IsPrinted ? DateTimeOffset.Now : null;
+
+            if (item.ParentOrder != null)
+            {
+                item.ParentOrder.PrintProgress = toggleResult.NewStatus == PrintStatus.Printed
+                    ? (toggleResult.PrintedSubCount >= toggleResult.TotalSubCount ? PrintStatus.Printed : PrintStatus.Partial)
+                    : (toggleResult.PrintedSubCount > 0 ? PrintStatus.Partial : PrintStatus.NotPrinted);
+
+                item.ParentOrder.IsPrinted = item.ParentOrder.PrintedItemsCount >= item.ParentOrder.TotalItemsCount && item.ParentOrder.TotalItemsCount > 0;
+                item.ParentOrder.NotifyPrintProgressChanged();
+            }
+
+            StatusMessage = item.IsPrinted
+                ? $"Đã đánh dấu ĐÃ IN quy cách '{item.SpecName}' ({item.ParentOrder?.DisplayOrderCode})."
+                : $"Đã hủy đánh dấu ĐÃ IN quy cách '{item.SpecName}' ({item.ParentOrder?.DisplayOrderCode}).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Lỗi khi cập nhật trạng thái in: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"Lỗi khi toggle in cho sản phẩm: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task PrintOrderLabelAsync(OrderDisplayModel? order)
+    {
+        if (order == null) return;
+        var exporter = _shippingLabelExporter ?? (Application.Current as App)?.Services?.GetService(typeof(IShippingLabelExporter)) as IShippingLabelExporter;
+        if (exporter == null)
+        {
+            MessageBox.Show("Dịch vụ in tem nhiệt chưa sẵn sàng.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            CustomerBill? bill = null;
+            long? billId = order.Order.Items?.FirstOrDefault(i => i.CustomerBillId != null)?.CustomerBillId;
+            if (billId.HasValue && _customerBillRepository != null)
+            {
+                bill = await _customerBillRepository.GetByIdAsync(billId.Value);
+            }
+
+            var previewWindow = new Views.ShippingLabelPreviewWindow(
+                order.Order,
+                bill,
+                exporter,
+                _settingsRepository,
+                _orderRepository
+            );
+
+            var mainWindow = Application.Current?.MainWindow;
+            if (mainWindow != null && mainWindow.IsVisible)
+            {
+                previewWindow.Owner = mainWindow;
+            }
+
+            bool? dialogResult = previewWindow.ShowDialog();
+
+            if (dialogResult == true && previewWindow.WasPrinted)
+            {
+                if (previewWindow.WasMarkedDelivered)
+                {
+                    order.IsDelivered = true;
+                    order.DeliveredAt = previewWindow.DeliveredAt;
+                    order.DeliveredBy = previewWindow.DeliveredBy;
+                    UpdateSummary();
+                    ApplyFilter();
+                    StatusMessage = $"✅ Đã in tem 75x100mm và đánh dấu ĐÃ GIAO cho đơn {order.DisplayOrderCode}.";
+                }
+                else
+                {
+                    StatusMessage = $"✅ Đã in tem 75x100mm cho đơn {order.DisplayOrderCode}.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"❌ Lỗi khi mở tem: {ex.Message}";
+            MessageBox.Show($"Lỗi khi mở tem đóng gói: {ex.Message}", "Lỗi Xem Tem", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task TogglePrintedAsync(OrderDisplayModel? order)
+    {
+        if (order == null) return;
+        bool newPrinted = !order.IsPrinted;
+        DateTimeOffset? printedAt = newPrinted ? DateTimeOffset.Now : null;
+
+        await _orderRepository.UpdateOrderPrintedStatusAsync(order.Id, newPrinted, printedAt);
+        order.IsPrinted = newPrinted;
+        order.Order.PrintedAt = printedAt;
+        StatusMessage = newPrinted 
+            ? $"Đã đánh dấu ĐÃ IN đơn hàng {order.DisplayOrderCode}."
+            : $"Đã bỏ đánh dấu ĐÃ IN đơn hàng {order.DisplayOrderCode}.";
+    }
+
+    [RelayCommand]
+    private async Task EditOrderNoteAsync(OrderDisplayModel? order)
+    {
+        if (order == null) return;
+
+        var window = Application.Current?.MainWindow;
+        string? result = Views.InputDialog.Show(
+            window!,
+            "Ghi chú đơn hàng",
+            $"Nhập ghi chú cho đơn hàng {order.DisplayOrderCode} ({order.FullOrderDisplayName}):\n(Để trống nếu muốn xóa ghi chú)",
+            order.Note ?? string.Empty);
+
+        if (result == null) return; // User cancelled
+
+        string? cleanNote = string.IsNullOrWhiteSpace(result) ? null : result.Trim();
+        await _orderRepository.UpdateOrderNoteAsync(order.Id, cleanNote);
+        order.Note = cleanNote;
+        StatusMessage = cleanNote != null
+            ? $"Đã lưu ghi chú cho đơn hàng {order.DisplayOrderCode}."
+            : $"Đã xóa ghi chú cho đơn hàng {order.DisplayOrderCode}.";
+    }
+
+    [RelayCommand]
+    private void OpenPreviewPopup(OrderDisplayModel? order)
+    {
+        if (order == null) return;
+        PreviewOrder = order;
+        IsPreviewPopupOpen = true;
+    }
+
+    [RelayCommand]
+    private void ClosePreviewPopup()
+    {
+        IsPreviewPopupOpen = false;
+        PreviewOrder = null;
+    }
+
+    [RelayCommand]
+    private void OpenPreviewOriginalImage()
+    {
+        if (PreviewOrder == null) return;
+        string? targetPath = PreviewOrder.FullThumbnailCandidatePath;
+        if (!string.IsNullOrEmpty(targetPath) && File.Exists(targetPath))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = targetPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Không thể mở tệp ảnh gốc: {ex.Message}", "Lỗi Mở Ảnh", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        else
+        {
+            MessageBox.Show("Tệp ảnh gốc không còn tồn tại trên đĩa hoặc đã bị di chuyển.", "Không Tìm Thấy Ảnh", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenPreviewContainingFolder()
+    {
+        if (PreviewOrder == null) return;
+        string? targetPath = PreviewOrder.FullThumbnailCandidatePath;
+        if (!string.IsNullOrEmpty(targetPath))
+        {
+            if (File.Exists(targetPath))
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{targetPath}\"");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Không thể mở thư mục: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            // Fallback: If specific file doesn't exist, try opening the parent folder
+            string? dir = System.IO.Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start("explorer.exe", $"\"{dir}\"");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Không thể mở thư mục: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+        }
+
+        MessageBox.Show("Thư mục hoặc tệp ảnh không tồn tại trên ổ đĩa.", "Thông Báo", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 }

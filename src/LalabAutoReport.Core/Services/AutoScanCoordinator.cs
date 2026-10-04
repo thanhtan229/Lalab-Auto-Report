@@ -20,6 +20,7 @@ public class AutoScanCoordinator : IAutoScanCoordinator
     private readonly IFolderFingerprintService _fingerprintService;
     private readonly IIdleDetectionService _idleDetectionService;
     private readonly IPrintStatusService? _printStatusService;
+    private readonly IRootFolderRepository? _rootFolderRepository;
     private readonly ILogger<AutoScanCoordinator>? _logger;
 
     private CancellationTokenSource? _cts;
@@ -41,6 +42,7 @@ public class AutoScanCoordinator : IAutoScanCoordinator
         IFolderFingerprintService fingerprintService,
         IIdleDetectionService idleDetectionService,
         IPrintStatusService? printStatusService = null,
+        IRootFolderRepository? rootFolderRepository = null,
         ILogger<AutoScanCoordinator>? logger = null)
     {
         _scanService = scanService;
@@ -51,6 +53,7 @@ public class AutoScanCoordinator : IAutoScanCoordinator
         _fingerprintService = fingerprintService;
         _idleDetectionService = idleDetectionService;
         _printStatusService = printStatusService;
+        _rootFolderRepository = rootFolderRepository;
         _logger = logger;
     }
 
@@ -133,6 +136,28 @@ public class AutoScanCoordinator : IAutoScanCoordinator
         }
     }
 
+    private async Task<IReadOnlyList<string>> GetActiveRootPathsAsync(AppSettings settings, CancellationToken cancellationToken)
+    {
+        if (_rootFolderRepository != null)
+        {
+            var activeRoots = await _rootFolderRepository.GetActiveRootsAsync(cancellationToken);
+            if (activeRoots.Count > 0)
+            {
+                return activeRoots
+                    .Where(r => !string.IsNullOrWhiteSpace(r.FullPath) && _fileSystem.DirectoryExists(r.FullPath))
+                    .Select(r => r.FullPath)
+                    .ToList();
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.RootFolder) && _fileSystem.DirectoryExists(settings.RootFolder))
+        {
+            return new[] { settings.RootFolder };
+        }
+
+        return Array.Empty<string>();
+    }
+
     public async Task<int> PerformStartupScanAsync(CancellationToken cancellationToken = default)
     {
         if (_isScanning) return 0;
@@ -146,8 +171,8 @@ public class AutoScanCoordinator : IAutoScanCoordinator
                 return 0;
             }
 
-            string rootFolder = settings.RootFolder;
-            if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+            var roots = await GetActiveRootPathsAsync(settings, cancellationToken);
+            if (roots.Count == 0)
             {
                 return 0;
             }
@@ -158,7 +183,12 @@ public class AutoScanCoordinator : IAutoScanCoordinator
                 datesToCheck.Add(DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd"));
             }
 
-            int updated = await ScanScopeWithFingerprintsAsync(rootFolder, datesToCheck, cancellationToken);
+            int updated = 0;
+            foreach (var root in roots)
+            {
+                updated += await ScanScopeWithFingerprintsAsync(root, datesToCheck, cancellationToken);
+            }
+
             if (updated > 0)
             {
                 StatusChanged?.Invoke($"Khởi động: Đã cập nhật {updated} đơn hàng.");
@@ -185,9 +215,8 @@ public class AutoScanCoordinator : IAutoScanCoordinator
         {
             _isScanning = true;
             var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-            string rootFolder = settings.RootFolder;
-
-            if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+            var roots = await GetActiveRootPathsAsync(settings, cancellationToken);
+            if (roots.Count == 0)
             {
                 return 0;
             }
@@ -199,7 +228,12 @@ public class AutoScanCoordinator : IAutoScanCoordinator
                 datesToCheck.Add(DateTime.Today.AddDays(-i).ToString("yyyy-MM-dd"));
             }
 
-            int updated = await ScanScopeWithFingerprintsAsync(rootFolder, datesToCheck, cancellationToken);
+            int updated = 0;
+            foreach (var root in roots)
+            {
+                updated += await ScanScopeWithFingerprintsAsync(root, datesToCheck, cancellationToken);
+            }
+
             if (updated > 0)
             {
                 StatusChanged?.Invoke($"Đã tự động cập nhật {updated} đơn hàng lúc {DateTime.Now:HH:mm}.");

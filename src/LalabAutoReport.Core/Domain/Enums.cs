@@ -51,6 +51,16 @@ public enum BillingFolderResolutionMode
 }
 
 /// <summary>
+/// Price tier assigned to customers (Retail, Studio, VIP)
+/// </summary>
+public enum PriceTier
+{
+    Retail = 0,
+    Studio = 1,
+    Vip = 2
+}
+
+/// <summary>
 /// Status of resolving a customer from folder name
 /// </summary>
 public enum CustomerResolutionStatus
@@ -204,7 +214,8 @@ public enum BillType
 public enum PrintStatus
 {
     NotPrinted = 0,
-    Printed = 1
+    Printed = 1,
+    Partial = 2
 }
 
 /// <summary>
@@ -223,3 +234,23 @@ public enum ResetDataScope
     /// </summary>
     FactoryReset = 1
 }
+
+/// <summary>
+/// Display mode for QR code on customer bills
+/// </summary>
+public enum QrDisplayMode
+{
+    VietQrAuto = 0,
+    CustomImage = 1,
+    None = 2
+}
+
+/// <summary>
+/// User role for mobile web access
+/// </summary>
+public enum MobileUserRole
+{
+    Staff = 0,
+    Admin = 1
+}
+

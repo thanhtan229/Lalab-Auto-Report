@@ -1,0 +1,26 @@
+{
+  "backupPath": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\artifacts\\cloud-production-predeploy-20261003.sql",
+  "backupSha256": "87bad586efebe2d63d2fc290a12bcb57d5e51933053df6be49447f940655d30e",
+  "migration0003SchemaMatches": {
+    "cloud_orders": true,
+    "cloud_heartbeats": true,
+    "cloud_print_commands": true,
+    "indexes": true
+  },
+  "migrationLedger": [
+    [
+      "0001_init.sql"
+    ],
+    [
+      "0002_operational_sync.sql"
+    ]
+  ],
+  "counts": {
+    "cloud_orders": 18,
+    "cloud_bills": 20,
+    "cloud_operational_events": 8,
+    "cloud_print_commands": 0
+  },
+  "previousWorkerVersion": "c86f8c78-c523-4d39-8b15-f70abe8590e3",
+  "timeTravelBookmark": "0000001e-00000048-000050f9-18f9442aee9f2dfbb91e35f8ab948c73"
+}

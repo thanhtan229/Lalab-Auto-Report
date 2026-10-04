@@ -23,6 +23,8 @@ public partial class CustomerBillOrderDisplayModel : ObservableObject
     public string? OrderCode => DomainOrder.OrderCodeSnapshot;
     public string DisplayOrderCode => !string.IsNullOrWhiteSpace(OrderCode) ? OrderCode : $"#{DomainOrder.OrderId}";
     public string OrderDate => DomainOrder.OrderDateSnapshot;
+    public string? SourceFolderPath => DomainOrder.SourceFolderPath;
+    public bool HasSourceFolder => !string.IsNullOrWhiteSpace(SourceFolderPath);
     public bool IsFromPreviousPeriod => DomainOrder.IsFromPreviousPeriod;
     public ObservableCollection<CustomerBillLineDisplayModel> Lines { get; } = new();
 

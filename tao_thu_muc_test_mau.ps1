@@ -18,8 +18,12 @@
 #>
 
 param(
-    [string]$TargetRoot = "d:\___TOOLS\__TINIX\Lalab Auto Report Antigravity\TEST_DATA_LALAB"
+    [string]$TargetRoot = ""
 )
+
+if ([string]::IsNullOrWhiteSpace($TargetRoot)) {
+    $TargetRoot = Join-Path $PSScriptRoot "TEST_DATA_LALAB"
+}
 
 $ErrorActionPreference = "Stop"
 

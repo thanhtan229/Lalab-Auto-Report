@@ -60,6 +60,16 @@ public class BillingService : IBillingService
         var lines = new List<BillLine>();
         long subtotal = 0;
 
+        PriceTier priceTier = PriceTier.Retail;
+        if (order.CustomerId.HasValue && _customerRepository != null)
+        {
+            var cust = await _customerRepository.GetByIdAsync(order.CustomerId.Value, cancellationToken);
+            if (cust != null)
+            {
+                priceTier = cust.PriceTier;
+            }
+        }
+
         foreach (var item in order.Items)
         {
             // Verify valid print folder
@@ -89,6 +99,7 @@ public class BillingService : IBillingService
             int? extraSheets = null;
             long? basePrice = null;
             long? extraSheetPrice = null;
+            long effectiveUnitPrice = spec.GetEffectiveUnitPrice(priceTier);
 
             if (spec.BillingMethod == BillingMethod.AlbumBasePlusExtra)
             {
@@ -100,8 +111,9 @@ public class BillingService : IBillingService
                 billedQuantity = 1; // 1 physical album per product job
                 sheetCount = printCount;
                 includedSheets = spec.IncludedSheets ?? 10;
-                basePrice = spec.BasePrice ?? 0;
-                extraSheetPrice = spec.ExtraSheetPrice ?? 0;
+                var (albumBase, albumExtra) = spec.GetEffectiveAlbumPrices(priceTier);
+                basePrice = albumBase;
+                extraSheetPrice = albumExtra;
                 extraSheets = Math.Max(0, sheetCount.Value - includedSheets.Value);
                 lineTotal = basePrice.Value + (extraSheets.Value * extraSheetPrice.Value);
 
@@ -117,7 +129,7 @@ public class BillingService : IBillingService
                     throw new InvalidOperationException($"Số lượng tính tiền của quy cách '{item.SpecificationFolderName}' không được nhỏ hơn 0.");
                 }
 
-                lineTotal = billedQuantity * spec.UnitPrice;
+                lineTotal = billedQuantity * effectiveUnitPrice;
                 item.BillQuantity = billedQuantity;
                 item.QuantityResolutionMode = item.QuantityResolutionMode ?? QuantityResolutionMode.UsePrint;
             }
@@ -141,7 +153,7 @@ public class BillingService : IBillingService
                 BillQuantity = billedQuantity,
                 QuantityResolutionMode = item.QuantityResolutionMode ?? QuantityResolutionMode.UsePrint,
                 QuantityResolutionNote = item.QuantityResolutionNote,
-                UnitPrice = spec.UnitPrice,
+                UnitPrice = effectiveUnitPrice,
                 LineTotal = lineTotal,
                 SourceScanSnapshotId = item.ScanSnapshotId,
                 PrintSpecification = spec

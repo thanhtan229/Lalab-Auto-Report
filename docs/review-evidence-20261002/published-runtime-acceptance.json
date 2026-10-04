@@ -1,0 +1,9 @@
+{
+  "oldPid": 106300,
+  "lockedBillAfterRestart": "PASS",
+  "recordedUtc": "2026-10-02T13:47:29.6613710Z",
+  "singleInstanceIpc": "PASS",
+  "newPid": 105128,
+  "persistentLanLogin": "PASS",
+  "fixture": "isolated synthetic profile"
+}

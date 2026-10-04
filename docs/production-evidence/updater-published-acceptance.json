@@ -1,0 +1,11 @@
+{
+  "health": "PASS",
+  "replacementLog": "SUCCESS: executable replaced; previous executable and download retained for rollback.\r\n",
+  "processId": 101472,
+  "newHash": "D7E5DD766F2D8E4EA0486876323861CC1BBDF444F7D69FE3523B4DE68D194C0B",
+  "oldExecutableRetained": true,
+  "result": "PASS",
+  "scope": "production replacement script on copied executable and isolated synthetic profile; no remote download",
+  "lockedBill": "75000",
+  "artifactHash": "D7E5DD766F2D8E4EA0486876323861CC1BBDF444F7D69FE3523B4DE68D194C0B"
+}

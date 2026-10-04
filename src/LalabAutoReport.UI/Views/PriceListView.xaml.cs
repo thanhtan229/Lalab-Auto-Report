@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using LalabAutoReport.Core.Domain;
 using LalabAutoReport.UI.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LalabAutoReport.UI.Views;
 
@@ -10,6 +11,25 @@ public partial class PriceListView : UserControl
     public PriceListView()
     {
         InitializeComponent();
+    }
+
+    private async void ManageFamilyAliases_Click(object sender, RoutedEventArgs e)
+    {
+        var window = Window.GetWindow(this);
+        var vm = ((App)Application.Current).Services?.GetRequiredService<ManageFamilyAliasesViewModel>();
+        if (vm != null)
+        {
+            var dialog = new ManageFamilyAliasesDialog(vm)
+            {
+                Owner = window
+            };
+            dialog.ShowDialog();
+
+            if (DataContext is PriceListViewModel priceListVm)
+            {
+                await priceListVm.LoadSpecificationsAsync();
+            }
+        }
     }
 
     private async void EditAlias_Click(object sender, RoutedEventArgs e)
@@ -44,23 +64,6 @@ public partial class PriceListView : UserControl
             if (res == MessageBoxResult.Yes)
             {
                 vm.RemoveAliasCommand.Execute(alias);
-            }
-        }
-    }
-
-    private void RemoveFamilyAlias_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.DataContext is ProductFamilyAlias alias && DataContext is PriceListViewModel vm)
-        {
-            var res = MessageBox.Show(
-                $"Bạn có chắc chắn muốn xóa alias dùng chung '{alias.AliasText}' khỏi dòng sản phẩm?",
-                "Xác nhận xóa family alias",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (res == MessageBoxResult.Yes)
-            {
-                vm.RemoveFamilyAliasCommand.Execute(alias);
             }
         }
     }

@@ -35,6 +35,9 @@ public class DatabaseResetService : IDatabaseResetService
         cancellationToken.ThrowIfCancellationRequested();
 
         string dbPath = _connectionFactory.DatabasePath;
+        using var lifecycle = await DatabaseLifecycleGuard.EnterAsync(dbPath, cancellationToken);
+        using (var guardConnection = _connectionFactory.CreateConnection())
+            await DatabaseLifecycleGuard.EnsureLocalOnlyAsync(guardConnection);
         _logger?.LogInformation("Starting database reset with scope {Scope} on '{DbPath}'", scope, dbPath);
 
         // Step 1: Always take safety pre-reset backup first
@@ -115,20 +118,7 @@ public class DatabaseResetService : IDatabaseResetService
                 }
             }
 
-            // Reset autoincrement sequence numbers for operational tables
-            var sequenceExists = await connection.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sqlite_sequence';",
-                transaction: transaction
-            );
-
-            if (sequenceExists > 0)
-            {
-                string quotedNames = string.Join(",", operationalTables.Select(t => $"'{t}'"));
-                await connection.ExecuteAsync(
-                    $"DELETE FROM sqlite_sequence WHERE name IN ({quotedNames});",
-                    transaction: transaction
-                );
-            }
+            // Preserve high-water IDs: an old Cloud identity must never be reused.
 
             await connection.ExecuteAsync("PRAGMA foreign_keys = ON;", transaction: transaction);
             transaction.Commit();

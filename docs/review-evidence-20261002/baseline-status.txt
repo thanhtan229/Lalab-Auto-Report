@@ -1,0 +1,151 @@
+ M .gitignore
+ D DEV_RESTART.bat
+ D PLAN_PRINTED_EXPLORER.md
+ D PLAN_lalab.md
+ D PLAN_lalab_V2.md
+ M PROJECT_STATUS.md
+ D RESTART.bat
+ D REVIEW_LALAB.md
+ M TEST.bat
+ M agents.md
+ D seed_test_database.py
+ M src/LalabAutoReport.Core/Domain/Enums.cs
+ M src/LalabAutoReport.Core/Domain/Models.cs
+ M src/LalabAutoReport.Core/Interfaces/IFolderVisualMarkerService.cs
+ M src/LalabAutoReport.Core/Interfaces/Interfaces.cs
+ M src/LalabAutoReport.Core/Services/AutoScanCoordinator.cs
+ M src/LalabAutoReport.Core/Services/BillingService.cs
+ M src/LalabAutoReport.Core/Services/CustomerBillingService.cs
+ M src/LalabAutoReport.Core/Services/FolderStructureParser.cs
+ M src/LalabAutoReport.Core/Services/LockingService.cs
+ M src/LalabAutoReport.Core/Services/PrintFolderResolver.cs
+ M src/LalabAutoReport.Core/Services/PrintStatusService.cs
+ M src/LalabAutoReport.Core/Services/ScanService.cs
+ M src/LalabAutoReport.Infrastructure/Data/DatabaseBackupService.cs
+ M src/LalabAutoReport.Infrastructure/Data/DatabaseMigrator.cs
+ M src/LalabAutoReport.Infrastructure/Data/SqliteCustomerBillRepository.cs
+ M src/LalabAutoReport.Infrastructure/Data/SqliteCustomerRepository.cs
+ M src/LalabAutoReport.Infrastructure/Data/SqliteFolderPrintRepository.cs
+ M src/LalabAutoReport.Infrastructure/Data/SqliteOrderRepository.cs
+ M src/LalabAutoReport.Infrastructure/Data/SqliteProductRepository.cs
+ M src/LalabAutoReport.Infrastructure/Data/SqliteSettingsRepository.cs
+ M src/LalabAutoReport.Infrastructure/FileSystem/PhysicalFileSystemAdapter.cs
+ M src/LalabAutoReport.Infrastructure/LalabAutoReport.Infrastructure.csproj
+ M src/LalabAutoReport.Infrastructure/Reporting/ClosedXmlBillExporter.cs
+ M src/LalabAutoReport.Infrastructure/Reporting/WpfJpegBillExporter.cs
+ M src/LalabAutoReport.Infrastructure/Services/GitHubUpdateService.cs
+ M src/LalabAutoReport.Infrastructure/Windows/FolderVisualMarkerService.cs
+ M src/LalabAutoReport.UI/App.xaml
+ M src/LalabAutoReport.UI/App.xaml.cs
+ M src/LalabAutoReport.UI/LalabAutoReport.UI.csproj
+ M src/LalabAutoReport.UI/MainWindow.xaml
+ M src/LalabAutoReport.UI/MainWindow.xaml.cs
+ M src/LalabAutoReport.UI/Resources/TinixStyles.xaml
+ M src/LalabAutoReport.UI/Resources/TinixTokens.xaml
+ M src/LalabAutoReport.UI/Services/QuickBillLauncher.cs
+ M src/LalabAutoReport.UI/ViewModels/CustomerBillLineDisplayModel.cs
+ M src/LalabAutoReport.UI/ViewModels/CustomerBillOrderDisplayModel.cs
+ M src/LalabAutoReport.UI/ViewModels/CustomerBillReviewViewModel.cs
+ M src/LalabAutoReport.UI/ViewModels/CustomersViewModel.cs
+ M src/LalabAutoReport.UI/ViewModels/DashboardViewModel.cs
+ M src/LalabAutoReport.UI/ViewModels/MainViewModel.cs
+ M src/LalabAutoReport.UI/ViewModels/OrderDisplayModel.cs
+ M src/LalabAutoReport.UI/ViewModels/PriceListViewModel.cs
+D  src/LalabAutoReport.UI/ViewModels/QuickBillSetupViewModel.cs
+ M src/LalabAutoReport.UI/ViewModels/ReportsViewModel.cs
+ M src/LalabAutoReport.UI/ViewModels/SettingsViewModel.cs
+ M src/LalabAutoReport.UI/Views/CustomerBillReviewWindow.xaml
+ M src/LalabAutoReport.UI/Views/CustomerBillReviewWindow.xaml.cs
+ M src/LalabAutoReport.UI/Views/CustomersView.xaml
+ M src/LalabAutoReport.UI/Views/DashboardView.xaml
+ M src/LalabAutoReport.UI/Views/DashboardView.xaml.cs
+ M src/LalabAutoReport.UI/Views/InputDialog.xaml
+ M src/LalabAutoReport.UI/Views/InputDialog.xaml.cs
+ M src/LalabAutoReport.UI/Views/PriceListView.xaml
+ M src/LalabAutoReport.UI/Views/PriceListView.xaml.cs
+D  src/LalabAutoReport.UI/Views/QuickBillSetupWindow.xaml
+D  src/LalabAutoReport.UI/Views/QuickBillSetupWindow.xaml.cs
+ M src/LalabAutoReport.UI/Views/ReportsView.xaml
+ M src/LalabAutoReport.UI/Views/SettingsView.xaml
+ M tests/LalabAutoReport.Tests/ContextMenuIntegrationTests.cs
+ M tests/LalabAutoReport.Tests/ConverterTests.cs
+ M tests/LalabAutoReport.Tests/CustomerBillingTests.cs
+ M tests/LalabAutoReport.Tests/ExcelBillExporterTests.cs
+ M tests/LalabAutoReport.Tests/GuestBillingTests.cs
+ M tests/LalabAutoReport.Tests/HardeningTests.cs
+ M tests/LalabAutoReport.Tests/InvoiceHistoryAndReorganizationTests.cs
+ M tests/LalabAutoReport.Tests/OrderItemDisplayModelTests.cs
+ M tests/LalabAutoReport.Tests/PrintFolderResolverTests.cs
+ M tests/LalabAutoReport.Tests/TabNavigationUiTests.cs
+?? FINAL_REVIEW.md
+?? FINAL_REVIEW_VERIFIED.md
+?? PLAN_PRODUCTION_HARDENING.md
+?? PRODUCTION_FIX_BASELINE.md
+?? PRODUCTION_FIX_PROGRESS.md
+?? cloud/
+?? docs/
+?? scripts/
+?? src/LalabAutoReport.Core/Domain/VietnameseBanks.cs
+?? src/LalabAutoReport.Core/Interfaces/ICloudMediaSyncService.cs
+?? src/LalabAutoReport.Core/Interfaces/ICloudSyncService.cs
+?? src/LalabAutoReport.Core/Interfaces/ICloudSyncStateRepository.cs
+?? src/LalabAutoReport.Core/Interfaces/IThumbnailService.cs
+?? src/LalabAutoReport.Core/Services/MobileAccessLink.cs
+?? src/LalabAutoReport.Core/Services/MobileAuthService.cs
+?? src/LalabAutoReport.Core/Services/NaturalStringComparer.cs
+?? src/LalabAutoReport.Infrastructure/Data/DataPurgeService.cs
+?? src/LalabAutoReport.Infrastructure/Data/SqliteCloudSyncStateRepository.cs
+?? src/LalabAutoReport.Infrastructure/Data/SqliteRootFolderRepository.cs
+?? src/LalabAutoReport.Infrastructure/Reporting/IBillVisualRenderer.cs
+?? src/LalabAutoReport.Infrastructure/Reporting/VietQrGenerator.cs
+?? src/LalabAutoReport.Infrastructure/Reporting/WpfShippingLabelExporter.cs
+?? src/LalabAutoReport.Infrastructure/Services/CloudMediaSyncService.cs
+?? src/LalabAutoReport.Infrastructure/Services/CloudSyncService.cs
+?? src/LalabAutoReport.Infrastructure/Services/NetworkAddressHelper.cs
+?? src/LalabAutoReport.Infrastructure/Services/SqliteGlobalSearchService.cs
+?? src/LalabAutoReport.Infrastructure/Services/ThumbnailService.cs
+?? src/LalabAutoReport.Infrastructure/Services/UpdateReplacement.cs
+?? src/LalabAutoReport.UI/Converters/EnumToBooleanConverter.cs
+?? src/LalabAutoReport.UI/Services/SystemTrayManager.cs
+?? src/LalabAutoReport.UI/Services/WindowsStartupHelper.cs
+?? src/LalabAutoReport.UI/ViewModels/GlobalSearchViewModel.cs
+?? src/LalabAutoReport.UI/ViewModels/InvoicesViewModel.cs
+?? src/LalabAutoReport.UI/ViewModels/ManageFamilyAliasesViewModel.cs
+?? src/LalabAutoReport.UI/ViewModels/RootFolderDisplayItem.cs
+?? src/LalabAutoReport.UI/Views/BillPreviewWindow.xaml
+?? src/LalabAutoReport.UI/Views/BillPreviewWindow.xaml.cs
+?? src/LalabAutoReport.UI/Views/CreateFamilyDialog.xaml
+?? src/LalabAutoReport.UI/Views/CreateFamilyDialog.xaml.cs
+?? src/LalabAutoReport.UI/Views/GlobalSearchWindow.xaml
+?? src/LalabAutoReport.UI/Views/GlobalSearchWindow.xaml.cs
+?? src/LalabAutoReport.UI/Views/InvoicesView.xaml
+?? src/LalabAutoReport.UI/Views/InvoicesView.xaml.cs
+?? src/LalabAutoReport.UI/Views/ManageFamilyAliasesDialog.xaml
+?? src/LalabAutoReport.UI/Views/ManageFamilyAliasesDialog.xaml.cs
+?? src/LalabAutoReport.UI/Views/ShippingLabelPreviewWindow.xaml
+?? src/LalabAutoReport.UI/Views/ShippingLabelPreviewWindow.xaml.cs
+?? src/LalabAutoReport.UI/Web/
+?? tests/LalabAutoReport.Tests/CloudMediaSyncServiceTests.cs
+?? tests/LalabAutoReport.Tests/CloudSyncServiceTests.cs
+?? tests/LalabAutoReport.Tests/DurableCloudSyncTests.cs
+?? tests/LalabAutoReport.Tests/FailingEnumerationAdapter.cs
+?? tests/LalabAutoReport.Tests/GlobalSearchTests.cs
+?? tests/LalabAutoReport.Tests/InvoicesViewModelTests.cs
+?? tests/LalabAutoReport.Tests/ManageFamilyAliasesViewModelTests.cs
+?? tests/LalabAutoReport.Tests/MobileAuthServiceTests.cs
+?? tests/LalabAutoReport.Tests/MobileSpaScriptSyntaxTests.cs
+?? tests/LalabAutoReport.Tests/MobileWebServerTests.cs
+?? tests/LalabAutoReport.Tests/MultiRootFolderTests.cs
+?? tests/LalabAutoReport.Tests/NetworkAddressHelperTests.cs
+?? tests/LalabAutoReport.Tests/OrderDeliveryAndNoteTests.cs
+?? tests/LalabAutoReport.Tests/PaymentStatusAndDebtTests.cs
+?? tests/LalabAutoReport.Tests/PrintProgressWorkflowTests.cs
+?? tests/LalabAutoReport.Tests/ShippingLabelTests.cs
+?? tests/LalabAutoReport.Tests/SplitBillTests.cs
+?? tests/LalabAutoReport.Tests/SystemTrayAndBackgroundDaemonTests.cs
+?? tests/LalabAutoReport.Tests/ThumbnailServiceTests.cs
+?? tests/LalabAutoReport.Tests/TieredPricingTests.cs
+?? tests/LalabAutoReport.Tests/UpdateReplacementTests.cs
+?? tests/LalabAutoReport.Tests/VietQrGeneratorTests.cs
+?? tests/LalabAutoReport.Tests/WhiteLabelAndQrSettingsTests.cs
+?? tests/LalabAutoReport.Tests/XamlResourceIntegrityTests.cs

@@ -75,6 +75,7 @@ public class PrintFolderResolver : IPrintFolderResolver
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Cannot access product folder '{Dir}'", specFolderFullPath);
+            return Incomplete(specFolderFullPath, ex);
         }
 
         foreach (var dir in allDescendants)
@@ -89,7 +90,8 @@ public class PrintFolderResolver : IPrintFolderResolver
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Inaccessible subfolder '{Dir}': skipping", dir);
+                _logger?.LogWarning(ex, "Inaccessible subfolder '{Dir}'", dir);
+                return Incomplete(dir, ex);
             }
         }
 
@@ -188,6 +190,12 @@ public class PrintFolderResolver : IPrintFolderResolver
         );
     }
 
+    private static PrintFolderResolutionResult Incomplete(string path, Exception error) => new(
+        Status: PrintFolderResolutionStatus.NoPrintFolder,
+        SelectedPrintFolderFullPath: null, SelectedPrintFolderRelativePath: null, PrintCount: null,
+        CandidatePrintFolderFullPaths: Array.Empty<string>(), CandidatePrintFolderRelativePaths: Array.Empty<string>(),
+        ErrorMessage: $"Không đọc đủ dữ liệu tại '{path}': {error.Message}");
+
     private void TraverseDescendantDirectories(string currentDir, List<string> accumulator)
     {
         IEnumerable<string> subDirs;
@@ -198,7 +206,7 @@ public class PrintFolderResolver : IPrintFolderResolver
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Cannot access subdirectories of '{Dir}'", currentDir);
-            return;
+            throw;
         }
 
         foreach (var subDir in subDirs)

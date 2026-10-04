@@ -1,0 +1,37 @@
+{
+  "source": "isolated synthetic acceptance profile",
+  "snapshotHashes": {
+    "customer_bills": "495b78132946e7f9c1b6944ca27449486b9b9d3fd58c64f81e05937bb14a12f4",
+    "customer_bill_orders": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "customer_bill_lines": "e60a339b4e29b808ce3f4009cc5efbc2ae3ec8eae87882c8031bcdf0718b1aa5",
+    "customer_bill_adjustments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_sync_state": "c3b0053e95053652abc229f7c0ef228eb8f4fb290c4adf8cbd5b1f09425bd58e",
+    "cloud_operational_outbox": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_field_revisions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_applied_events": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "backupHashes": {
+    "customer_bills": "495b78132946e7f9c1b6944ca27449486b9b9d3fd58c64f81e05937bb14a12f4",
+    "customer_bill_orders": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "customer_bill_lines": "e60a339b4e29b808ce3f4009cc5efbc2ae3ec8eae87882c8031bcdf0718b1aa5",
+    "customer_bill_adjustments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_sync_state": "c3b0053e95053652abc229f7c0ef228eb8f4fb290c4adf8cbd5b1f09425bd58e",
+    "cloud_operational_outbox": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_field_revisions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_applied_events": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "restoreHashes": {
+    "customer_bills": "495b78132946e7f9c1b6944ca27449486b9b9d3fd58c64f81e05937bb14a12f4",
+    "customer_bill_orders": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "customer_bill_lines": "e60a339b4e29b808ce3f4009cc5efbc2ae3ec8eae87882c8031bcdf0718b1aa5",
+    "customer_bill_adjustments": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_sync_state": "c3b0053e95053652abc229f7c0ef228eb8f4fb290c4adf8cbd5b1f09425bd58e",
+    "cloud_operational_outbox": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_field_revisions": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cloud_applied_events": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "integrityCheck": [
+    "ok"
+  ],
+  "foreignKeyViolations": 0
+}

@@ -563,6 +563,23 @@ public partial class ReportsViewModel : ObservableObject
                 catch { }
             }
 
+            // Đồng bộ bill và ảnh JPEG vừa xuất lên Cloudflare
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var syncService = (Application.Current as App)?.Services?.GetService(typeof(ICloudSyncService)) as ICloudSyncService;
+                    if (syncService != null && fullBill.Id > 0)
+                    {
+                        await syncService.SyncBillAsync(fullBill.Id);
+                    }
+                }
+                catch
+                {
+                    // Non-blocking fire-and-forget
+                }
+            });
+
             if (excelError != null)
             {
                 MessageBox.Show($"Đã xuất file JPEG thành công:\n{path}\n\nTuy nhiên lỗi ghi file Excel (.xlsx):\n{excelError}", "Cảnh Báo Xuất Excel", MessageBoxButton.OK, MessageBoxImage.Warning);

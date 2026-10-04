@@ -1,0 +1,9 @@
+DRAFT_REFRESH scanned=15, billed=15, reason=, total=75000
+LOCKED_RESCAN persistedQty=15, status=Exported
+LOCKED_REWRITE persistedQty=99
+MULTI_ROOT returned=2 ids=1,1 persisted=1 root=2
+FAILED_EVENT applied=0, cursor=2026-10-02T10:00:00.000Z
+INACCESSIBLE_FINAL status=Resolved count=18 selected=2026-10-02\Audit Customer\13x18 in error=<null>
+SPLIT_ERROR=SQLite Error 19: 'simulated old-bill save failure'.
+SPLIT_DUPLICATE orderBills=2
+TEMP_FIXTURE=C:\Users\Admin\AppData\Local\Temp\LalabAuditData_344382a1a01346c19ccb8e3e61dc2b16

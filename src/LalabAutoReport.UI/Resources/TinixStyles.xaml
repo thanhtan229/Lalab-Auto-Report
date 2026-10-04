@@ -295,6 +295,90 @@
         </Setter>
     </Style>
 
+    <!-- BUTTON: PAYMENT TOGGLE (Checkbox-style toggle button for payment status) -->
+    <Style x:Key="Tinix.Button.PaymentToggle" TargetType="Button">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
+        <Setter Property="Foreground" Value="#059669"/>
+        <Setter Property="BorderBrush" Value="#CBD5E1"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="ToolTip" Value="Đánh dấu ĐÃ THANH TOÁN"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            SnapsToDevicePixels="True">
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Checkmark icon: Shown ONLY when IsPaid is True (Checked state) -->
+                            <Path x:Name="checkIcon" Width="15" Height="15" Stretch="Uniform"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Data="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"
+                                  Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- When IsPaid == True: Show checkmark inside the checkbox -->
+                        <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                            <Setter TargetName="checkIcon" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <!-- 1. Default (IsPaid == False): Unchecked empty checkbox -->
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#F0FDF4"/>
+                <Setter Property="BorderBrush" Value="#10B981"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="#DCFCE7"/>
+                <Setter Property="BorderBrush" Value="#059669"/>
+            </Trigger>
+
+            <!-- 2. When IsPaid == True: Checked checkbox with green border and green checkmark -->
+            <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                <Setter Property="Background" Value="#FFFFFF"/>
+                <Setter Property="BorderBrush" Value="#10B981"/>
+                <Setter Property="Foreground" Value="#059669"/>
+                <Setter Property="ToolTip" Value="Đánh dấu CHƯA THANH TOÁN (Hoàn tác)"/>
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPaid}" Value="True"/>
+                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="#ECFDF5"/>
+                <Setter Property="BorderBrush" Value="#059669"/>
+                <Setter Property="Foreground" Value="#047857"/>
+            </MultiDataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsPaid}" Value="True"/>
+                    <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource Self}}" Value="True"/>
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="#D1FAE5"/>
+                <Setter Property="BorderBrush" Value="#047857"/>
+                <Setter Property="Foreground" Value="#047857"/>
+            </MultiDataTrigger>
+
+            <!-- Disabled -->
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="#F3F4F6"/>
+                <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                <Setter Property="Foreground" Value="#9CA3AF"/>
+                <Setter Property="Cursor" Value="Arrow"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- BUTTON: SIDEBAR NAVIGATION ITEM -->
     <Style x:Key="Tinix.Button.SidebarNav" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -523,17 +607,178 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!-- TEXTBOX: ALIAS -->
+    <Style x:Key="Tinix.TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}" TargetType="TextBox" />
     
     <!-- COMBOBOX: STANDARD -->
     <Style x:Key="Tinix.ComboBox.Standard" TargetType="ComboBox">
         <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
         <Setter Property="FontSize" Value="{StaticResource Tinix.FontSize.Small}"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="8,0,0,0"/>
     </Style>
 
     <Style TargetType="ComboBox" BasedOn="{StaticResource Tinix.ComboBox.Standard}"/>
+
+    <!-- ==========================================
+         PRICE TIER PILL BUTTONS (SEGMENTED SELECTOR)
+         ========================================== -->
+    <Style x:Key="Tinix.PriceTierPill.Base" TargetType="RadioButton">
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Background" Value="{StaticResource Tinix.Color.Bg.Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+    </Style>
+
+    <!-- 1. RETAIL / KHÁCH LẺ (SLATE DARK / NEUTRAL) -->
+    <Style x:Key="Tinix.PriceTierPill.Retail" BasedOn="{StaticResource Tinix.PriceTierPill.Base}" TargetType="RadioButton">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="pillBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="6,0"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Hover (Unchecked) -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="pillBorder" Property="Background" Value="#F1EFEA"/>
+                            <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Text.Secondary}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+                        </MultiTrigger>
+                        <!-- Checked / Active -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="pillBorder" Property="Background" Value="#334155"/>
+                            <Setter TargetName="pillBorder" Property="BorderBrush" Value="#1E293B"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="pillBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#334155" BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.30"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="pillBorder" Property="Opacity" Value="0.45"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 2. STUDIO / KHÁCH QUEN (TEAL / OCEAN BLUE) -->
+    <Style x:Key="Tinix.PriceTierPill.Studio" BasedOn="{StaticResource Tinix.PriceTierPill.Base}" TargetType="RadioButton">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="pillBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="6,0"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Hover (Unchecked) -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="pillBorder" Property="Background" Value="#EBF8FF"/>
+                            <Setter TargetName="pillBorder" Property="BorderBrush" Value="#0284C7"/>
+                            <Setter Property="Foreground" Value="#0369A1"/>
+                        </MultiTrigger>
+                        <!-- Checked / Active -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="pillBorder" Property="Background" Value="#0284C7"/>
+                            <Setter TargetName="pillBorder" Property="BorderBrush" Value="#0369A1"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="pillBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#0284C7" BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.35"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="pillBorder" Property="Opacity" Value="0.45"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 3. VIP / ĐẠI LÝ (TINIX PRIMARY ORANGE) -->
+    <Style x:Key="Tinix.PriceTierPill.Vip" BasedOn="{StaticResource Tinix.PriceTierPill.Base}" TargetType="RadioButton">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="pillBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Tinix.Radius.Md}"
+                            Padding="6,0"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Hover (Unchecked) -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="pillBorder" Property="Background" Value="#FFF7ED"/>
+                            <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Primary}"/>
+                        </MultiTrigger>
+                        <!-- Checked / Active -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="pillBorder" Property="Background" Value="{StaticResource Tinix.Color.Primary}"/>
+                            <Setter TargetName="pillBorder" Property="BorderBrush" Value="{StaticResource Tinix.Color.Primary.Active}"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter TargetName="pillBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="{StaticResource TinixColorPrimaryRaw}" BlurRadius="8" ShadowDepth="2" Direction="270" Opacity="0.40"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="pillBorder" Property="Opacity" Value="0.45"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <!-- CARD CONTAINER -->
     <Style x:Key="Tinix.Card" TargetType="Border">

@@ -21,10 +21,38 @@ public partial class PriceListViewModel : ObservableObject
     private PrintSpecification? _selectedSpec;
 
     [ObservableProperty]
+    private ObservableCollection<ProductFamily> _availableFamilies = new();
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsCreatingAlbum))]
+    [NotifyPropertyChangedFor(nameof(IsCreatingPhotoPrint))]
+    private ProductFamily? _selectedCreationFamily;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCreatingAlbum))]
+    [NotifyPropertyChangedFor(nameof(IsCreatingPhotoPrint))]
     private ProductCategory _newCategory = ProductCategory.PhotoPrint;
 
-    public bool IsCreatingAlbum => NewCategory == ProductCategory.Album;
+    public bool IsCreatingAlbum => SelectedCreationFamily != null
+        ? (SelectedCreationFamily.BillingMethod == BillingMethod.AlbumBasePlusExtra || SelectedCreationFamily.Category == ProductCategory.Album)
+        : (NewCategory == ProductCategory.Album);
+    public bool IsCreatingPhotoPrint => !IsCreatingAlbum;
+
+    partial void OnNewCategoryChanged(ProductCategory value)
+    {
+        if (SelectedCreationFamily == null || SelectedCreationFamily.Category != value)
+        {
+            SelectedCreationFamily = AvailableFamilies.FirstOrDefault(f => f.Category == value);
+        }
+    }
+
+    partial void OnSelectedCreationFamilyChanged(ProductFamily? value)
+    {
+        if (value != null && NewCategory != value.Category)
+        {
+            NewCategory = value.Category;
+        }
+    }
 
     public IReadOnlyList<ProductCategory> AvailableCategories { get; } = new[]
     {
@@ -37,6 +65,12 @@ public partial class PriceListViewModel : ObservableObject
 
     [ObservableProperty]
     private long _newSpecPrice = 5000;
+
+    [ObservableProperty]
+    private long _newSpecPriceStudio = 0;
+
+    [ObservableProperty]
+    private long _newSpecPriceVip = 0;
 
     [ObservableProperty]
     private int _newIncludedSheets = 10;
@@ -57,7 +91,19 @@ public partial class PriceListViewModel : ObservableObject
     private long _editUnitPrice;
 
     [ObservableProperty]
+    private long _editUnitPriceStudio;
+
+    [ObservableProperty]
+    private long _editUnitPriceVip;
+
+    [ObservableProperty]
     private long _editBasePrice;
+
+    [ObservableProperty]
+    private long _editBasePriceStudio;
+
+    [ObservableProperty]
+    private long _editBasePriceVip;
 
     [ObservableProperty]
     private int _editIncludedSheets;
@@ -65,27 +111,30 @@ public partial class PriceListViewModel : ObservableObject
     [ObservableProperty]
     private long _editExtraSheetPrice;
 
+    [ObservableProperty]
+    private long _editExtraSheetPriceStudio;
+
+    [ObservableProperty]
+    private long _editExtraSheetPriceVip;
+
     partial void OnSelectedSpecChanged(PrintSpecification? value)
     {
         if (value != null)
         {
             EditUnitPrice = value.UnitPrice;
+            EditUnitPriceStudio = value.UnitPriceStudio ?? 0;
+            EditUnitPriceVip = value.UnitPriceVip ?? 0;
             EditBasePrice = value.BasePrice ?? 400000;
+            EditBasePriceStudio = value.BasePriceStudio ?? 0;
+            EditBasePriceVip = value.BasePriceVip ?? 0;
             EditIncludedSheets = value.IncludedSheets ?? 10;
             EditExtraSheetPrice = value.ExtraSheetPrice ?? 20000;
+            EditExtraSheetPriceStudio = value.ExtraSheetPriceStudio ?? 0;
+            EditExtraSheetPriceVip = value.ExtraSheetPriceVip ?? 0;
         }
     }
 
     private readonly IProductRepository _productRepository;
-
-    [ObservableProperty]
-    private ObservableCollection<ProductFamily> _families = new();
-
-    [ObservableProperty]
-    private ProductFamily? _selectedFamily;
-
-    [ObservableProperty]
-    private string _newFamilyAlias = string.Empty;
 
     public PriceListViewModel(IProductRepository productRepository)
     {
@@ -110,63 +159,22 @@ public partial class PriceListViewModel : ObservableObject
             SelectedSpec = Specifications.FirstOrDefault();
         }
 
-        var fams = await _productRepository.GetAllFamiliesAsync();
-        Families.Clear();
-        foreach (var f in fams)
+        var families = await _productRepository.GetAllFamiliesAsync();
+        AvailableFamilies.Clear();
+        foreach (var f in families)
         {
-            Families.Add(f);
+            AvailableFamilies.Add(f);
         }
-        if (SelectedFamily != null)
+        if (SelectedCreationFamily != null)
         {
-            SelectedFamily = Families.FirstOrDefault(f => f.Id == SelectedFamily.Id) ?? Families.FirstOrDefault();
+            SelectedCreationFamily = AvailableFamilies.FirstOrDefault(f => f.Id == SelectedCreationFamily.Id) 
+                ?? AvailableFamilies.FirstOrDefault(f => f.Category == NewCategory) 
+                ?? AvailableFamilies.FirstOrDefault();
         }
         else
         {
-            SelectedFamily = Families.FirstOrDefault();
-        }
-    }
-
-    [RelayCommand]
-    private async Task AddFamilyAliasAsync()
-    {
-        if (SelectedFamily == null)
-        {
-            StatusMessage = "Vui lòng chọn dòng sản phẩm (Ảnh in hoặc Album)!";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(NewFamilyAlias))
-        {
-            StatusMessage = "Vui lòng nhập alias cho dòng sản phẩm!";
-            return;
-        }
-
-        try
-        {
-            await _productRepository.AddFamilyAliasAsync(SelectedFamily.Id, NewFamilyAlias.Trim());
-            StatusMessage = $"Đã thêm family alias '{NewFamilyAlias.Trim()}' cho dòng {SelectedFamily.Name}";
-            NewFamilyAlias = string.Empty;
-            await LoadSpecificationsAsync();
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Lỗi thêm family alias: {ex.Message}";
-        }
-    }
-
-    [RelayCommand]
-    public async Task RemoveFamilyAliasAsync(ProductFamilyAlias? alias)
-    {
-        if (alias == null) return;
-        try
-        {
-            await _productRepository.RemoveFamilyAliasAsync(alias.Id);
-            StatusMessage = $"Đã xóa family alias '{alias.AliasText}'";
-            await LoadSpecificationsAsync();
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Lỗi xóa family alias: {ex.Message}";
+            SelectedCreationFamily = AvailableFamilies.FirstOrDefault(f => f.Category == NewCategory) 
+                ?? AvailableFamilies.FirstOrDefault();
         }
     }
 
@@ -182,14 +190,19 @@ public partial class PriceListViewModel : ObservableObject
         string rawName = NewSpecName.Trim();
         string canonicalSize = SizeNormalizer.NormalizeSize(rawName);
 
+        var family = SelectedCreationFamily;
+        var category = family?.Category ?? NewCategory;
+
         PrintSpecification spec;
-        if (NewCategory == ProductCategory.Album)
+        if (IsCreatingAlbum)
         {
             spec = new PrintSpecification
             {
                 CanonicalName = rawName,
                 CanonicalSize = canonicalSize,
                 Category = ProductCategory.Album,
+                FamilyId = family?.Id,
+                FamilyName = family?.Name,
                 BillingMethod = BillingMethod.AlbumBasePlusExtra,
                 IncludedSheets = Math.Max(1, NewIncludedSheets),
                 BasePrice = Math.Max(0, NewBasePrice),
@@ -204,9 +217,13 @@ public partial class PriceListViewModel : ObservableObject
             {
                 CanonicalName = rawName,
                 CanonicalSize = canonicalSize,
-                Category = ProductCategory.PhotoPrint,
+                Category = category,
+                FamilyId = family?.Id,
+                FamilyName = family?.Name,
                 BillingMethod = BillingMethod.FileCount,
                 UnitPrice = Math.Max(0, NewSpecPrice),
+                UnitPriceStudio = NewSpecPriceStudio > 0 ? NewSpecPriceStudio : null,
+                UnitPriceVip = NewSpecPriceVip > 0 ? NewSpecPriceVip : null,
                 IsActive = true
             };
         }
@@ -215,9 +232,14 @@ public partial class PriceListViewModel : ObservableObject
         {
             var created = await _productRepository.CreateSpecificationAsync(spec);
             NewSpecName = string.Empty;
+            NewSpecPrice = 5000;
+            NewSpecPriceStudio = 0;
+            NewSpecPriceVip = 0;
             StatusMessage = created.Category == ProductCategory.Album
                 ? $"Đã thêm album: {created.CanonicalName} (Khổ chuẩn: {created.CanonicalSize}) - {created.BasePrice:N0} đ / {created.IncludedSheets} tờ"
-                : $"Đã thêm quy cách: {created.CanonicalName} (Khổ chuẩn: {created.CanonicalSize}) - {created.UnitPrice:N0} đ";
+                : $"Đã thêm quy cách: {created.CanonicalName} (Khổ chuẩn: {created.CanonicalSize}) - Lẻ: {created.UnitPrice:N0} đ" +
+                  (created.UnitPriceStudio > 0 ? $", Studio: {created.UnitPriceStudio:N0} đ" : "") +
+                  (created.UnitPriceVip > 0 ? $", Đại lý: {created.UnitPriceVip:N0} đ" : "");
             await LoadSpecificationsAsync();
             SelectedSpec = Specifications.FirstOrDefault(s => s.Id == created.Id);
         }
@@ -325,11 +347,20 @@ public partial class PriceListViewModel : ObservableObject
     {
         if (SelectedSpec == null) return;
         SelectedSpec.UnitPrice = Math.Max(0, EditUnitPrice);
+        SelectedSpec.UnitPriceStudio = EditUnitPriceStudio > 0 ? EditUnitPriceStudio : null;
+        SelectedSpec.UnitPriceVip = EditUnitPriceVip > 0 ? EditUnitPriceVip : null;
+
         SelectedSpec.BasePrice = Math.Max(0, EditBasePrice);
+        SelectedSpec.BasePriceStudio = EditBasePriceStudio > 0 ? EditBasePriceStudio : null;
+        SelectedSpec.BasePriceVip = EditBasePriceVip > 0 ? EditBasePriceVip : null;
+
         SelectedSpec.IncludedSheets = Math.Max(1, EditIncludedSheets);
         SelectedSpec.ExtraSheetPrice = Math.Max(0, EditExtraSheetPrice);
+        SelectedSpec.ExtraSheetPriceStudio = EditExtraSheetPriceStudio > 0 ? EditExtraSheetPriceStudio : null;
+        SelectedSpec.ExtraSheetPriceVip = EditExtraSheetPriceVip > 0 ? EditExtraSheetPriceVip : null;
+
         await _specificationRepository.UpdateSpecificationAsync(SelectedSpec);
-        StatusMessage = $"Đã cập nhật thông tin cho '{SelectedSpec.CanonicalName}'";
+        StatusMessage = $"Đã cập nhật thông tin và bảng giá đa cấp cho '{SelectedSpec.CanonicalName}'";
         await LoadSpecificationsAsync();
     }
 

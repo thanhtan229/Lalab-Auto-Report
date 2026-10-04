@@ -1,0 +1,144 @@
+[
+  {
+    "results": [
+      {
+        "name": "0001_init.sql"
+      },
+      {
+        "name": "0002_operational_sync.sql"
+      },
+      {
+        "name": "0003_media_heartbeat_printqueue.sql"
+      },
+      {
+        "name": "0004_versioned_operations.sql"
+      },
+      {
+        "name": "0005_event_stream_identity.sql"
+      },
+      {
+        "name": "0006_bill_snapshots_and_print_claims.sql"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.1812
+      },
+      "duration": 0.1812,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 155648,
+      "rows_read": 6,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "count": 18
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0923
+      },
+      "duration": 0.0923,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 155648,
+      "rows_read": 18,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "count": 20,
+        "total": 9615000,
+        "paid": 1
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.1034
+      },
+      "duration": 0.1034,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 155648,
+      "rows_read": 20,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "count": 8
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0583
+      },
+      "duration": 0.0583,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 155648,
+      "rows_read": 8,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "count": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0604
+      },
+      "duration": 0.0604,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 155648,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

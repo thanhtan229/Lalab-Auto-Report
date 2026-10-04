@@ -16,6 +16,84 @@
         Background="{StaticResource Tinix.Color.Bg.Body}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style x:Key="SmartExportButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="FontFamily" Value="{StaticResource Tinix.Font.UI}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{StaticResource Tinix.Color.Primary}"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource Tinix.Radius.Md}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- When NOT in IsOpenOnlyState (Export / Re-export mode) -->
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsOpenOnlyState}" Value="False"/>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Primary.Hover}"/>
+                            </MultiDataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsOpenOnlyState}" Value="False"/>
+                                    <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Primary.Active}"/>
+                            </MultiDataTrigger>
+
+                            <!-- When IN IsOpenOnlyState (Open existing bill mode: Soft blue) -->
+                            <DataTrigger Binding="{Binding IsOpenOnlyState}" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#EFF6FF"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#93C5FD"/>
+                                <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsOpenOnlyState}" Value="True"/>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#DBEAFE"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#2563EB"/>
+                            </MultiDataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsOpenOnlyState}" Value="True"/>
+                                    <Condition Binding="{Binding IsPressed, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#BFDBFE"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#1D4ED8"/>
+                            </MultiDataTrigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource Tinix.Color.Border.Subtle}"/>
+                                <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Muted}"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOpenOnlyState}" Value="True">
+                    <Setter Property="Foreground" Value="#1D4ED8"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -40,8 +118,59 @@
                         <Border Background="#FEF3C7" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="8,3" Margin="0,0,8,0" Visibility="{Binding IsGuestBill, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="⚡ KHÁCH LẺ" FontWeight="Bold" Foreground="#B45309" FontSize="11"/>
                         </Border>
-                        <Border Background="{StaticResource Tinix.Color.Primary.Subtle}" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="8,3" Margin="0,0,10,0">
-                            <TextBlock Text="{Binding Bill.Status}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" FontSize="12"/>
+                        <!-- Bill Export Status Badge (Header) -->
+                        <Border CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="8,3" Margin="0,0,10,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#FEF3C7"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBillExported}" Value="True">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="12" FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="📝 CHƯA XUẤT BILL"/>
+                                        <Setter Property="Foreground" Value="#B45309"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBillExported}" Value="True">
+                                                <Setter Property="Text" Value="📄 ĐÃ XUẤT BILL"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <!-- Payment Badge -->
+                        <Border CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="8,3" Margin="0,0,10,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#FEF3C7"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="12" FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="⏳ CHƯA THANH TOÁN"/>
+                                        <Setter Property="Foreground" Value="#B45309"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                                <Setter Property="Text" Value="💰 ĐÃ THANH TOÁN"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </Border>
                         <TextBlock Text="{Binding Bill.BillNumber}" FontFamily="{StaticResource Tinix.Font.Mono}" FontWeight="Bold" FontSize="18" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
                         <TextBlock Text=" • " Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="16" VerticalAlignment="Center"/>
@@ -66,28 +195,14 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Command="{Binding ConvertGuestToCustomerCommand}" Content="👤 Chuyển thành Khách Hàng" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="14,0" Margin="0,0,8,0" Visibility="{Binding IsGuestBill, Converter={StaticResource BoolToVis}}"/>
                     <Button Command="{Binding RescanDraftCommand}" Content="🔄 Quét Lại Dữ Liệu" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="14,0" Margin="0,0,8,0"/>
-                    <Button Command="{Binding ReopenBillCommand}" Content="🔓 Mở Khóa Sửa" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="14,0" Margin="0,0,8,0" Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"/>
-                    <Button Command="{Binding CloseWindowCommand}" Content="Đóng" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="16,0"/>
+                    <Button Command="{Binding ResetToScannedQuantitiesCommand}" Content="🔄 Lấy lại theo thư mục" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="14,0" Margin="0,0,8,0" ToolTip="Khôi phục số lượng tính tiền về đúng số lượng ảnh quét trên ổ đĩa"/>
+                    <Button Command="{Binding CloseWindowCommand}" Content="Đóng" Height="36" Style="{StaticResource Tinix.Button.Primary}" Padding="16,0" IsCancel="True"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- ALERTS & NOTICES -->
         <StackPanel Grid.Row="1" Margin="0,0,0,12">
-            <!-- Locked State Banner -->
-            <Border Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="14,10" Margin="0,0,0,6" Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="🔒 " FontSize="16" VerticalAlignment="Center"/>
-                        <TextBlock Text="Hóa đơn này đang ở trạng thái ĐÃ KHÓA / ĐÃ XUẤT. Các ô số liệu bị khóa để đảm bảo an toàn. Bấm nút [🔓 Mở Khóa Sửa] nếu cần điều chỉnh lại." Foreground="#92400E" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Command="{Binding ReopenBillCommand}" Content="🔓 Mở Khóa Sửa" Height="28" Style="{StaticResource Tinix.Button.Secondary}" Padding="12,0"/>
-                </Grid>
-            </Border>
 
             <!-- Suggested Customer Banner -->
             <Border Background="#EFF6FF" BorderBrush="#93C5FD" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="14,10" Margin="0,0,0,6" Visibility="{Binding HasSuggestedCustomer, Converter={StaticResource BoolToVis}}">
@@ -192,13 +307,13 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <CheckBox IsChecked="{Binding IsIncluded}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                    <CheckBox IsEnabled="{Binding DataContext.IsEditable, RelativeSource={RelativeSource AncestorType=Window}}" IsChecked="{Binding IsIncluded}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                         <TextBlock Text="📁 " FontSize="13" VerticalAlignment="Center"/>
                                                         <Border Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="4" Padding="5,1" Margin="0,0,8,0" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding DisplayOrderCode}" FontWeight="SemiBold" FontSize="12" Foreground="#334155" FontFamily="Consolas, Segoe UI Mono, monospace"/>
                                                         </Border>
-                                                        <TextBox Text="{Binding OrderName, UpdateSourceTrigger=PropertyChanged}" 
+                                                        <TextBox IsEnabled="{Binding DataContext.IsEditable, RelativeSource={RelativeSource AncestorType=Window}}" Text="{Binding OrderName, UpdateSourceTrigger=PropertyChanged}" 
                                                                  FontWeight="Bold" FontSize="13" 
                                                                  Foreground="{StaticResource Tinix.Color.Text.Primary}"
                                                                  Height="28" MinWidth="130" MaxWidth="320"
@@ -210,10 +325,20 @@
                                                         <Border Background="{StaticResource Tinix.Color.Warning.Bg}" CornerRadius="3" Padding="6,2" Margin="10,0,0,0" Visibility="{Binding IsFromPreviousPeriod, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center">
                                                             <TextBlock Text="Đơn từ kỳ trước" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Warning}"/>
                                                         </Border>
+                                                        <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="3" Padding="6,2" Margin="10,0,0,0" Visibility="{Binding HasSourceFolder, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center" ToolTip="{Binding SourceFolderPath}">
+                                                            <TextBlock Text="{Binding SourceFolderPath}" MaxWidth="160" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                                        </Border>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                                         <TextBlock Text="Tạm tính đơn: " Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="13"/>
                                                         <TextBlock Text="{Binding Subtotal, StringFormat='{}{0:#,##0} đ'}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" FontSize="14"/>
+                                                        <Button Content="✂️ Tách Đơn"
+                                                                ToolTip="Tách đơn này thành một hóa đơn riêng biệt với mã số bill mới"
+                                                                Command="{Binding DataContext.SplitOrderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding DataContext.CanSplitOrders, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"
+                                                                Style="{StaticResource Tinix.Button.Secondary}"
+                                                                Padding="8,3" Height="26" Margin="12,0,0,0" FontSize="11"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -419,6 +544,20 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- SHIPPING ADDRESS CARD -->
+                        <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="🏷️ " FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="ĐỊA CHỈ GIAO HÀNG (IN TEM DÁN)" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBox IsEnabled="{Binding IsEditable}" Text="{Binding ShippingAddress, UpdateSourceTrigger=PropertyChanged}" 
+                                         AcceptsReturn="True" Height="48" TextWrapping="Wrap" 
+                                         Style="{StaticResource Tinix.TextBox.Standard}"
+                                         ToolTip="Địa chỉ nhận hàng in trên tem dán bưu kiện / phiếu giao hàng"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- NOTE CARD -->
                         <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
                             <StackPanel>
@@ -432,6 +571,7 @@
                 <!-- SUMMARY CARD & EXPORT BUTTON (Fixed at Bottom Right) -->
                 <Border Grid.Row="1" Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Lg}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" Padding="16">
                     <StackPanel>
+                        <Button Content="Mở lại để sửa" Command="{Binding ReopenBillCommand}" Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8"/>
                         <TextBlock Text="TỔNG HỢP THANH TOÁN" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,8"/>
 
                         <Grid Margin="0,2">
@@ -457,47 +597,113 @@
                             </Grid>
                         </Border>
 
-                        <!-- Action Buttons: View Exported Bill, Folder, & Export -->
+                        <!-- Payment Status Action Card -->
+                        <Border CornerRadius="{StaticResource Tinix.Radius.Md}" BorderThickness="1" Padding="12,10" Margin="0,0,0,10">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#FFFBEB"/>
+                                    <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                            <Setter Property="Background" Value="#ECFDF5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                    <TextBlock Text="THANH TOÁN:" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                    <TextBlock Text="{Binding PaymentStatusText}" FontSize="12" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#D97706"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                                        <Setter Property="Foreground" Value="#059669"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                                <Button Grid.Column="1" Command="{Binding TogglePaymentStatusCommand}" Style="{StaticResource Tinix.Button.PaymentToggle}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Thermal Shipping Label Buttons (75x100mm) -->
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Button Command="{Binding OpenExportedFileCommand}"
-                                    IsEnabled="{Binding CanViewExportedBill}"
-                                    Height="40"
-                                    Style="{StaticResource Tinix.Button.Info}"
-                                    ToolTip="{Binding ViewBillToolTip}">
+                            <Button Command="{Binding PrintShippingLabelCommand}"
+                                    Height="36"
+                                    Margin="0,0,4,0"
+                                    Style="{StaticResource Tinix.Button.Secondary}"
+                                    ToolTip="Gửi trực tiếp tem dán vận chuyển (75x100mm) tới máy in">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Path Width="16" Height="14" Stretch="Uniform"
-                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                          Margin="0,0,8,0" VerticalAlignment="Center"
-                                          Data="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                                    <TextBlock Text="XEM LẠI BILL" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="🖨️ " FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="IN TEM DÁN" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Grid.Column="1"
-                                    Command="{Binding OpenExportedFolderCommand}"
-                                    IsEnabled="{Binding CanViewExportedBill}"
-                                    Height="40" Width="40"
-                                    Padding="0"
-                                    Margin="8,0,0,0"
-                                    Style="{StaticResource Tinix.Button.Info}"
-                                    ToolTip="{Binding FolderToolTip}">
-                                <Path Width="18" Height="15" Stretch="Uniform"
-                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Data="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                                    Command="{Binding ExportShippingLabelCommand}"
+                                    Height="36"
+                                    Margin="4,0,0,0"
+                                    Style="{StaticResource Tinix.Button.Secondary}"
+                                    ToolTip="Xuất file ảnh tem vận chuyển (75x100mm), tự động sao chép vào Clipboard và mở xem ảnh">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🏷️ " FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="XUẤT TEM ẢNH" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </Button>
                         </Grid>
 
-                        <!-- Big Export Button -->
-                        <Button Command="{Binding ExportBillCommand}" Height="44" Style="{StaticResource Tinix.Button.Primary}" HorizontalAlignment="Stretch">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⚡ " FontSize="16" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding ExportButtonText}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+                        <!-- Bottom Action Buttons: Copy Bill + Smart Export/View Button -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left: Copy Bill to Clipboard -->
+                            <Button Grid.Column="0"
+                                    Command="{Binding CopyBillCommand}"
+                                    Height="44"
+                                    Margin="0,0,4,0"
+                                    Style="{StaticResource Tinix.Button.Secondary}"
+                                    ToolTip="Sao chép ảnh hóa đơn vào Clipboard (Ctrl + V để dán sang Zalo/Messenger), không lưu file ảnh hay CSDL">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="📋 " FontSize="15" VerticalAlignment="Center"/>
+                                    <TextBlock Text="COPY BILL" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Right: Smart Action (Xuất / Mở xem / Xuất lại) -->
+                            <Button Grid.Column="1"
+                                    Command="{Binding ExportBillCommand}"
+                                    Height="44"
+                                    Margin="4,0,0,0"
+                                    Style="{StaticResource SmartExportButtonStyle}"
+                                    ToolTip="{Binding ExportButtonToolTip}">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="⚡ Buộc xuất lại bill mới (Force Re-export)"
+                                                  Command="{Binding ForceReexportBillCommand}"
+                                                  ToolTip="Render lại ảnh JPEG và Excel mới kể cả khi số liệu không thay đổi"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ExportButtonIcon}" FontSize="15" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ExportButtonText}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
                     </StackPanel>
                 </Border>
             </Grid>

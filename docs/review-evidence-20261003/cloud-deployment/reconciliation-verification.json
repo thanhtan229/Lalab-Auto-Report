@@ -1,0 +1,13 @@
+{
+  "billsCompared": 36,
+  "snapshotAndInclusionMismatches": [],
+  "cloudOrders": 18,
+  "cloudBills": 36,
+  "cloudEventCount": 8,
+  "checkpoint": [
+    8,
+    0
+  ],
+  "pending": 0,
+  "integrity": "ok"
+}

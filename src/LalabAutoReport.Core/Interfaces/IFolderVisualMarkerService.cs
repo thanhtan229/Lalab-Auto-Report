@@ -3,23 +3,35 @@ using System.Threading.Tasks;
 
 namespace LalabAutoReport.Core.Interfaces;
 
+public enum VisualFolderColor
+{
+    DefaultYellow = 0,
+    BluePartial = 1,
+    RedPrinted = 2
+}
+
 /// <summary>
 /// Service managing visual appearance of folders in Windows File Explorer (desktop.ini, folder attributes, and icon refresh)
 /// </summary>
 public interface IFolderVisualMarkerService
 {
     /// <summary>
-    /// Checks whether the folder currently has the red printed folder visual marker applied
+    /// Checks whether the folder currently has any visual marker applied
     /// </summary>
     bool HasVisualMarker(string folderPath);
 
     /// <summary>
-    /// Applies the red folder icon marker to the specified folder
+    /// Gets the current visual folder color applied to the folder
     /// </summary>
-    bool ApplyVisualMarker(string folderPath);
+    VisualFolderColor GetVisualMarkerColor(string folderPath);
 
     /// <summary>
-    /// Removes the red folder icon marker from the specified folder and restores standard appearance
+    /// Applies the custom folder icon marker (Red Printed or Blue Partial) to the specified folder
+    /// </summary>
+    bool ApplyVisualMarker(string folderPath, VisualFolderColor color = VisualFolderColor.RedPrinted);
+
+    /// <summary>
+    /// Removes the custom folder icon marker from the specified folder and restores standard appearance
     /// </summary>
     bool RemoveVisualMarker(string folderPath);
 
@@ -29,7 +41,12 @@ public interface IFolderVisualMarkerService
     void RefreshExplorer(string folderPath);
 
     /// <summary>
-    /// Gets the absolute path to the shared printed folder icon (.ico)
+    /// Gets the absolute path to the shared printed folder icon (Red - .ico)
     /// </summary>
     string GetOrExtractPrintedFolderIconPath();
+
+    /// <summary>
+    /// Gets the absolute path to the shared partial printed folder icon (Blue - .ico)
+    /// </summary>
+    string GetOrExtractPartialFolderIconPath();
 }

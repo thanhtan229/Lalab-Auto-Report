@@ -1,0 +1,24 @@
+{
+  "fixture": "isolated synthetic acceptance profile",
+  "scenario": "LAN excluded line still displayed",
+  "lines": [
+    {
+      "id": 1,
+      "description": "Acceptance Photo",
+      "size": "10x15",
+      "quantity": 15,
+      "unitPrice": 5000,
+      "lineTotal": 75000
+    },
+    {
+      "id": 1002,
+      "description": "EXCLUDED FIXTURE LINE",
+      "size": "10x15",
+      "quantity": 5,
+      "unitPrice": 5000,
+      "lineTotal": 25000
+    }
+  ],
+  "productSubtotal": 75000,
+  "grandTotal": 75000
+}

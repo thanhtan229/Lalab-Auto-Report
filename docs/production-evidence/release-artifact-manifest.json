@@ -1,0 +1,27 @@
+{
+  "createdUtc": "2026-10-02T13:23:45.524668+00:00",
+  "head": "bc54840de5648db3c9a66cb927ed96f4d707218b",
+  "workingTree": "dirty, includes preserved pre-existing changes; HEAD alone does not identify this build",
+  "version": "1.0.0",
+  "assemblyVersion": "1.0.0.0",
+  "target": "win-x64 self-contained single-file",
+  "sqliteMigration": 21,
+  "d1Migrations": [
+    "0004_versioned_operations.sql",
+    "0005_event_stream_identity.sql"
+  ],
+  "remoteDeployed": false,
+  "releaseTagCreated": false,
+  "artifacts": [
+    {
+      "path": "artifacts\\windows\\LalabAutoReport.UI.exe",
+      "bytes": 202963884,
+      "sha256": "d7e5dd766f2d8e4ea0486876323861cc1bbdf444f7d69fe3523b4de68d194c0b"
+    },
+    {
+      "path": "artifacts\\worker\\index.js",
+      "bytes": 44101,
+      "sha256": "02161b70cbdedc0331fc3f0d3a64d1352fd460a8f146e6add07359f3316a6282"
+    }
+  ]
+}

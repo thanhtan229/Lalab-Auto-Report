@@ -12,11 +12,17 @@
         WindowStartupLocation="CenterScreen"
         FontFamily="{StaticResource Tinix.Font.UI}"
         Background="{StaticResource Tinix.Color.Bg.Body}">
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Ctrl" Key="F" Command="{Binding OpenGlobalSearchCommand}"/>
+    </Window.InputBindings>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
             <views:DashboardView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:InvoicesViewModel}">
+            <views:InvoicesView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ReportsViewModel}">
             <views:ReportsView/>
@@ -116,11 +122,36 @@
 
                 <!-- Navigation items -->
                 <StackPanel Grid.Row="1" Margin="10,0">
+                    <!-- Quick Global Search Button (Ctrl + F) -->
+                    <Button Command="{Binding OpenGlobalSearchCommand}"
+                            Style="{StaticResource Tinix.Button.Secondary}"
+                            Margin="4,0,4,14"
+                            Height="36"
+                            HorizontalContentAlignment="Stretch"
+                            Padding="10,0"
+                            ToolTip="Tìm kiếm toàn bộ đơn hàng, hóa đơn, khách hàng qua mọi ngày (Ctrl + F)">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔍" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Tìm kiếm..." FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="4" Padding="5,1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="Ctrl+F" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                            </Border>
+                        </Grid>
+                    </Button>
                     <RadioButton GroupName="MainSidebarTabs"
                                  Tag="📋"
                                  Content="ĐƠN HÀNG"
                                  IsChecked="{Binding IsDashboardActive}"
                                  Command="{Binding NavigateToDashboardCommand}"
+                                 Style="{StaticResource Tinix.Sidebar.NavTab}"/>
+
+                    <RadioButton GroupName="MainSidebarTabs"
+                                 Tag="🧾"
+                                 Content="HÓA ĐƠN"
+                                 IsChecked="{Binding IsInvoicesActive}"
+                                 Command="{Binding NavigateToInvoicesCommand}"
                                  Style="{StaticResource Tinix.Sidebar.NavTab}"/>
 
                     <RadioButton GroupName="MainSidebarTabs"

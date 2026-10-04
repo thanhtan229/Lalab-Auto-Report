@@ -20,6 +20,13 @@
     <SolidColorBrush x:Key="Tinix.Color.Primary.Subtle" Color="{StaticResource TinixColorPrimarySubtleRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Primary.Focus" Color="{StaticResource TinixColorPrimaryFocusRaw}"/>
 
+    <!-- BRAND ACCENT / DATE POD TOKENS -->
+    <Color x:Key="TinixColorDatePodBgRaw">#FFF6F2</Color>
+    <Color x:Key="TinixColorDatePodBorderRaw">#FFCCA8</Color>
+    <SolidColorBrush x:Key="Tinix.Color.DatePod.Bg" Color="{StaticResource TinixColorDatePodBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.DatePod.Border" Color="{StaticResource TinixColorDatePodBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.DatePod.Text" Color="{StaticResource TinixColorPrimaryHoverRaw}"/>
+
     <!-- NEUTRAL SURFACES & TEXT -->
     <Color x:Key="TinixColorBgBodyRaw">#F8F5EE</Color>
     <Color x:Key="TinixColorBgSurfaceRaw">#FFFFFF</Color>
@@ -32,6 +39,7 @@
     <Color x:Key="TinixColorTextMutedRaw">#9B9897</Color>
 
     <SolidColorBrush x:Key="Tinix.Color.Bg.Body" Color="{StaticResource TinixColorBgBodyRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Bg.App" Color="{StaticResource TinixColorBgBodyRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Bg.Surface" Color="{StaticResource TinixColorBgSurfaceRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Bg.Subtle" Color="{StaticResource TinixColorBgSubtleRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Bg.Sidebar" Color="{StaticResource TinixColorBgSidebarRaw}"/>
@@ -77,6 +85,58 @@
     <SolidColorBrush x:Key="Tinix.Color.Info.Border" Color="{StaticResource TinixColorInfoBorderRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Info.Hover" Color="{StaticResource TinixColorInfoHoverBgRaw}"/>
     <SolidColorBrush x:Key="Tinix.Color.Info.Active" Color="{StaticResource TinixColorInfoActiveBgRaw}"/>
+
+    <!-- KPI CARD TOKENS -->
+    <!-- Card 1: Revenue (Peach / Warm Orange - Brand) -->
+    <Color x:Key="TinixCardRevenueBgRaw">#FFF6F2</Color>
+    <Color x:Key="TinixCardRevenueBorderRaw">#FFCCA8</Color>
+    <Color x:Key="TinixCardRevenueTitleRaw">#C93700</Color>
+    <Color x:Key="TinixCardRevenueValueRaw">#9F2800</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Revenue.Bg" Color="{StaticResource TinixCardRevenueBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Revenue.Border" Color="{StaticResource TinixCardRevenueBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Revenue.Title" Color="{StaticResource TinixCardRevenueTitleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Revenue.Value" Color="{StaticResource TinixCardRevenueValueRaw}"/>
+
+    <!-- Card 2: Print Volume / Quantity (Sky Blue) -->
+    <Color x:Key="TinixCardPrintBgRaw">#EFF6FF</Color>
+    <Color x:Key="TinixCardPrintBorderRaw">#BFDBFE</Color>
+    <Color x:Key="TinixCardPrintTitleRaw">#1D4ED8</Color>
+    <Color x:Key="TinixCardPrintValueRaw">#1E3A8A</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Print.Bg" Color="{StaticResource TinixCardPrintBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Print.Border" Color="{StaticResource TinixCardPrintBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Print.Title" Color="{StaticResource TinixCardPrintTitleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Print.Value" Color="{StaticResource TinixCardPrintValueRaw}"/>
+
+    <!-- Card 3: Orders (Purple / Lavender) -->
+    <Color x:Key="TinixCardOrderBgRaw">#F5F3FF</Color>
+    <Color x:Key="TinixCardOrderBorderRaw">#DDD6FE</Color>
+    <Color x:Key="TinixCardOrderTitleRaw">#6D28D9</Color>
+    <Color x:Key="TinixCardOrderValueRaw">#5B21B6</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Order.Bg" Color="{StaticResource TinixCardOrderBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Order.Border" Color="{StaticResource TinixCardOrderBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Order.Title" Color="{StaticResource TinixCardOrderTitleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Order.Value" Color="{StaticResource TinixCardOrderValueRaw}"/>
+
+    <!-- Card 4: Customers / CRM (Emerald / Teal Mint) -->
+    <Color x:Key="TinixCardCustomerBgRaw">#ECFDF5</Color>
+    <Color x:Key="TinixCardCustomerBorderRaw">#A7F3D0</Color>
+    <Color x:Key="TinixCardCustomerTitleRaw">#047857</Color>
+    <Color x:Key="TinixCardCustomerValueRaw">#065F46</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Customer.Bg" Color="{StaticResource TinixCardCustomerBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Customer.Border" Color="{StaticResource TinixCardCustomerBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Customer.Title" Color="{StaticResource TinixCardCustomerTitleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Customer.Value" Color="{StaticResource TinixCardCustomerValueRaw}"/>
+
+    <!-- Card 5: Review / Pending / Debt (Amber / Warm Gold) -->
+    <Color x:Key="TinixCardReviewBgRaw">#FFFBEB</Color>
+    <Color x:Key="TinixCardReviewBorderRaw">#FDE68A</Color>
+    <Color x:Key="TinixCardReviewTitleRaw">#B45309</Color>
+    <Color x:Key="TinixCardReviewValueRaw">#92400E</Color>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Review.Bg" Color="{StaticResource TinixCardReviewBgRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Review.Border" Color="{StaticResource TinixCardReviewBorderRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Review.Title" Color="{StaticResource TinixCardReviewTitleRaw}"/>
+    <SolidColorBrush x:Key="Tinix.Color.Card.Review.Value" Color="{StaticResource TinixCardReviewValueRaw}"/>
+
 
     <!-- TYPOGRAPHY -->
     <FontFamily x:Key="Tinix.Font.Display">Georgia, Times New Roman, Serif</FontFamily>

@@ -151,7 +151,7 @@ public class GitHubUpdateService : IUpdateService
             throw excitingInvalidOperationException("URL tải bản cập nhật không hợp lệ.");
         }
 
-        var tempDir = Path.Combine(Path.GetTempPath(), "LalabAutoReport_Update");
+        var tempDir = Path.Combine(Path.GetTempPath(), "LalabAutoReport_Update", Guid.NewGuid().ToString("N"));
         if (!Directory.Exists(tempDir))
         {
             Directory.CreateDirectory(tempDir);
@@ -183,6 +183,8 @@ public class GitHubUpdateService : IUpdateService
                     progress.Report((double)totalRead / totalBytes);
                 }
             }
+            if (totalBytes > 0 && totalRead != totalBytes)
+                throw new InvalidDataException("Bản cập nhật tải chưa đủ; ứng dụng hiện tại được giữ nguyên.");
         }
 
         _logger.LogInformation("Download completed. Creating updater script...");
@@ -194,51 +196,17 @@ public class GitHubUpdateService : IUpdateService
             return;
         }
 
-        var currentPid = Process.GetCurrentProcess().Id;
-        var batchPath = Path.Combine(tempDir, "apply_update.bat");
-
-        var batchScript = $@"@echo off
-chcp 65001 >nul
-set ""PID={currentPid}""
-set ""SRC={tempExePath}""
-set ""DEST={currentExePath}""
-
-:WAIT_LOOP
-tasklist /fi ""PID eq %PID%"" 2>nul | find ""%PID%"" >nul
-if not errorlevel 1 (
-    timeout /t 1 /nobreak >nul
-    goto WAIT_LOOP
-)
-
-:: Replace executable
-copy /y ""%SRC%"" ""%DEST%"" >nul
-if errorlevel 1 (
-    timeout /t 1 /nobreak >nul
-    copy /y ""%SRC%"" ""%DEST%"" >nul
-)
-
-:: Restart application
-start """" ""%DEST%""
-
-:: Clean up
-del ""%SRC%"" >nul 2>&1
-(goto) 2>nul & del ""%~f0""
-";
-
-        await File.WriteAllTextAsync(batchPath, batchScript, System.Text.Encoding.UTF8, cancellationToken).ConfigureAwait(false);
-
-        _logger.LogInformation("Launching updater script {BatchPath} and exiting...", batchPath);
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "cmd.exe",
-            Arguments = $"/c \"{batchPath}\"",
-            CreateNoWindow = true,
-            UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Hidden
-        };
-
-        Process.Start(psi);
+        // Preserve the isolated acceptance profile without replaying quick-bill commands.
+        string restartArguments = "--minimized";
+        var arguments = Environment.GetCommandLineArgs();
+        for (int i = 1; i + 1 < arguments.Length; i++)
+            if (arguments[i].Equals("--isolated-data-directory", StringComparison.OrdinalIgnoreCase))
+                restartArguments += " --isolated-data-directory " + UpdateReplacement.QuoteArgument(arguments[i + 1]);
+        string script = await UpdateReplacement.PrepareAsync(tempExePath, currentExePath,
+            Environment.ProcessId, restartArguments, cancellationToken: cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("Launching safe updater {Script}; recovery files are retained.", script);
+        using var updater = Process.Start(UpdateReplacement.CreateStartInfo(script))
+            ?? throw new InvalidOperationException("Không thể khởi động updater; ứng dụng hiện tại được giữ nguyên.");
         Environment.Exit(0);
     }
 

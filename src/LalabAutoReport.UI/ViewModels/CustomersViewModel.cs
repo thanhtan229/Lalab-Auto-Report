@@ -61,15 +61,21 @@ public partial class CustomersViewModel : ObservableObject
     [ObservableProperty]
     private bool _isLoadingBilling;
 
-    [ObservableProperty]
-    private bool _isGuestSelected;
+    public int CustomerTotalBillsCount => CustomerBills.Count;
+    public long CustomerTotalSpentAmount => CustomerBills.Sum(b => b.GrandTotal);
+    public long CustomerTotalDebtAmount => CustomerBills.Where(b => !b.IsPaid).Sum(b => b.GrandTotal);
+    public bool HasCustomerHistory => CustomerTotalBillsCount > 0;
 
-    public Customer GuestCustomerItem { get; } = new Customer
+    public event Action<long>? ViewCustomerInvoicesRequested;
+
+    [RelayCommand]
+    private void ViewCustomerInvoices()
     {
-        Id = -1,
-        CanonicalName = "⚡ Khách Lẻ (Quick Bill)",
-        Note = "Khách vãng lai, in gấp, không tạo hồ sơ đại lý dài hạn."
-    };
+        if (SelectedCustomer != null && SelectedCustomer.Id > 0)
+        {
+            ViewCustomerInvoicesRequested?.Invoke(SelectedCustomer.Id);
+        }
+    }
 
     public ObservableCollection<CustomerBill> CustomerBills { get; } = new();
 
@@ -92,12 +98,6 @@ public partial class CustomersViewModel : ObservableObject
     public async Task LoadCustomersAsync()
     {
         var customers = await _customerRepository.GetAllAsync();
-        var settings = await _settingsRepository.GetSettingsAsync();
-
-        // Populate aliases for GuestCustomerItem from settings
-        GuestCustomerItem.Aliases = settings.GuestAliases
-            .Select(a => new CustomerAlias { Id = 0, CustomerId = -1, AliasText = a, NormalizedAlias = a.Trim().ToLowerInvariant() })
-            .ToList();
 
         AllCustomers.Clear();
         foreach (var c in customers)
@@ -109,36 +109,21 @@ public partial class CustomersViewModel : ObservableObject
 
         if (SelectedCustomer != null)
         {
-            if (SelectedCustomer.Id == -1)
-            {
-                SelectedCustomer = GuestCustomerItem;
-            }
-            else
-            {
-                SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == SelectedCustomer.Id) ?? AllCustomers.FirstOrDefault() ?? GuestCustomerItem;
-            }
+            SelectedCustomer = AllCustomers.FirstOrDefault(c => c.Id == SelectedCustomer.Id) ?? AllCustomers.FirstOrDefault();
         }
         else
         {
-            SelectedCustomer = AllCustomers.FirstOrDefault() ?? GuestCustomerItem;
+            SelectedCustomer = AllCustomers.FirstOrDefault();
         }
     }
 
     partial void OnSelectedCustomerChanged(Customer? value)
     {
-        IsGuestSelected = value != null && value.Id == -1;
-
-        if (value != null && !IsGuestSelected)
+        if (value != null)
         {
             EditCustomerName = value.CanonicalName;
             EditCustomerPhone = value.Phone ?? string.Empty;
             EditCustomerNote = value.Note ?? string.Empty;
-        }
-        else if (IsGuestSelected)
-        {
-            EditCustomerName = "Khách Lẻ (Quick Bill)";
-            EditCustomerPhone = "(Tùy biến từng đơn)";
-            EditCustomerNote = value?.Note ?? string.Empty;
         }
         else
         {
@@ -156,12 +141,6 @@ public partial class CustomersViewModel : ObservableObject
         if (SelectedCustomer == null)
         {
             StatusMessage = "Vui lòng chọn khách hàng!";
-            return;
-        }
-
-        if (IsGuestSelected)
-        {
-            StatusMessage = "Mục Khách Lẻ cố định không cần sửa thông tin. Tên và SĐT sẽ nhập khi lập bill.";
             return;
         }
 
@@ -213,12 +192,6 @@ public partial class CustomersViewModel : ObservableObject
             return false;
         }
 
-        if (IsGuestSelected)
-        {
-            StatusMessage = "Không thể xóa mục Khách lẻ cố định của hệ thống.";
-            return false;
-        }
-
         string customerName = SelectedCustomer.CanonicalName;
         long customerId = SelectedCustomer.Id;
 
@@ -252,21 +225,6 @@ public partial class CustomersViewModel : ObservableObject
     private void ApplyFilter()
     {
         FilteredCustomers.Clear();
-
-        bool guestMatches = true;
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            string s = SearchText.Trim().ToLowerInvariant();
-            guestMatches = "khách lẻ".Contains(s) ||
-                           "khach le".Contains(s) ||
-                           "quick bill".Contains(s) ||
-                           GuestCustomerItem.Aliases.Any(a => a.AliasText.ToLowerInvariant().Contains(s));
-        }
-
-        if (guestMatches)
-        {
-            FilteredCustomers.Add(GuestCustomerItem);
-        }
 
         var filtered = AllCustomers.AsEnumerable();
         if (!string.IsNullOrWhiteSpace(SearchText))
@@ -321,21 +279,6 @@ public partial class CustomersViewModel : ObservableObject
 
         string trimmed = NewAliasText.Trim();
 
-        if (IsGuestSelected)
-        {
-            var settings = await _settingsRepository.GetSettingsAsync();
-            if (!settings.GuestAliases.Any(a => string.Equals(a, trimmed, StringComparison.OrdinalIgnoreCase)))
-            {
-                settings.GuestAliases.Add(trimmed);
-                await _settingsRepository.SaveSettingsAsync(settings);
-            }
-            StatusMessage = $"Đã thêm alias '{trimmed}' cho Khách Lẻ";
-            NewAliasText = string.Empty;
-            await LoadCustomersAsync();
-            SelectedCustomer = GuestCustomerItem;
-            return;
-        }
-
         await _customerRepository.AddAliasAsync(SelectedCustomer.Id, trimmed);
         StatusMessage = $"Đã thêm alias '{trimmed}' cho {SelectedCustomer.CanonicalName}";
         NewAliasText = string.Empty;
@@ -375,25 +318,6 @@ public partial class CustomersViewModel : ObservableObject
 
         try
         {
-            if (IsGuestSelected)
-            {
-                var settings = await _settingsRepository.GetSettingsAsync();
-                int idx = settings.GuestAliases.FindIndex(a => string.Equals(a, alias.AliasText, StringComparison.OrdinalIgnoreCase));
-                if (idx >= 0)
-                {
-                    settings.GuestAliases[idx] = trimmed;
-                }
-                else
-                {
-                    settings.GuestAliases.Add(trimmed);
-                }
-                await _settingsRepository.SaveSettingsAsync(settings);
-                StatusMessage = $"Đã cập nhật alias '{alias.AliasText}' thành '{trimmed}' cho Khách Lẻ";
-                await LoadCustomersAsync();
-                SelectedCustomer = GuestCustomerItem;
-                return true;
-            }
-
             await _customerRepository.UpdateAliasAsync(alias.Id, trimmed);
             StatusMessage = $"Đã cập nhật alias '{alias.AliasText}' thành '{trimmed}'";
             long currentId = SelectedCustomer.Id;
@@ -415,17 +339,6 @@ public partial class CustomersViewModel : ObservableObject
 
         try
         {
-            if (IsGuestSelected)
-            {
-                var settings = await _settingsRepository.GetSettingsAsync();
-                settings.GuestAliases.RemoveAll(a => string.Equals(a, alias.AliasText, StringComparison.OrdinalIgnoreCase));
-                await _settingsRepository.SaveSettingsAsync(settings);
-                StatusMessage = $"Đã xóa alias '{alias.AliasText}' của Khách Lẻ";
-                await LoadCustomersAsync();
-                SelectedCustomer = GuestCustomerItem;
-                return;
-            }
-
             await _customerRepository.RemoveAliasAsync(alias.Id);
             StatusMessage = $"Đã xóa alias '{alias.AliasText}'";
             long currentId = SelectedCustomer.Id;
@@ -446,11 +359,7 @@ public partial class CustomersViewModel : ObservableObject
             CustomerBills.Clear();
 
             IReadOnlyList<CustomerBill> bills;
-            if (IsGuestSelected)
-            {
-                bills = await _customerBillRepository.GetAllBillsAsync(BillType.Guest);
-            }
-            else if (SelectedCustomer != null && SelectedCustomer.Id > 0)
+            if (SelectedCustomer != null && SelectedCustomer.Id > 0)
             {
                 bills = await _customerBillRepository.GetBillsByCustomerIdAsync(SelectedCustomer.Id);
             }
@@ -463,6 +372,11 @@ public partial class CustomersViewModel : ObservableObject
             {
                 CustomerBills.Add(b);
             }
+
+            OnPropertyChanged(nameof(CustomerTotalBillsCount));
+            OnPropertyChanged(nameof(CustomerTotalSpentAmount));
+            OnPropertyChanged(nameof(CustomerTotalDebtAmount));
+            OnPropertyChanged(nameof(HasCustomerHistory));
         }
         catch (Exception ex)
         {
@@ -487,13 +401,6 @@ public partial class CustomersViewModel : ObservableObject
         try
         {
             IsLoadingBilling = true;
-            if (IsGuestSelected)
-            {
-                UnbilledSummary = null;
-                HasUnbilledOrders = true; // Cho phép bấm nút Lập Bill Khách Lẻ
-                await RefreshBillsAsync();
-                return;
-            }
 
             var summary = await _customerBillingService.GetCustomerUnbilledSummaryAsync(customer.Id);
             UnbilledSummary = summary;
@@ -512,45 +419,11 @@ public partial class CustomersViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenQuickBill()
-    {
-        var vm = new QuickBillSetupViewModel(
-            _customerBillingService,
-            _customerBillRepository,
-            _jpegBillExporter,
-            _settingsRepository,
-            _excelBillExporter
-        );
-
-        var win = new QuickBillSetupWindow(vm)
-        {
-            Owner = Application.Current?.MainWindow
-        };
-
-        win.ShowDialog();
-
-        if (SelectedCustomer != null)
-        {
-            _ = LoadCustomerBillingInfoAsync(SelectedCustomer);
-        }
-        else
-        {
-            _ = RefreshBillsAsync();
-        }
-    }
-
-    [RelayCommand]
     private async Task ComputeBillAsync()
     {
         if (SelectedCustomer == null)
         {
             StatusMessage = "Vui lòng chọn khách hàng!";
-            return;
-        }
-
-        if (IsGuestSelected)
-        {
-            OpenQuickBill();
             return;
         }
 
@@ -668,6 +541,23 @@ public partial class CustomersViewModel : ObservableObject
                 }
                 catch { }
             }
+
+            // Đồng bộ bill và ảnh JPEG vừa xuất lên Cloudflare
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var syncService = (Application.Current as App)?.Services?.GetService(typeof(ICloudSyncService)) as ICloudSyncService;
+                    if (syncService != null && fullBill.Id > 0)
+                    {
+                        await syncService.SyncBillAsync(fullBill.Id);
+                    }
+                }
+                catch
+                {
+                    // Non-blocking fire-and-forget
+                }
+            });
 
             if (excelError != null)
             {

@@ -1,0 +1,521 @@
+<UserControl x:Class="LalabAutoReport.UI.Views.InvoicesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:domain="clr-namespace:LalabAutoReport.Core.Domain;assembly=LalabAutoReport.Core"
+             xmlns:vm="clr-namespace:LalabAutoReport.UI.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:InvoicesViewModel}"
+             d:DesignHeight="700" d:DesignWidth="1050"
+             FontFamily="{StaticResource Tinix.Font.UI}"
+             Background="{StaticResource Tinix.Color.Bg.Body}">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
+    <Grid Margin="24,20,24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Page Title & Actions Toolbar -->
+            <RowDefinition Height="Auto"/> <!-- KPI Cards (Tổng bill, Doanh thu, Thu tiền, Còn nợ) -->
+            <RowDefinition Height="Auto"/> <!-- Filter Toolbar -->
+            <RowDefinition Height="*"/>    <!-- DataGrid / Empty View -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. PAGE HEADER & TOP ACTIONS -->
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="HÓA ĐƠN &amp; THANH TOÁN"
+                           FontFamily="{StaticResource Tinix.Font.Display}"
+                           FontSize="{StaticResource Tinix.FontSize.Display}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                <TextBlock Text="Quản lý toàn bộ hóa đơn xuất xưởng, theo dõi trạng thái thanh toán và in tem giao hàng"
+                           Foreground="{StaticResource Tinix.Color.Text.Secondary}"
+                           FontSize="{StaticResource Tinix.FontSize.Caption}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding OpenQuickBillCommand}"
+                        Content="⚡ Quick Bill"
+                        Style="{StaticResource Tinix.Button.Secondary}"
+                        Height="36"
+                        Padding="14,0"
+                        Margin="0,0,8,0"
+                        ToolTip="Lập và xuất hóa đơn nhanh cho khách lẻ từ thư mục tùy chọn"/>
+
+                <Button Command="{Binding OpenBillsFolderCommand}"
+                        Content="📁 Mở Thư Mục Bills"
+                        Style="{StaticResource Tinix.Button.Ghost}"
+                        Height="36"
+                        Padding="12,0"
+                        ToolTip="Mở thư mục Bills trên Windows Explorer"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 2. KPI METRICS CARDS -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Card 1: Tổng hóa đơn (Sky Blue) -->
+            <Border Grid.Column="0" Background="{StaticResource Tinix.Color.Card.Print.Bg}"
+                    BorderBrush="{StaticResource Tinix.Color.Card.Print.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,12" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="TỔNG HÓA ĐƠN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Print.Title}" Margin="0,0,0,2"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <TextBlock Text="{Binding TotalBillsCount}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Print.Value}"/>
+                        <TextBlock Text=" hóa đơn" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="4,0,0,3" VerticalAlignment="Bottom"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding AllInvoices.Count, StringFormat='{}Từ tổng số {0} bản ghi'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Card 2: Tổng doanh thu (Peach / Warm Orange) -->
+            <Border Grid.Column="1" Background="{StaticResource Tinix.Color.Card.Revenue.Bg}"
+                    BorderBrush="{StaticResource Tinix.Color.Card.Revenue.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,12" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="TỔNG DOANH THU" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Revenue.Title}" Margin="0,0,0,2"/>
+                    <TextBlock Text="{Binding FormattedTotalRevenue}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Revenue.Value}"/>
+                    <TextBlock Text="Tổng giá trị các bill hiển thị" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Card 3: Đã thu tiền (Emerald / Mint) -->
+            <Border Grid.Column="2" Background="{StaticResource Tinix.Color.Card.Customer.Bg}"
+                    BorderBrush="{StaticResource Tinix.Color.Card.Customer.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,12" Margin="0,0,10,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                        <TextBlock Text="ĐÃ THANH TOÁN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Customer.Title}"/>
+                        <Border Background="{StaticResource Tinix.Color.Success.Bg}" BorderBrush="{StaticResource Tinix.Color.Success.Border}" BorderThickness="0.5" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding PaidBillsCount, StringFormat='{}{0} bill'}" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding FormattedTotalPaidAmount}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Customer.Value}"/>
+                    <TextBlock Text="Đã thu tiền vào quỹ" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Card 4: Còn nợ (Chưa thu) (Amber / Gold) -->
+            <Border Grid.Column="3" Background="{StaticResource Tinix.Color.Card.Review.Bg}"
+                    BorderBrush="{StaticResource Tinix.Color.Card.Review.Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="16,12">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                        <TextBlock Text="CÒN NỢ (CHƯA THU)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Review.Title}"/>
+                        <Border Background="{StaticResource Tinix.Color.Warning.Bg}" BorderBrush="{StaticResource Tinix.Color.Warning.Border}" BorderThickness="0.5" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding UnpaidBillsCount, StringFormat='{}{0} bill'}" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Warning}"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding FormattedTotalDebtAmount}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Review.Value}"/>
+                    <TextBlock Text="Công nợ gối đầu cần thu" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 3. FILTER TOOLBAR -->
+        <Border Grid.Row="2" Background="{StaticResource Tinix.Color.Bg.Surface}"
+                BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1"
+                CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="14,10" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/> <!-- Date Scope Filter -->
+                    <ColumnDefinition Width="Auto"/> <!-- Payment Filter -->
+                    <ColumnDefinition Width="Auto"/> <!-- Type Filter -->
+                    <ColumnDefinition Width="*"/>    <!-- Search Box -->
+                    <ColumnDefinition Width="Auto"/> <!-- Refresh Button -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Date Scope Filter -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                    <TextBlock Text="Kỳ:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+                    <ComboBox SelectedValue="{Binding DateScopeFilter, Mode=TwoWay}" SelectedValuePath="Tag" Height="34" Width="135" VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="Toàn bộ lịch sử" Tag="AllTime" IsSelected="True"/>
+                        <ComboBoxItem Content="Tháng này" Tag="ThisMonth"/>
+                        <ComboBoxItem Content="Hôm nay" Tag="Today"/>
+                        <ComboBoxItem Content="Tùy chọn ngày..." Tag="Custom"/>
+                    </ComboBox>
+
+                    <!-- Custom DatePicker if selected -->
+                    <StackPanel Orientation="Horizontal" Margin="6,0,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DateScopeFilter}" Value="Custom">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <DatePicker SelectedDate="{Binding StartDate, Mode=TwoWay}" Width="105" Height="34" VerticalContentAlignment="Center"/>
+                        <TextBlock Text="➔" VerticalAlignment="Center" Margin="4,0" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                        <DatePicker SelectedDate="{Binding EndDate, Mode=TwoWay}" Width="105" Height="34" VerticalContentAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Customer Filter (Searchable ComboBox + Clear Button) -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                    <TextBlock Text="Khách hàng:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+                    <ComboBox ItemsSource="{Binding CustomerFilterOptions}"
+                              SelectedItem="{Binding SelectedCustomerFilter, Mode=TwoWay}"
+                              DisplayMemberPath="DisplayName"
+                              IsEditable="True"
+                              IsTextSearchEnabled="True"
+                              Height="34"
+                              Width="180"
+                              VerticalContentAlignment="Center"
+                              ToolTip="Chọn hoặc gõ tên để tìm nhanh khách hàng"/>
+                    <Button Command="{Binding ClearCustomerFilterCommand}"
+                            Visibility="{Binding IsCustomerFilterActive, Converter={StaticResource BoolToVis}}"
+                            Style="{StaticResource Tinix.Button.Ghost}"
+                            Padding="6,0" Height="34" Margin="2,0,0,0"
+                            ToolTip="Bỏ lọc khách hàng">
+                        <TextBlock Text="✕" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}" FontWeight="Bold"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Payment Status Filter -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                    <TextBlock Text="Thanh toán:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
+                    <ComboBox SelectedValue="{Binding PaymentFilter, Mode=TwoWay}" SelectedValuePath="Tag" Height="34" Width="140" VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="Tất cả trạng thái" Tag="All" IsSelected="True"/>
+                        <ComboBoxItem Content="⏳ Chưa trả (Nợ)" Tag="Unpaid"/>
+                        <ComboBoxItem Content="✓ Đã thanh toán" Tag="Paid"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Search Box -->
+                <TextBox Grid.Column="3" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,12,0" VerticalContentAlignment="Center">
+                    <TextBox.Resources>
+                        <VisualBrush x:Key="CueSearchInvoices" AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                            <VisualBrush.Visual>
+                                <TextBlock Text="🔍 Tìm mã bill, số điện thoại..." Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0" FontSize="{StaticResource Tinix.FontSize.Caption}"/>
+                            </VisualBrush.Visual>
+                        </VisualBrush>
+                    </TextBox.Resources>
+                    <TextBox.Style>
+                        <Style TargetType="TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}">
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Background" Value="{StaticResource CueSearchInvoices}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+
+                <!-- Refresh Button -->
+                <Button Grid.Column="4" Command="{Binding LoadInvoicesCommand}" Style="{StaticResource Tinix.Button.Secondary}" Height="34" Padding="12,0" ToolTip="Tải lại danh sách hóa đơn">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔄" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Làm mới" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 4. DATAGRID CONTENT -->
+        <Border Grid.Row="3" Background="{StaticResource Tinix.Color.Bg.Surface}"
+                BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1"
+                CornerRadius="{StaticResource Tinix.Radius.Md}" ClipToBounds="True">
+            <Grid>
+                <DataGrid ItemsSource="{Binding FilteredInvoices}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          Background="White"
+                           RowHeight="46"
+                           BorderThickness="0">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <!-- Mã Hóa Đơn -->
+                        <DataGridTemplateColumn Header="Mã Hóa Đơn" Width="145">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" Margin="8,0,0,0">
+                                        <TextBlock Text="{Binding BillNumber}" FontFamily="{StaticResource Tinix.Font.Mono}" FontWeight="Bold" FontSize="12.5" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                        <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontSize="10" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Phân Loại -->
+                        <DataGridTemplateColumn Header="Phân Loại" Width="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- Guest Badge -->
+                                        <Border Background="{StaticResource Tinix.Color.Warning.Bg}"
+                                                BorderBrush="{StaticResource Tinix.Color.Warning.Border}"
+                                                BorderThickness="0.5"
+                                                CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="6,2">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding BillType}" Value="Guest">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="⚡ Khách Lẻ" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Warning}"/>
+                                        </Border>
+
+                                        <!-- Customer Badge -->
+                                        <Border Background="{StaticResource Tinix.Color.Info.Bg}"
+                                                BorderBrush="{StaticResource Tinix.Color.Info.Border}"
+                                                BorderThickness="0.5"
+                                                CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="6,2">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding BillType}" Value="Customer">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="👤 Khách Quen" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Info}"/>
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Khách Hàng (Click để mở xem bill) -->
+                        <DataGridTemplateColumn Header="Khách Hàng" Width="175">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding DataContext.OpenBillCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Cursor="Hand"
+                                            ToolTip="Nhấp chuột để mở xem và chỉnh sửa hóa đơn">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="Padding" Value="0"/>
+                                                <Setter Property="HorizontalAlignment" Value="Left"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <StackPanel VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding CustomerNameSnapshot}" FontWeight="SemiBold" FontSize="12.5" Foreground="{StaticResource Tinix.Color.Text.Primary}">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Style.Triggers>
+                                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                                    <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Primary}"/>
+                                                                                    <Setter Property="TextDecorations" Value="Underline"/>
+                                                                                </Trigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                                <TextBlock Text="{Binding PhoneSnapshot}" FontSize="10.5" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                                                            </StackPanel>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Kỳ Hóa Đơn -->
+                        <DataGridTemplateColumn Header="Kỳ Hóa Đơn" Width="160">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding PeriodStart, StringFormat='{}{0:yyyy-MM-dd}'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                        <TextBlock Text=" ➔ " FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                                        <TextBlock Text="{Binding PeriodEnd, StringFormat='{}{0:yyyy-MM-dd}'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Số Đơn -->
+                        <DataGridTextColumn Header="Số Đơn" Binding="{Binding OrderCount, StringFormat='{}{0} đơn'}" Width="80">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontSize" Value="11.5"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Tổng Tiền -->
+                        <DataGridTextColumn Header="Tổng Tiền (VND)" Binding="{Binding GrandTotal, StringFormat='{}{0:N0} đ'}" Width="135">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="FontSize" Value="12.5"/>
+                                    <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Text.Primary}"/>
+                                    <Setter Property="Padding" Value="0,0,12,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Trạng Thái Thanh Toán (1-Click Toggle) -->
+                        <DataGridTemplateColumn Header="Thanh Toán" Width="145">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding DataContext.TogglePaymentStatusCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Cursor="Hand"
+                                            ToolTip="Nhấn để đổi trạng thái: Đã thanh toán ↔ Chưa thanh toán">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="Padding" Value="0"/>
+                                                <Setter Property="HorizontalAlignment" Value="Left"/>
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="8,4" BorderThickness="1">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="{StaticResource Tinix.Color.Warning.Bg}"/>
+                                                                        <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Warning.Border}"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                                                                <Setter Property="Background" Value="{StaticResource Tinix.Color.Success.Bg}"/>
+                                                                                <Setter Property="BorderBrush" Value="{StaticResource Tinix.Color.Success.Border}"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock FontSize="10.5" FontWeight="Bold">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Text" Value="⏳ Chưa trả"/>
+                                                                                <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Warning}"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsPaid}" Value="True">
+                                                                                        <Setter Property="Text" Value="✓ Đã trả"/>
+                                                                                        <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Success}"/>
+                                                                                    </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding HasPendingCloudChanges}" Value="True"><Setter Property="Text" Value="Chờ Cloud xác nhận"/></DataTrigger>
+</Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Thao Tác (Actions) -->
+                        <DataGridTemplateColumn Header="Thao Tác" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="👁️ Mở Bill"
+                                                Command="{Binding DataContext.OpenBillCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource Tinix.Button.Secondary}"
+                                                Padding="10,4" Margin="0,0,5,0" FontSize="11"
+                                                ToolTip="Xem chi tiết, chỉnh sửa hoặc in hóa đơn"/>
+
+                                        <Button Content="🖼️ Ảnh"
+                                                Command="{Binding DataContext.OpenFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource Tinix.Button.Ghost}"
+                                                Padding="7,4" Margin="0,0,5,0" FontSize="11"
+                                                ToolTip="Mở tệp ảnh JPEG đã xuất để gửi khách"/>
+
+                                        <Button Content="🏷️ Tem"
+                                                Command="{Binding DataContext.PrintShippingLabelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource Tinix.Button.Ghost}"
+                                                Padding="7,4" Margin="0,0,5,0" FontSize="11"
+                                                ToolTip="In tem dán bưu kiện giao hàng nhiệt (75x100mm)"/>
+
+                                        <Button Content="🔄 Xuất Lại"
+                                                Command="{Binding DataContext.ReExportJpegCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource Tinix.Button.Ghost}"
+                                                Padding="7,4" Margin="0,0,5,0" FontSize="11"
+                                                ToolTip="Xuất lại tệp ảnh JPEG và Excel mới nhất"/>
+
+                                        <Button Content="📁 Thư Mục"
+                                                Command="{Binding DataContext.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Style="{StaticResource Tinix.Button.Ghost}"
+                                                Padding="7,4" FontSize="11"
+                                                ToolTip="Mở thư mục chứa file hóa đơn"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Empty State -->
+                <Border Background="White" Visibility="{Binding HasNoInvoicesFound, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="40,30">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="🧾" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBlock Text="Không tìm thấy hóa đơn nào trong phạm vi đã chọn" FontWeight="Bold" FontSize="14" Foreground="{StaticResource Tinix.Color.Text.Primary}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Thử thay đổi bộ lọc trạng thái hoặc nhấn '⚡ Quick Bill' để lập hóa đơn mới." FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Muted}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 5. STATUS BAR -->
+        <Border Grid.Row="4" Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="0,1,0,0" Padding="16,8" Margin="0,10,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11.5" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+                    <ProgressBar IsIndeterminate="True" Width="80" Height="10" Margin="0,0,8,0"/>
+                    <TextBlock Text="Đang xử lý..." Foreground="{StaticResource Tinix.Color.Primary}" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

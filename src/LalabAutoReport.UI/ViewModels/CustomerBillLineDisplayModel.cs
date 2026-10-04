@@ -97,10 +97,9 @@ public partial class CustomerBillLineDisplayModel : ObservableObject
     {
         if (value < 0) value = 0;
         DomainLine.BilledQuantity = value;
-        if (value != DomainLine.ScannedQuantity)
-        {
-            DomainLine.QuantityOverrideReason = "Chỉnh sửa thủ công";
-        }
+        DomainLine.QuantityOverrideReason = (value != DomainLine.ScannedQuantity)
+            ? "Chỉnh sửa thủ công"
+            : null;
         RecalculateLineTotal();
     }
 
@@ -108,10 +107,9 @@ public partial class CustomerBillLineDisplayModel : ObservableObject
     {
         if (value < 0) value = 0;
         DomainLine.BilledUnitPrice = value;
-        if (value != DomainLine.ConfiguredUnitPrice)
-        {
-            DomainLine.PriceOverrideReason = "Chỉnh sửa thủ công";
-        }
+        DomainLine.PriceOverrideReason = (value != DomainLine.ConfiguredUnitPrice)
+            ? "Chỉnh sửa thủ công"
+            : null;
         RecalculateLineTotal();
     }
 

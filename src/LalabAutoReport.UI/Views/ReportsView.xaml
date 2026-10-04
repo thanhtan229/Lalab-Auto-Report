@@ -114,52 +114,52 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Metric 1: Revenue -->
-                <Border Grid.Column="0" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
+                <!-- Metric 1: Revenue (Peach / Warm Orange) -->
+                <Border Grid.Column="0" Background="{StaticResource Tinix.Color.Card.Revenue.Bg}" BorderBrush="{StaticResource Tinix.Color.Card.Revenue.Border}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock Text="DOANH THU" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}"/>
-                        <TextBlock Text="{Binding FormattedTotalRevenue}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}" Margin="0,4,0,0"/>
-                        <TextBlock Text="Đơn vị: VND (nguyên)" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                        <TextBlock Text="DOANH THU" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Revenue.Title}"/>
+                        <TextBlock Text="{Binding FormattedTotalRevenue}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Revenue.Value}" Margin="0,4,0,0"/>
+                        <TextBlock Text="Đơn vị: VND (nguyên)" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Metric 2: Bill Quantity -->
-                <Border Grid.Column="1" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
+                <!-- Metric 2: Bill Quantity (Sky Blue) -->
+                <Border Grid.Column="1" Background="{StaticResource Tinix.Color.Card.Print.Bg}" BorderBrush="{StaticResource Tinix.Color.Card.Print.Border}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock Text="SẢN LƯỢNG IN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
-                        <TextBlock Text="{Binding TotalBillQuantity, StringFormat='{}{0:N0} tấm'}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,0"/>
-                        <TextBlock Text="Tổng ảnh in tính tiền" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                        <TextBlock Text="SẢN LƯỢNG IN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Print.Title}"/>
+                        <TextBlock Text="{Binding TotalBillQuantity, StringFormat='{}{0:N0} tấm'}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Print.Value}" Margin="0,4,0,0"/>
+                        <TextBlock Text="Tổng ảnh in tính tiền" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Metric 3: Orders -->
-                <Border Grid.Column="2" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
+                <!-- Metric 3: Orders (Purple / Lavender) -->
+                <Border Grid.Column="2" Background="{StaticResource Tinix.Color.Card.Order.Bg}" BorderBrush="{StaticResource Tinix.Color.Card.Order.Border}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock Text="ĐƠN HÀNG VẬT LÝ" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
-                        <TextBlock Text="{Binding TotalOrders, StringFormat='{}{0} đơn'}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,0"/>
-                        <TextBlock Text="Thư mục khách hàng" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                        <TextBlock Text="ĐƠN HÀNG VẬT LÝ" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Order.Title}"/>
+                        <TextBlock Text="{Binding TotalOrders, StringFormat='{}{0} đơn'}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Order.Value}" Margin="0,4,0,0"/>
+                        <TextBlock Text="Thư mục khách hàng" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Metric 4: Customers -->
-                <Border Grid.Column="3" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
+                <!-- Metric 4: Customers (Emerald / Mint) -->
+                <Border Grid.Column="3" Background="{StaticResource Tinix.Color.Card.Customer.Bg}" BorderBrush="{StaticResource Tinix.Color.Card.Customer.Border}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14" Margin="0,0,10,0">
                     <StackPanel>
-                        <TextBlock Text="KHÁCH HÀNG" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
-                        <TextBlock Text="{Binding TotalCustomers, StringFormat='{}{0} khách'}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,0"/>
-                        <TextBlock Text="Danh tính chuẩn hóa" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                        <TextBlock Text="KHÁCH HÀNG" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Customer.Title}"/>
+                        <TextBlock Text="{Binding TotalCustomers, StringFormat='{}{0} khách'}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Customer.Value}" Margin="0,4,0,0"/>
+                        <TextBlock Text="Danh tính chuẩn hóa" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Metric 5: Unresolved / Locked -->
-                <Border Grid.Column="4" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14">
+                <!-- Metric 5: Unresolved / Locked (Amber / Gold) -->
+                <Border Grid.Column="4" Background="{StaticResource Tinix.Color.Card.Review.Bg}" BorderBrush="{StaticResource Tinix.Color.Card.Review.Border}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Lg}" Padding="16,14">
                     <StackPanel>
-                        <TextBlock Text="CẦN XỬ LÝ / ĐÃ TÍNH BILL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                        <TextBlock Text="CẦN XỬ LÝ / ĐÃ TÍNH BILL" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Card.Review.Title}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                             <TextBlock Text="{Binding UnresolvedOrdersCount}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Danger}"/>
                             <TextBlock Text=" / " FontFamily="{StaticResource Tinix.Font.Display}" FontSize="20" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
                             <TextBlock Text="{Binding LockedOrdersCount}" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Info}"/>
                         </StackPanel>
-                        <TextBlock Text="Chờ xử lý / Đã tính bill" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                        <TextBlock Text="Chờ xử lý / Đã tính bill" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -294,230 +294,6 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
-                </TabItem>
-
-                <!-- TAB 4: ALL INVOICES / BILL HISTORY -->
-                <TabItem Header="🧾 Danh Sách Hóa Đơn">
-                    <Grid Margin="0,10,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/> <!-- Filter Toolbar -->
-                            <RowDefinition Height="*"/>    <!-- DataGrid or Empty View -->
-                        </Grid.RowDefinitions>
-
-                        <!-- Filter Toolbar -->
-                        <Border Grid.Row="0" Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="14,10" Margin="0,0,0,10">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/> <!-- Quick Scope Toggle -->
-                                    <ColumnDefinition Width="Auto"/> <!-- Type Filter -->
-                                    <ColumnDefinition Width="*"/>    <!-- Search Box -->
-                                    <ColumnDefinition Width="Auto"/> <!-- Count & Total Amount Badge -->
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Quick Scope Toggle -->
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
-                                    <TextBlock Text="Phạm vi:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12"/>
-                                    <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="6,3" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
-                                        <StackPanel Orientation="Horizontal">
-                                            <RadioButton GroupName="BillHistoryScope" Content="Theo kỳ báo cáo" IsChecked="{Binding BillScopeReportPeriod, Mode=TwoWay}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,10,0" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
-                                            <RadioButton GroupName="BillHistoryScope" Content="Toàn bộ lịch sử" IsChecked="{Binding BillScopeAllTime, Mode=TwoWay}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-
-                                <!-- Type Filter -->
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
-                                    <TextBlock Text="Loại:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12"/>
-                                    <ComboBox SelectedValue="{Binding BillTypeFilter, Mode=TwoWay}" SelectedValuePath="Tag" Height="34" Width="170" VerticalContentAlignment="Center">
-                                        <ComboBoxItem Content="Tất cả loại bill" Tag="All" IsSelected="True"/>
-                                        <ComboBoxItem Content="👤 Khách quen" Tag="Customer"/>
-                                        <ComboBoxItem Content="⚡ Khách lẻ (Quick Bill)" Tag="Guest"/>
-                                    </ComboBox>
-                                </StackPanel>
-
-                                <!-- Search Box -->
-                                <TextBox Grid.Column="2" Text="{Binding BillSearchText, UpdateSourceTrigger=PropertyChanged}" Height="34" Margin="0,0,16,0" VerticalContentAlignment="Center">
-                                    <TextBox.Resources>
-                                        <VisualBrush x:Key="CueSearchBills" AlignmentX="Left" AlignmentY="Center" Stretch="None">
-                                            <VisualBrush.Visual>
-                                                <TextBlock Text="🔍 Tìm mã bill, khách hàng, số điện thoại..." Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0" FontSize="{StaticResource Tinix.FontSize.Caption}"/>
-                                            </VisualBrush.Visual>
-                                        </VisualBrush>
-                                    </TextBox.Resources>
-                                    <TextBox.Style>
-                                        <Style TargetType="TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}">
-                                            <Style.Triggers>
-                                                <Trigger Property="Text" Value="">
-                                                    <Setter Property="Background" Value="{StaticResource CueSearchBills}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBox.Style>
-                                </TextBox>
-
-                                <!-- Count & Total Amount Badge -->
-                                <Border Grid.Column="3" Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="12,5" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding TotalReportBillsCount, StringFormat='{}{0} hóa đơn'}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="12" VerticalAlignment="Center"/>
-                                        <TextBlock Text="  •  " Foreground="{StaticResource Tinix.Color.Text.Muted}" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding FormattedReportBillsAmount}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}" FontSize="13" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                        </Border>
-
-                        <!-- DataGrid -->
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding FilteredReportBills}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column" Background="White" RowHeight="42" BorderThickness="0">
-                            <DataGrid.Columns>
-                                <!-- Mã Hóa Đơn -->
-                                <DataGridTemplateColumn Header="Mã Hóa Đơn" Width="150">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding BillNumber}" FontFamily="{StaticResource Tinix.Font.Mono}" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Tinix.Color.Primary}" VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!-- Phân Loại -->
-                                <DataGridTemplateColumn Header="Loại Bill" Width="120">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <!-- Guest Badge -->
-                                                <Border Background="#FEF3C7" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="6,2">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding BillType}" Value="Guest">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <TextBlock Text="⚡ Khách Lẻ" FontSize="10" FontWeight="Bold" Foreground="#B45309"/>
-                                                </Border>
-
-                                                <!-- Customer Badge -->
-                                                <Border Background="#E0E7FF" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="6,2">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding BillType}" Value="Customer">
-                                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <TextBlock Text="👤 Khách Quen" FontSize="10" FontWeight="Bold" Foreground="#4338CA"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!-- Khách Hàng -->
-                                <DataGridTemplateColumn Header="Khách Hàng" Width="160">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding CustomerNameSnapshot}" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
-                                                <TextBlock Text="{Binding PhoneSnapshot}" FontSize="10" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!-- Kỳ Hóa Đơn -->
-                                <DataGridTemplateColumn Header="Kỳ Hóa Đơn" Width="170">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding PeriodStart, StringFormat='{}{0:yyyy-MM-dd}'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
-                                                <TextBlock Text=" ➔ " FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
-                                                <TextBlock Text="{Binding PeriodEnd, StringFormat='{}{0:yyyy-MM-dd}'}" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!-- Số Đơn -->
-                                <DataGridTextColumn Header="Số Đơn" Binding="{Binding OrderCount, StringFormat='{}{0} đơn'}" Width="80">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                            <Setter Property="FontSize" Value="11"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-
-                                <!-- Tổng Tiền -->
-                                <DataGridTextColumn Header="Tổng Tiền (VND)" Binding="{Binding GrandTotal, StringFormat='{}{0:N0} đ'}" Width="130">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                            <Setter Property="FontWeight" Value="Bold"/>
-                                            <Setter Property="Foreground" Value="{StaticResource Tinix.Color.Success}"/>
-                                            <Setter Property="Padding" Value="0,0,12,0"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-
-                                <!-- Trạng Thái -->
-                                <DataGridTemplateColumn Header="Trạng Thái" Width="110">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="8,2" Background="{StaticResource Tinix.Color.Success.Bg}" BorderBrush="{StaticResource Tinix.Color.Success.Border}" BorderThickness="1" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Success}"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!-- Thao Tác -->
-                                <DataGridTemplateColumn Header="Thao Tác" Width="*">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Content="👁️ Mở Bill" 
-                                                        Command="{Binding DataContext.OpenBillCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                        CommandParameter="{Binding}" 
-                                                        Style="{StaticResource Tinix.Button.Secondary}" 
-                                                        Padding="10,4" Margin="0,0,6,0" FontSize="11"/>
-                                                <Button Content="🖼️ Ảnh" 
-                                                        Command="{Binding DataContext.OpenFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                        CommandParameter="{Binding}" 
-                                                        Style="{StaticResource Tinix.Button.Ghost}" 
-                                                        Padding="8,4" Margin="0,0,6,0" FontSize="11" ToolTip="Mở tệp ảnh JPEG đã xuất"/>
-                                                <Button Content="📁 Thư Mục" 
-                                                        Command="{Binding DataContext.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                        CommandParameter="{Binding}" 
-                                                        Style="{StaticResource Tinix.Button.Ghost}" 
-                                                        Padding="8,4" Margin="0,0,6,0" FontSize="11" ToolTip="Mở thư mục chứa file hóa đơn"/>
-                                                <Button Content="🔄 Xuất Lại" 
-                                                        Command="{Binding DataContext.ReExportJpegCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                        CommandParameter="{Binding}" 
-                                                        Style="{StaticResource Tinix.Button.Ghost}" 
-                                                        Padding="8,4" FontSize="11" ToolTip="Xuất lại file hóa đơn JPEG và Excel"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-
-                        <!-- Empty State if no bills found -->
-                        <Border Grid.Row="1" Background="White" Visibility="{Binding HasNoBillsFound, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="40,30">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="🧾" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                                <TextBlock Text="Không tìm thấy hóa đơn nào trong phạm vi đã chọn" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource Tinix.Color.Text.Secondary}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Các hóa đơn đã khóa hoặc đã xuất sẽ hiển thị tại đây." FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Muted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
                 </TabItem>
             </TabControl>
         </Border>

@@ -12,6 +12,7 @@
             <converters:NumberThousandsConverter x:Key="NumberThousandsConverter"/>
             <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <converters:InverseBooleanConverter x:Key="InverseBoolConverter"/>
+            <converters:EnumToBooleanConverter x:Key="EnumToBoolConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

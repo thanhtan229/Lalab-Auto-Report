@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LalabAutoReport.Infrastructure.Reporting;
 
-public class WpfJpegBillExporter : IJpegBillExporter
+public class WpfJpegBillExporter : IJpegBillExporter, IBillVisualRenderer
 {
     public const int DefaultMaxLinesPerPage = 45;
 
@@ -30,33 +30,18 @@ public class WpfJpegBillExporter : IJpegBillExporter
         _logger = logger;
     }
 
-    public async Task<string> ExportBillToJpegAsync(CustomerBill bill, string? destinationDirectory = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<BitmapSource>> RenderBillBitmapsAsync(CustomerBill bill, CancellationToken cancellationToken = default)
     {
-        string exportDir = destinationDirectory ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(exportDir))
-        {
-            var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
-            exportDir = settings.BillExportFolder;
-        }
-
-        if (string.IsNullOrWhiteSpace(exportDir))
-        {
-            exportDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LalabReports", "Bills");
-        }
-
-        Directory.CreateDirectory(exportDir);
-
+        var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
         var pages = PaginateBill(bill, DefaultMaxLinesPerPage);
-        var exportedFiles = new List<string>();
+        var bitmaps = new List<BitmapSource>();
 
         void DoRender()
         {
             foreach (var page in pages)
             {
-                string fileName = GenerateDeterministicFileName(bill, page.PageNumber, page.TotalPages);
-                string filePath = Path.Combine(exportDir, fileName);
-                RenderPageToJpeg(bill, page, filePath);
-                exportedFiles.Add(filePath);
+                var bmp = RenderPageToBitmap(bill, page, settings);
+                bitmaps.Add(bmp);
             }
         }
 
@@ -83,6 +68,88 @@ public class WpfJpegBillExporter : IJpegBillExporter
             staThread.IsBackground = true;
             staThread.Start();
             await tcs.Task;
+        }
+
+        return bitmaps;
+    }
+
+    public Task<string> SaveBitmapToJpegAsync(BitmapSource bitmap, string destinationFilePath, int quality = 95, CancellationToken cancellationToken = default)
+    {
+        string? dir = Path.GetDirectoryName(destinationFilePath);
+        if (!string.IsNullOrWhiteSpace(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+        SaveBitmapToJpeg(bitmap, destinationFilePath, quality);
+        return Task.FromResult(destinationFilePath);
+    }
+
+    public BitmapSource StitchBitmapsVertically(IReadOnlyList<BitmapSource> pages)
+    {
+        if (pages == null || pages.Count == 0) throw new ArgumentException("No pages to stitch", nameof(pages));
+        if (pages.Count == 1) return pages[0];
+
+        int totalHeight = pages.Sum(p => p.PixelHeight);
+        int maxWidth = pages.Max(p => p.PixelWidth);
+
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, maxWidth, totalHeight));
+            double currentY = 0;
+            foreach (var page in pages)
+            {
+                dc.DrawImage(page, new Rect(0, currentY, page.PixelWidth, page.PixelHeight));
+                currentY += page.PixelHeight;
+            }
+        }
+
+        var rtb = new RenderTargetBitmap(maxWidth, totalHeight, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+        using var ms = new MemoryStream();
+        encoder.Save(ms);
+        ms.Position = 0;
+
+        var stitched = new BitmapImage();
+        stitched.BeginInit();
+        stitched.CacheOption = BitmapCacheOption.OnLoad;
+        stitched.StreamSource = ms;
+        stitched.EndInit();
+        stitched.Freeze();
+        return stitched;
+    }
+
+    public async Task<string> ExportBillToJpegAsync(CustomerBill bill, string? destinationDirectory = null, CancellationToken cancellationToken = default)
+    {
+        var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
+        string exportDir = destinationDirectory ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(exportDir))
+        {
+            exportDir = settings.BillExportFolder;
+        }
+
+        if (string.IsNullOrWhiteSpace(exportDir))
+        {
+            exportDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LalabReports", "Bills");
+        }
+
+        Directory.CreateDirectory(exportDir);
+
+        var pages = PaginateBill(bill, DefaultMaxLinesPerPage);
+        var bitmaps = await RenderBillBitmapsAsync(bill, cancellationToken);
+        var exportedFiles = new List<string>();
+
+        for (int i = 0; i < pages.Count; i++)
+        {
+            var page = pages[i];
+            var bmp = bitmaps[i];
+            string fileName = GenerateDeterministicFileName(bill, page.PageNumber, page.TotalPages);
+            string filePath = Path.Combine(exportDir, fileName);
+            SaveBitmapToJpeg(bmp, filePath);
+            exportedFiles.Add(filePath);
         }
 
         string primaryFilePath = exportedFiles.FirstOrDefault() ?? Path.Combine(exportDir, GenerateDeterministicFileName(bill));
@@ -232,14 +299,14 @@ public class WpfJpegBillExporter : IJpegBillExporter
         return pages;
     }
 
-    private static void RenderPageToJpeg(CustomerBill bill, BillPageData page, string destinationFilePath)
+    public static BitmapSource RenderPageToBitmap(CustomerBill bill, BillPageData page, AppSettings? settings = null)
     {
         const double width = 1080;
         const double marginX = 64;
         const double contentWidth = width - (marginX * 2);
 
         // Pre-calculate dynamic canvas height for this page
-        double calculatedHeight = MeasurePageHeight(bill, page, contentWidth);
+        double calculatedHeight = MeasurePageHeight(bill, page, contentWidth, settings);
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
@@ -257,16 +324,79 @@ public class WpfJpegBillExporter : IJpegBillExporter
             var typefaceRegular = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
             var typefaceSemiBold = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
 
-            var brandFt = CreateText("Lalab Photo Printing Service", typefaceDisplay, 14, Color.FromRgb(37, 99, 235));
-            dc.DrawText(brandFt, new Point(marginX, currentY));
-            currentY += 28;
+            string wsName = !string.IsNullOrWhiteSpace(settings?.WorkshopName) 
+                ? settings.WorkshopName 
+                : "XƯỞNG IN ẢNH CHUYÊN NGHIỆP";
+            string wsSlogan = !string.IsNullOrWhiteSpace(settings?.WorkshopSlogan) 
+                ? settings.WorkshopSlogan 
+                : "Dịch vụ in ấn ảnh & Album chuyên nghiệp";
+            string wsPhone = settings?.WorkshopPhone?.Trim() ?? string.Empty;
+            string wsAddr = settings?.WorkshopAddress?.Trim() ?? string.Empty;
+
+            BitmapSource? logoBitmap = TryLoadBitmap(settings?.WorkshopLogoPath);
+
+            double headerTextX = marginX;
+            double brandSectionStartY = currentY;
+
+            if (logoBitmap != null)
+            {
+                // Draw logo: max height 56, width proportional
+                double maxLogoH = 56;
+                double maxLogoW = 140;
+                double scale = Math.Min(maxLogoH / logoBitmap.PixelHeight, maxLogoW / logoBitmap.PixelWidth);
+                double logoW = logoBitmap.PixelWidth * scale;
+                double logoH = logoBitmap.PixelHeight * scale;
+
+                dc.DrawImage(logoBitmap, new Rect(marginX, currentY + ((maxLogoH - logoH) / 2), logoW, logoH));
+                headerTextX = marginX + logoW + 18;
+            }
+
+            // Draw Brand Name
+            var brandFt = CreateText(wsName.ToUpperInvariant(), typefaceDisplay, 15, Color.FromRgb(26, 86, 219));
+            dc.DrawText(brandFt, new Point(headerTextX, currentY));
+            currentY += brandFt.Height + 2;
+
+            // Draw Slogan
+            var sloganFt = CreateText(wsSlogan, typefaceRegular, 13, Color.FromRgb(71, 85, 105));
+            dc.DrawText(sloganFt, new Point(headerTextX, currentY));
+            currentY += sloganFt.Height + 2;
+
+            // Draw Contact info if available
+            string contactInfo = string.Empty;
+            if (!string.IsNullOrWhiteSpace(wsPhone) && !string.IsNullOrWhiteSpace(wsAddr))
+            {
+                contactInfo = $"Hotline: {wsPhone}  •  Địa chỉ: {wsAddr}";
+            }
+            else if (!string.IsNullOrWhiteSpace(wsPhone))
+            {
+                contactInfo = $"Hotline: {wsPhone}";
+            }
+            else if (!string.IsNullOrWhiteSpace(wsAddr))
+            {
+                contactInfo = $"Địa chỉ: {wsAddr}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(contactInfo))
+            {
+                var contactFt = CreateText(contactInfo, typefaceRegular, 12, Color.FromRgb(100, 116, 139));
+                dc.DrawText(contactFt, new Point(headerTextX, currentY));
+                currentY += contactFt.Height + 2;
+            }
+
+            if (logoBitmap != null)
+            {
+                currentY = Math.Max(currentY, brandSectionStartY + 60);
+            }
+
+            currentY += 12; // Gap before invoice title
 
             string titleText = page.TotalPages > 1
-                ? $"HÓA ĐƠN BÁN HÀNG & IN ẤN — TRANG {page.PageNumber}/{page.TotalPages}"
-                : "HÓA ĐƠN BÁN HÀNG & IN ẤN";
-            var titleFt = CreateText(titleText, typefaceDisplay, 28, Color.FromRgb(15, 23, 42));
-            dc.DrawText(titleFt, new Point(marginX, currentY));
-            currentY += 44;
+                ? $"HÓA ĐƠN BÁN HÀNG — TRANG {page.PageNumber}/{page.TotalPages}"
+                : "HÓA ĐƠN BÁN HÀNG";
+            var titleFt = CreateText(titleText, typefaceDisplay, 26, Color.FromRgb(15, 23, 42));
+            double titleX = (width - titleFt.Width) / 2;
+            dc.DrawText(titleFt, new Point(titleX, currentY));
+            currentY += titleFt.Height + 14;
 
             // Info Card (Bill number, Customer, Period, Date)
             var cardRect = new Rect(marginX, currentY, contentWidth, 100);
@@ -397,11 +527,13 @@ public class WpfJpegBillExporter : IJpegBillExporter
                 if (orderChunk.ShowSubtotalOnThisPage)
                 {
                     double subtotalY = currentY + 4;
-                    var subtotalLabelFt = CreateText($"Tạm tính {order.OrderNameSnapshot}:", typefaceSemiBold, 14, Color.FromRgb(71, 85, 105));
-                    dc.DrawText(subtotalLabelFt, new Point(width - marginX - 300, subtotalY));
-
                     var subtotalValFt = CreateText(order.Subtotal.ToString("#,##0", ViCulture) + " đ", typefaceDisplay, 16, Color.FromRgb(30, 41, 59));
-                    dc.DrawText(subtotalValFt, new Point(width - marginX - 16 - subtotalValFt.Width, subtotalY));
+                    double valX = width - marginX - 16 - subtotalValFt.Width;
+                    dc.DrawText(subtotalValFt, new Point(valX, subtotalY));
+
+                    var subtotalLabelFt = CreateText("Tạm tính:", typefaceSemiBold, 14, Color.FromRgb(71, 85, 105));
+                    double labelX = valX - subtotalLabelFt.Width - 14;
+                    dc.DrawText(subtotalLabelFt, new Point(labelX, subtotalY));
 
                     currentY = subtotalY + 36;
                 }
@@ -455,6 +587,103 @@ public class WpfJpegBillExporter : IJpegBillExporter
 
                 currentY += 104;
 
+                // QR PAYMENT CARD (Tinix Card Style)
+                bool isVietQr = (settings?.QrMode == QrDisplayMode.VietQrAuto || (settings?.QrMode == null && settings?.EnableVietQrOnBill == true))
+                                && !string.IsNullOrWhiteSpace(settings?.BankAccountNumber);
+                bool isCustomQr = (settings?.QrMode == QrDisplayMode.CustomImage)
+                                  && !string.IsNullOrWhiteSpace(settings?.CustomQrImagePath)
+                                  && File.Exists(settings.CustomQrImagePath);
+
+                if (isVietQr || isCustomQr)
+                {
+                    double cardHeight = 170;
+                    var qrCardRect = new Rect(marginX, currentY, contentWidth, cardHeight);
+
+                    // Card background & border
+                    dc.DrawRoundedRectangle(
+                        new SolidColorBrush(Color.FromRgb(248, 250, 252)), 
+                        new Pen(new SolidColorBrush(Color.FromRgb(226, 232, 240)), 1.5), 
+                        qrCardRect, 8, 8);
+
+                    // Draw QR Code
+                    double qrSize = 138;
+                    double qrMargin = 16;
+                    var qrRect = new Rect(marginX + qrMargin, currentY + qrMargin, qrSize, qrSize);
+
+                    // White backing for QR
+                    dc.DrawRoundedRectangle(Brushes.White, new Pen(new SolidColorBrush(Color.FromRgb(203, 213, 225)), 1), qrRect, 6, 6);
+
+                    // Draw inner QR Code vector or custom image with margin
+                    var innerQrRect = new Rect(qrRect.X + 4, qrRect.Y + 4, qrRect.Width - 8, qrRect.Height - 8);
+
+                    if (isVietQr)
+                    {
+                        string qrPayload = VietQrGenerator.BuildVietQrPayload(
+                            settings!.BankBinOrCode, 
+                            settings.BankAccountNumber, 
+                            bill.GrandTotal, 
+                            bill.BillNumber);
+
+                        VietQrGenerator.RenderQrCode(dc, innerQrRect, qrPayload);
+                    }
+                    else if (isCustomQr)
+                    {
+                        var customQrBmp = TryLoadBitmap(settings!.CustomQrImagePath);
+                        if (customQrBmp != null)
+                        {
+                            dc.DrawImage(customQrBmp, innerQrRect);
+                        }
+                    }
+
+                    // Text Info next to QR
+                    double textX = marginX + qrSize + 36;
+                    double textY = currentY + 18;
+
+                    string qrTitle = isVietQr 
+                        ? "QUÉT MÃ VIETQR ĐỂ THANH TOÁN TỰ ĐỘNG" 
+                        : "QUÉT MÃ QR ĐỂ THANH TOÁN";
+                    var qrTitleFt = CreateText(qrTitle, typefaceDisplay, 15, Color.FromRgb(30, 58, 138));
+                    dc.DrawText(qrTitleFt, new Point(textX, textY));
+                    textY += 24;
+
+                    if (!string.IsNullOrWhiteSpace(settings?.BankAccountNumber))
+                    {
+                        string bankName = VietnameseBanks.GetShortNameOrBin(settings.BankBinOrCode);
+                        string bankDisplay = !string.IsNullOrWhiteSpace(bankName) ? $"Ngân hàng: {bankName}" : "Ngân hàng";
+                        var bankInfoFt = CreateText($"{bankDisplay}  •  Số TK: {settings.BankAccountNumber}", typefaceDisplay, 14, Color.FromRgb(15, 23, 42));
+                        dc.DrawText(bankInfoFt, new Point(textX, textY));
+                        textY += 22;
+
+                        if (!string.IsNullOrWhiteSpace(settings.BankAccountName))
+                        {
+                            var ownerFt = CreateText($"Chủ tài khoản: {settings.BankAccountName.ToUpper()}", typefaceSemiBold, 13, Color.FromRgb(51, 65, 85));
+                            dc.DrawText(ownerFt, new Point(textX, textY));
+                            textY += 20;
+                        }
+
+                        var memoFt = CreateText($"Nội dung CK: {bill.BillNumber}  (Số tiền: {bill.GrandTotal.ToString("#,##0", ViCulture)} đ)", typefaceRegular, 12, Color.FromRgb(71, 85, 105));
+                        dc.DrawText(memoFt, new Point(textX, textY));
+                        textY += 18;
+
+                        string hint = isVietQr
+                            ? "Hỗ trợ mọi app ngân hàng (VCB, MB, Tech, Vietin, MoMo...)"
+                            : "Quét mã bằng ứng dụng ngân hàng hoặc ví điện tử";
+                        var subHintFt = CreateText(hint, typefaceRegular, 11, Color.FromRgb(148, 163, 184));
+                        dc.DrawText(subHintFt, new Point(textX, textY));
+                    }
+                    else
+                    {
+                        var memoFt = CreateText($"Nội dung CK: {bill.BillNumber}  (Số tiền: {bill.GrandTotal.ToString("#,##0", ViCulture)} đ)", typefaceRegular, 13, Color.FromRgb(71, 85, 105));
+                        dc.DrawText(memoFt, new Point(textX, textY));
+                        textY += 22;
+
+                        var subHintFt = CreateText("Quét mã bằng ứng dụng ngân hàng hoặc ví điện tử", typefaceRegular, 11, Color.FromRgb(148, 163, 184));
+                        dc.DrawText(subHintFt, new Point(textX, textY));
+                    }
+
+                    currentY += cardHeight + 20;
+                }
+
                 // Optional note
                 if (!string.IsNullOrWhiteSpace(bill.Note))
                 {
@@ -464,9 +693,13 @@ public class WpfJpegBillExporter : IJpegBillExporter
                 }
 
                 // Footer
+                string footerMsg = !string.IsNullOrWhiteSpace(settings?.InvoiceFooterMessage)
+                    ? settings.InvoiceFooterMessage
+                    : "Cảm ơn quý khách đã tin tưởng và ủng hộ dịch vụ!";
+
                 string footerText = page.TotalPages > 1
-                    ? $"Trang {page.PageNumber}/{page.TotalPages} — Cảm ơn quý khách đã tin tưởng và ủng hộ xưởng in Lalab!"
-                    : "Cảm ơn quý khách đã tin tưởng và ủng hộ xưởng in Lalab!";
+                    ? $"Trang {page.PageNumber}/{page.TotalPages} — {footerMsg}"
+                    : footerMsg;
                 var footerFt = CreateText(footerText, typefaceRegular, 13, Color.FromRgb(148, 163, 184));
                 dc.DrawText(footerFt, new Point(width / 2 - (footerFt.Width / 2), currentY));
             }
@@ -478,30 +711,73 @@ public class WpfJpegBillExporter : IJpegBillExporter
                 dc.DrawText(contFt, new Point(marginX + 16, currentY));
                 currentY += 40;
 
-                var footerFt = CreateText($"Trang {page.PageNumber}/{page.TotalPages} — Cảm ơn quý khách đã tin tưởng và ủng hộ xưởng in Lalab!", typefaceRegular, 13, Color.FromRgb(148, 163, 184));
+                string footerMsg = !string.IsNullOrWhiteSpace(settings?.InvoiceFooterMessage)
+                    ? settings.InvoiceFooterMessage
+                    : "Cảm ơn quý khách đã tin tưởng và ủng hộ dịch vụ!";
+
+                var footerFt = CreateText($"Trang {page.PageNumber}/{page.TotalPages} — {footerMsg}", typefaceRegular, 13, Color.FromRgb(148, 163, 184));
                 dc.DrawText(footerFt, new Point(width / 2 - (footerFt.Width / 2), currentY));
             }
         }
 
-        // Render to Bitmap and Encode to JPEG
+        // Render to Bitmap and convert to in-memory BitmapImage
         int pixelHeight = (int)Math.Ceiling(calculatedHeight);
         var rtb = new RenderTargetBitmap(1080, pixelHeight, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(visual);
 
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+        using var ms = new MemoryStream();
+        encoder.Save(ms);
+        ms.Position = 0;
+
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.StreamSource = ms;
+        bitmap.EndInit();
+        bitmap.Freeze();
+
+        return bitmap;
+    }
+
+    public static void SaveBitmapToJpeg(BitmapSource bitmap, string destinationFilePath, int quality = 95)
+    {
         var encoder = new JpegBitmapEncoder
         {
-            QualityLevel = 95
+            QualityLevel = quality
         };
-        encoder.Frames.Add(BitmapFrame.Create(rtb));
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
 
         using var fileStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write);
         encoder.Save(fileStream);
     }
 
-    private static double MeasurePageHeight(CustomerBill bill, BillPageData page, double contentWidth)
+    private static void RenderPageToJpeg(CustomerBill bill, BillPageData page, string destinationFilePath, AppSettings? settings = null)
     {
-        // Header base height
-        double h = 210;
+        var bitmap = RenderPageToBitmap(bill, page, settings);
+        SaveBitmapToJpeg(bitmap, destinationFilePath);
+    }
+
+    private static double MeasureHeaderHeight(AppSettings? settings)
+    {
+        double h = 48; // top margin
+        bool hasLogo = !string.IsNullOrWhiteSpace(settings?.WorkshopLogoPath) && File.Exists(settings.WorkshopLogoPath);
+        bool hasContact = !string.IsNullOrWhiteSpace(settings?.WorkshopPhone) || !string.IsNullOrWhiteSpace(settings?.WorkshopAddress);
+
+        double brandH = hasContact ? 76 : 56;
+        if (hasLogo && brandH < 60) brandH = 60;
+        h += brandH + 12; // gap before Title
+        h += 44; // Title
+        h += 100; // Info Card
+        h += 20; // Spacing after info card
+        return h;
+    }
+
+    private static double MeasurePageHeight(CustomerBill bill, BillPageData page, double contentWidth, AppSettings? settings = null)
+    {
+        // Header dynamic height
+        double h = MeasureHeaderHeight(settings);
 
         foreach (var orderChunk in page.Orders)
         {
@@ -556,6 +832,18 @@ public class WpfJpegBillExporter : IJpegBillExporter
             // Grand total banner
             h += 110;
 
+            // QR card
+            bool isVietQr = (settings?.QrMode == QrDisplayMode.VietQrAuto || (settings?.QrMode == null && settings?.EnableVietQrOnBill == true))
+                            && !string.IsNullOrWhiteSpace(settings?.BankAccountNumber);
+            bool isCustomQr = (settings?.QrMode == QrDisplayMode.CustomImage)
+                              && !string.IsNullOrWhiteSpace(settings?.CustomQrImagePath)
+                              && File.Exists(settings.CustomQrImagePath);
+
+            if (isVietQr || isCustomQr)
+            {
+                h += 190;
+            }
+
             // Note
             if (!string.IsNullOrWhiteSpace(bill.Note))
             {
@@ -572,6 +860,29 @@ public class WpfJpegBillExporter : IJpegBillExporter
         }
 
         return Math.Max(600, h);
+    }
+
+    public static BitmapSource? TryLoadBitmap(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri(Path.GetFullPath(filePath), UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static FormattedText CreateText(string text, Typeface typeface, double fontSize, Color color)

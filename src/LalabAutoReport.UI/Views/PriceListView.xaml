@@ -20,10 +20,28 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock Text="ĐƠN GIÁ &amp; QUY CÁCH" FontSize="{StaticResource Tinix.FontSize.Caption}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
-            <TextBlock Text="Bảng Giá Quy Cách In Ảnh &amp; Album" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="{StaticResource Tinix.FontSize.Display}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="ĐƠN GIÁ &amp; QUY CÁCH" FontSize="{StaticResource Tinix.FontSize.Caption}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}" Margin="0,0,0,4"/>
+                <TextBlock Text="Bảng Giá Quy Cách In Ảnh &amp; Album" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="{StaticResource Tinix.FontSize.Display}" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+            </StackPanel>
+            <Button Grid.Column="1" 
+                    Style="{StaticResource Tinix.Button.Secondary}" 
+                    Height="38" 
+                    Padding="16,0" 
+                    VerticalAlignment="Center" 
+                    Click="ManageFamilyAliases_Click"
+                    ToolTip="Cấu hình các từ khóa nhận diện dùng chung cho từng dòng sản phẩm (Album, Ảnh in...)">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🧩" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Quản Lý Alias Dòng..." FontWeight="SemiBold" FontSize="{StaticResource Tinix.FontSize.Small}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -97,12 +115,12 @@
                                                    FontSize="{StaticResource Tinix.FontSize.Body}" 
                                                    VerticalAlignment="Center"/>
                                         <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" Background="#EEF2F6" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#455A64" FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding FamilyName, TargetNullValue=Ảnh in}" FontSize="10" Foreground="#455A64" FontWeight="Medium"/>
                                         </Border>
                                     </StackPanel>
                                     <TextBlock Grid.Row="0" Grid.Column="1" 
                                                FontWeight="Bold" 
-                                               Foreground="{StaticResource Tinix.Color.Primary}" 
+                                               Foreground="{StaticResource Tinix.Color.Text.Primary}" 
                                                FontSize="{StaticResource Tinix.FontSize.Body}" 
                                                VerticalAlignment="Center">
                                         <TextBlock.Style>
@@ -131,15 +149,16 @@
                         <StackPanel>
                             <TextBlock Text="Thêm sản phẩm / quy cách mới:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,8" FontSize="{StaticResource Tinix.FontSize.Small}"/>
                             
-                            <!-- Category Selection -->
+                            <!-- Category / Family Selection -->
                             <Grid Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="140"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <ComboBox Grid.Column="0" 
-                                          ItemsSource="{Binding AvailableCategories}" 
-                                          SelectedItem="{Binding NewCategory}" 
+                                          ItemsSource="{Binding AvailableFamilies}" 
+                                          SelectedItem="{Binding SelectedCreationFamily}" 
+                                          DisplayMemberPath="Name"
                                           Height="34" 
                                           Margin="0,0,6,0"
                                           HorizontalContentAlignment="Center"
@@ -165,10 +184,28 @@
                                 </TextBox>
                             </Grid>
 
-                            <!-- PhotoPrint Price Field -->
+                            <!-- PhotoPrint Price Fields (3 Cấp Độ Giá) -->
                             <StackPanel Visibility="{Binding IsCreatingPhotoPrint, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8">
-                                <TextBlock Text="Đơn giá mỗi ảnh in (VND):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
-                                <TextBox Text="{Binding NewSpecPrice, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                <TextBlock Text="BẢNG GIÁ THEO CẤP ĐỘ (VND/ảnh):" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock Text="Khách Lẻ:" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding NewSpecPrice, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="3,0,3,0">
+                                        <TextBlock Text="Studio (0 = Lẻ):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding NewSpecPriceStudio, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" ToolTip="Để 0 để tự động áp dụng giá khách lẻ" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                        <TextBlock Text="Đại Lý (0 = Lẻ):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding NewSpecPriceVip, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" ToolTip="Để 0 để tự động áp dụng giá khách lẻ" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    </StackPanel>
+                                </Grid>
                             </StackPanel>
 
                             <!-- Album Pricing Fields -->
@@ -227,7 +264,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Border CornerRadius="{StaticResource Tinix.Radius.Full}" Padding="10,3" Background="#EEF2F6" VerticalAlignment="Center" Margin="0,0,10,0">
-                                        <TextBlock Text="{Binding SelectedSpec.Category}" Foreground="#455A64" FontSize="11" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SelectedSpec.FamilyName, TargetNullValue=Ảnh in}" Foreground="#455A64" FontSize="11" FontWeight="SemiBold"/>
                                     </Border>
                                     <Button Style="{StaticResource Tinix.Button.Secondary}" Height="30" Padding="10,0" ToolTip="Xóa quy cách sản phẩm này" Click="DeleteSpec_Click" VerticalAlignment="Center" Foreground="{StaticResource Tinix.Color.Danger}">
                                         <StackPanel Orientation="Horizontal">
@@ -250,17 +287,27 @@
                                         </Style.Triggers>
                                     </Style>
                                 </StackPanel.Style>
+                                <TextBlock Text="BẢNG GIÁ THEO CẤP ĐỘ (VND/ảnh):" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                        <TextBlock Text="Đơn giá VND/ảnh:" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock Text="Khách Lẻ:" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
                                         <TextBox Text="{Binding EditUnitPrice, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
                                     </StackPanel>
-                                    <Button Grid.Column="1" Command="{Binding SaveSelectedSpecCommand}" Content="Lưu Đơn Giá" VerticalAlignment="Bottom" Height="34" Padding="16,0" Style="{StaticResource Tinix.Button.Info}"/>
+                                    <StackPanel Grid.Column="1" Margin="3,0,3,0">
+                                        <TextBlock Text="Studio (0 = Lẻ):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding EditUnitPriceStudio, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                        <TextBlock Text="Đại Lý (0 = Lẻ):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding EditUnitPriceVip, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    </StackPanel>
                                 </Grid>
+                                <Button Command="{Binding SaveSelectedSpecCommand}" Content="💾 Lưu Bảng Giá Ảnh In" Height="34" Padding="16,0" Style="{StaticResource Tinix.Button.Info}"/>
                             </StackPanel>
 
                             <!-- Edit Album Pricing -->
@@ -278,132 +325,119 @@
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="100"/>
-                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Margin="0,0,4,0">
-                                        <TextBlock Text="Giá gói album (VND):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
-                                        <TextBox Text="{Binding EditBasePrice, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Margin="4,0,4,0">
-                                        <TextBlock Text="Số tờ chuẩn:" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
-                                        <TextBox Text="{Binding EditIncludedSheets, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Margin="4,0,0,0">
-                                        <TextBlock Text="Giá tờ phát sinh (VND):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" Margin="0,0,0,2"/>
-                                        <TextBox Text="{Binding EditExtraSheetPrice, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="34" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    <TextBlock Grid.Column="0" Text="BẢNG GIÁ GÓI &amp; TỜ PHÁT SINH THEO CẤP ĐỘ:" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Số tờ chuẩn:" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBox Text="{Binding EditIncludedSheets, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Width="60" Height="28" Style="{StaticResource Tinix.TextBox.Standard}"/>
                                     </StackPanel>
                                 </Grid>
-                                <Button Command="{Binding SaveSelectedSpecCommand}" Content="Lưu Cấu Hình Album" Height="34" Margin="0,4,0,0" Style="{StaticResource Tinix.Button.Info}"/>
+
+                                <!-- Row 1: Khách Lẻ -->
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Khách Lẻ:" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                        <TextBlock Text="Giá gói album (VND):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="10" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding EditBasePrice, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="30" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                                        <TextBlock Text="Tờ phát sinh (VND):" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="10" Margin="0,0,0,2"/>
+                                        <TextBox Text="{Binding EditExtraSheetPrice, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="30" Style="{StaticResource Tinix.TextBox.Standard}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Row 2: Studio -->
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Studio:" FontWeight="SemiBold" FontSize="11" Foreground="#0284C7" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                        <TextBox Text="{Binding EditBasePriceStudio, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="30" Style="{StaticResource Tinix.TextBox.Standard}" ToolTip="Để 0 để tự động áp dụng giá khách lẻ"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                                        <TextBox Text="{Binding EditExtraSheetPriceStudio, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="30" Style="{StaticResource Tinix.TextBox.Standard}" ToolTip="Để 0 để tự động áp dụng giá khách lẻ"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Row 3: Đại Lý -->
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Đại Lý:" FontWeight="SemiBold" FontSize="11" Foreground="#16A34A" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Margin="4,0,4,0">
+                                        <TextBox Text="{Binding EditBasePriceVip, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="30" Style="{StaticResource Tinix.TextBox.Standard}" ToolTip="Để 0 để tự động áp dụng giá khách lẻ"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                                        <TextBox Text="{Binding EditExtraSheetPriceVip, Converter={StaticResource NumberThousandsConverter}, UpdateSourceTrigger=PropertyChanged}" behaviors:NumericInputBehavior.IsThousands="True" Height="30" Style="{StaticResource Tinix.TextBox.Standard}" ToolTip="Để 0 để tự động áp dụng giá khách lẻ"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Button Command="{Binding SaveSelectedSpecCommand}" Content="💾 Lưu Cấu Hình Album Đa Cấp" Height="34" Margin="0,4,0,0" Style="{StaticResource Tinix.Button.Info}"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <!-- TabControl for Specific Aliases vs Shared Family Aliases -->
-                    <TabControl Grid.Row="1" Grid.RowSpan="3" Background="Transparent" BorderThickness="0" Margin="0,0,0,12">
-                        <!-- Tab 1: Product-Specific Aliases -->
-                        <TabItem Header="Alias Riêng Của Sản Phẩm">
-                            <Grid Margin="0,10,0,0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                    <!-- Specific Aliases Section -->
+                    <Grid Grid.Row="1" Grid.RowSpan="3" Margin="0,8,0,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="Alias chính xác map riêng vào sản phẩm này:" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,8" FontSize="{StaticResource Tinix.FontSize.Small}"/>
+                        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                            <TextBlock Text="ALIAS RIÊNG CỦA SẢN PHẨM" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="{StaticResource Tinix.FontSize.Caption}"/>
+                            <TextBlock Text="Các tên viết tắt hoặc ký hiệu thư mục map trực tiếp vào riêng sản phẩm này (ví dụ: '13x18', '1318'):" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="0,2,0,0"/>
+                        </StackPanel>
 
-                                <ListBox Grid.Row="1" ItemsSource="{Binding SelectedSpec.Aliases}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" Background="{StaticResource Tinix.Color.Bg.Subtle}" Margin="0,0,0,12" Padding="6">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type domain:PrintSpecificationAlias}">
-                                            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="10,6" Margin="0,2" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" FontFamily="{StaticResource Tinix.Font.Mono}" FontSize="{StaticResource Tinix.FontSize.Small}"/>
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <Button Style="{StaticResource Tinix.Button.Icon}" Margin="0,0,6,0" ToolTip="Sửa alias quy cách" Click="EditAlias_Click">
-                                                            <Path Width="13" Height="13" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                                                        </Button>
-                                                        <Button Style="{StaticResource Tinix.Button.Icon.Danger}" ToolTip="Xóa alias quy cách" Click="RemoveAlias_Click">
-                                                            <Path Width="13" Height="13" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                                        </Button>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
+                        <ListBox Grid.Row="1" ItemsSource="{Binding SelectedSpec.Aliases}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" Background="{StaticResource Tinix.Color.Bg.Subtle}" Margin="0,0,0,12" Padding="6">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type domain:PrintSpecificationAlias}">
+                                    <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="10,6" Margin="0,2" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" FontFamily="{StaticResource Tinix.Font.Mono}" FontSize="{StaticResource Tinix.FontSize.Small}"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource Tinix.Button.Icon}" Margin="0,0,6,0" ToolTip="Sửa alias quy cách" Click="EditAlias_Click">
+                                                    <Path Width="13" Height="13" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                                </Button>
+                                                <Button Style="{StaticResource Tinix.Button.Icon.Danger}" ToolTip="Xóa alias quy cách" Click="RemoveAlias_Click">
+                                                    <Path Width="13" Height="13" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
-                                <StackPanel Grid.Row="2">
-                                    <TextBlock Text="Thêm alias cho riêng quy cách này (ví dụ: '13x18' map vào '13x18 in'):" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox Text="{Binding NewSpecAlias, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
-                                        <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Info}" Padding="16,0" Height="34"/>
-                                    </Grid>
-                                </StackPanel>
+                        <StackPanel Grid.Row="2">
+                            <TextBlock Text="Thêm alias cho riêng quy cách này (ví dụ: '13x18' map vào '13x18 in'):" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding NewSpecAlias, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
+                                <Button Grid.Column="1" Command="{Binding AddAliasCommand}" Content="Thêm Alias" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Info}" Padding="16,0" Height="34"/>
                             </Grid>
-                        </TabItem>
-
-                        <!-- Tab 2: Shared Family Aliases -->
-                        <TabItem Header="Alias Dòng (Dùng Chung Mọi Size)">
-                            <Grid Margin="0,10,0,0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <StackPanel Grid.Row="0" Margin="0,0,0,8">
-                                    <Grid Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Chọn dòng sản phẩm: " VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="{StaticResource Tinix.FontSize.Small}"/>
-                                        <ComboBox Grid.Column="1" ItemsSource="{Binding Families}" SelectedItem="{Binding SelectedFamily}" DisplayMemberPath="Name" Height="32" VerticalContentAlignment="Center"/>
-                                    </Grid>
-                                    <TextBlock Text="💡 Alias ở đây được dùng chung cho TẤT CẢ các kích thước thuộc dòng (vd: 'ab', 'alb', 'album' cho Album; 'in', 'anh' cho Ảnh in)." FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}" TextWrapping="Wrap"/>
-                                </StackPanel>
-
-                                <ListBox Grid.Row="1" ItemsSource="{Binding SelectedFamily.Aliases}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" Background="{StaticResource Tinix.Color.Bg.Subtle}" Margin="0,0,0,12" Padding="6">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type domain:ProductFamilyAlias}">
-                                            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="10,6" Margin="0,2" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding AliasText}" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center" FontFamily="{StaticResource Tinix.Font.Mono}" FontSize="{StaticResource Tinix.FontSize.Small}"/>
-                                                    <Button Grid.Column="1" Style="{StaticResource Tinix.Button.Icon.Danger}" ToolTip="Xóa alias dùng chung" Click="RemoveFamilyAlias_Click">
-                                                        <Path Width="13" Height="13" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                                    </Button>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-
-                                <StackPanel Grid.Row="2">
-                                    <TextBlock Text="Thêm alias dùng chung mới (ví dụ: 'ab', 'alb', 'cuon'):" FontSize="{StaticResource Tinix.FontSize.Caption}" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox Text="{Binding NewFamilyAlias, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34"/>
-                                        <Button Grid.Column="1" Command="{Binding AddFamilyAliasCommand}" Content="Thêm Family Alias" Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Info}" Padding="16,0" Height="34"/>
-                                    </Grid>
-                                </StackPanel>
-                            </Grid>
-                        </TabItem>
-                    </TabControl>
+                        </StackPanel>
+                    </Grid>
 
                     <!-- Status -->
                     <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" FontSize="{StaticResource Tinix.FontSize.Caption}"/>

@@ -1,0 +1,163 @@
+[
+  {
+    "id": "2c068fa0-e170-45fc-ba1f-bc7f797a5e1b",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "63969d57-ea96-4b6d-a410-0ad18fd82fda",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T06:23:15.390692Z"
+  },
+  {
+    "id": "9b5cdc7a-d4df-4027-b650-f3cf6ce79230",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "b92579ee-0e48-42e7-81a8-71e1f6bdae05",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T06:24:19.005738Z"
+  },
+  {
+    "id": "abb5adea-6f86-4f73-94b0-a1b364840b64",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "5cf000ba-18f0-447b-9d0e-2b7b32f60f64",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T06:57:23.479899Z"
+  },
+  {
+    "id": "05e61adb-9051-4fd8-b6ed-01445962652c",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "7896edfc-90ef-4777-97ab-3577756705c7",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T07:19:57.281699Z"
+  },
+  {
+    "id": "79e8dcd0-42f2-4daf-9bbc-8aeea0e0f239",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "86f1a0d0-8a01-4aa3-8dd3-4e175e392325",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T08:00:45.255348Z"
+  },
+  {
+    "id": "454d9dd3-3342-40d2-bc8f-3c582d151bd8",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "2b8bfbe2-dc7b-4204-8ccf-aa7d769fb00f",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T08:16:19.70065Z"
+  },
+  {
+    "id": "3c111465-8809-4bcb-99d2-2c074f365776",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "604f70c1-6ba7-41a2-922e-337d950390d5",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T09:25:20.078834Z"
+  },
+  {
+    "id": "fd0e079a-093c-4187-bd3b-eed959ee5336",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "c86f8c78-c523-4d39-8b15-f70abe8590e3",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-02T09:39:12.39256Z"
+  },
+  {
+    "id": "a0a675ed-8ce8-402a-9fc8-6fd949e798e7",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/message": "Fix remote print claim/ACK recovery and authoritative mobile bill snapshots; validated 46 tests",
+      "workers/triggered_by": "deployment"
+    },
+    "versions": [
+      {
+        "version_id": "681ef6eb-3938-49bc-a865-b53f433e61a0",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-03T01:31:16.971276Z"
+  },
+  {
+    "id": "9cb1721d-f730-4af9-8552-620e0bb24f34",
+    "source": "wrangler",
+    "strategy": "percentage",
+    "author_email": "thanhtan229@gmail.com",
+    "annotations": {
+      "workers/triggered_by": "secret"
+    },
+    "versions": [
+      {
+        "version_id": "982d60eb-a645-49d6-a452-21c3868b1178",
+        "percentage": 100
+      }
+    ],
+    "created_on": "2026-10-03T01:32:34.899159Z"
+  }
+]

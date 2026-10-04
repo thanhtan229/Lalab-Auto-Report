@@ -1,5 +1,9 @@
+using System;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using LalabAutoReport.Core.Domain;
 using LalabAutoReport.UI.ViewModels;
 
@@ -39,6 +43,16 @@ public partial class DashboardView : UserControl
         if (ViewModel != null) ViewModel.CurrentFilter = "Billed";
     }
 
+    private void FilterUndelivered_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null) ViewModel.CurrentFilter = "Undelivered";
+    }
+
+    private void FilterDelivered_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null) ViewModel.CurrentFilter = "Delivered";
+    }
+
     private void OpenOrderFolder_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
@@ -47,13 +61,6 @@ public partial class DashboardView : UserControl
         }
     }
 
-    private void RescanOrder_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.DataContext is OrderDisplayModel order && ViewModel != null)
-        {
-            ViewModel.RescanOrderCommand.Execute(order);
-        }
-    }
 
     private void DeleteOrder_Click(object sender, RoutedEventArgs e)
     {
@@ -69,6 +76,29 @@ public partial class DashboardView : UserControl
         {
             ViewModel.ComputeOrViewBillCommand.Execute(order);
         }
+    }
+
+    public void OrderCard_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is DependencyObject dep && FindVisualParent<Button>(dep) != null)
+        {
+            return;
+        }
+
+        if (sender is ListBoxItem item && item.DataContext is OrderDisplayModel order && ViewModel != null)
+        {
+            ViewModel.ComputeOrViewBillCommand.Execute(order);
+        }
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child != null)
+        {
+            if (child is T parent) return parent;
+            child = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        }
+        return null;
     }
 
     private void OpenSourceFolder_Click(object sender, RoutedEventArgs e)
@@ -162,6 +192,33 @@ public partial class DashboardView : UserControl
             {
                 // Clipboard access might rarely fail
             }
+        }
+    }
+
+    private void Thumbnail_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is OrderDisplayModel order && ViewModel != null)
+        {
+            ViewModel.OpenPreviewPopupCommand.Execute(order);
+            this.Focus();
+        }
+    }
+
+    private void PreviewBackdrop_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            ViewModel.ClosePreviewPopupCommand.Execute(null);
+        }
+    }
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if (e.Key == Key.Escape && ViewModel?.IsPreviewPopupOpen == true)
+        {
+            ViewModel.ClosePreviewPopupCommand.Execute(null);
+            e.Handled = true;
         }
     }
 

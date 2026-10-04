@@ -1,0 +1,13 @@
+{
+  "sourceChangesSincePreviousVerifiedManifest": [],
+  "sourceEditedByAudit": false,
+  "head": "bc54840de5648db3c9a66cb927ed96f4d707218b",
+  "databaseCheckMode": "read-only",
+  "integrity": [
+    "ok"
+  ],
+  "foreignKeyViolations": 0,
+  "schemaVersion": 21,
+  "legacyReconciliationRequired": true,
+  "publishedExecutableSha256": "d7e5dd766f2d8e4ea0486876323861cc1bbdf444f7d69fe3523b4de68d194c0b"
+}

@@ -13,6 +13,7 @@ namespace LalabAutoReport.Infrastructure.Data;
 public class SqliteSettingsRepository : ISettingsRepository
 {
     private readonly ISqliteConnectionFactory _connectionFactory;
+    internal ISqliteConnectionFactory ConnectionFactory => _connectionFactory;
 
     public SqliteSettingsRepository(ISqliteConnectionFactory connectionFactory)
     {
@@ -88,6 +89,77 @@ public class SqliteSettingsRepository : ISettingsRepository
                 .ToList();
         }
 
+        if (dict.TryGetValue("SecondaryBackupFolder", out var secondaryBackup) && !string.IsNullOrWhiteSpace(secondaryBackup))
+        {
+            settings.SecondaryBackupFolder = secondaryBackup;
+        }
+
+        if (dict.TryGetValue("EnableVietQrOnBill", out var enableQr) && bool.TryParse(enableQr, out var parsedEnableQr))
+        {
+            settings.EnableVietQrOnBill = parsedEnableQr;
+        }
+
+        if (dict.TryGetValue("BankBinOrCode", out var bankBin) && !string.IsNullOrWhiteSpace(bankBin))
+        {
+            settings.BankBinOrCode = bankBin;
+        }
+
+        if (dict.TryGetValue("BankAccountNumber", out var bankAcc) && !string.IsNullOrWhiteSpace(bankAcc))
+        {
+            settings.BankAccountNumber = bankAcc;
+        }
+
+        if (dict.TryGetValue("BankAccountName", out var bankName) && !string.IsNullOrWhiteSpace(bankName))
+        {
+            settings.BankAccountName = bankName;
+        }
+
+        if (dict.TryGetValue("WorkshopName", out var wsName) && !string.IsNullOrWhiteSpace(wsName))
+        {
+            settings.WorkshopName = wsName;
+        }
+
+        if (dict.TryGetValue("WorkshopPhone", out var wsPhone) && !string.IsNullOrWhiteSpace(wsPhone))
+        {
+            settings.WorkshopPhone = wsPhone;
+        }
+
+        if (dict.TryGetValue("WorkshopAddress", out var wsAddr) && !string.IsNullOrWhiteSpace(wsAddr))
+        {
+            settings.WorkshopAddress = wsAddr;
+        }
+
+        if (dict.TryGetValue("WorkshopSlogan", out var wsSlogan) && !string.IsNullOrWhiteSpace(wsSlogan))
+        {
+            settings.WorkshopSlogan = wsSlogan;
+        }
+
+        if (dict.TryGetValue("InvoiceFooterMessage", out var footerMsg) && !string.IsNullOrWhiteSpace(footerMsg))
+        {
+            settings.InvoiceFooterMessage = footerMsg;
+        }
+
+        if (dict.TryGetValue("WorkshopLogoPath", out var logoPath))
+        {
+            settings.WorkshopLogoPath = string.IsNullOrWhiteSpace(logoPath) ? null : logoPath;
+        }
+
+        if (dict.TryGetValue("QrMode", out var qrModeStr) && Enum.TryParse<QrDisplayMode>(qrModeStr, true, out var parsedQrMode))
+        {
+            settings.QrMode = parsedQrMode;
+            settings.EnableVietQrOnBill = (parsedQrMode == QrDisplayMode.VietQrAuto);
+        }
+        else if (dict.TryGetValue("EnableVietQrOnBill", out var legacyQr) && bool.TryParse(legacyQr, out var parsedLegacyQr))
+        {
+            settings.EnableVietQrOnBill = parsedLegacyQr;
+            settings.QrMode = parsedLegacyQr ? QrDisplayMode.VietQrAuto : QrDisplayMode.None;
+        }
+
+        if (dict.TryGetValue("CustomQrImagePath", out var customQrPath))
+        {
+            settings.CustomQrImagePath = string.IsNullOrWhiteSpace(customQrPath) ? null : customQrPath;
+        }
+
         if (dict.TryGetValue("BillExportFolder", out var exportFolder) && !string.IsNullOrWhiteSpace(exportFolder))
         {
             settings.BillExportFolder = exportFolder;
@@ -101,6 +173,81 @@ public class SqliteSettingsRepository : ISettingsRepository
             settings.BillExportFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LalabReports", "Bills");
         }
 
+        if (dict.TryGetValue("EnableMobileServer", out var enableMobile) && bool.TryParse(enableMobile, out var parsedEnableMobile))
+        {
+            settings.EnableMobileServer = parsedEnableMobile;
+        }
+
+        if (dict.TryGetValue("MobileServerPort", out var portStr) && int.TryParse(portStr, out var parsedPort) && parsedPort > 0 && parsedPort <= 65535)
+        {
+            settings.MobileServerPort = parsedPort;
+        }
+
+        if (dict.TryGetValue("AdminPin", out var adminPin) && !string.IsNullOrWhiteSpace(adminPin))
+        {
+            settings.AdminPin = adminPin;
+        }
+
+        if (dict.TryGetValue("StaffPin", out var staffPin) && !string.IsNullOrWhiteSpace(staffPin))
+        {
+            settings.StaffPin = staffPin;
+        }
+
+        if (dict.TryGetValue("MobileAuthSecret", out var authSecret) && !string.IsNullOrWhiteSpace(authSecret))
+        {
+            settings.MobileAuthSecret = authSecret;
+        }
+
+        if (dict.TryGetValue("ShowOrderThumbnails", out var showThumbs) && bool.TryParse(showThumbs, out var parsedThumbs))
+        {
+            settings.ShowOrderThumbnails = parsedThumbs;
+        }
+
+        if (dict.TryGetValue("ThermalPrinterName", out var thermalPrinter))
+        {
+            settings.ThermalPrinterName = string.IsNullOrWhiteSpace(thermalPrinter) ? null : thermalPrinter;
+        }
+
+        if (dict.TryGetValue("AutoMarkDeliveredOnPrint", out var autoDelivered) && bool.TryParse(autoDelivered, out var parsedAutoDelivered))
+        {
+            settings.AutoMarkDeliveredOnPrint = parsedAutoDelivered;
+        }
+
+        if (dict.TryGetValue("MinimizeToTrayOnClose", out var minTray) && bool.TryParse(minTray, out var parsedMinTray))
+        {
+            settings.MinimizeToTrayOnClose = parsedMinTray;
+        }
+
+        if (dict.TryGetValue("AutoStartWithWindows", out var autoStart) && bool.TryParse(autoStart, out var parsedAutoStart))
+        {
+            settings.AutoStartWithWindows = parsedAutoStart;
+        }
+
+        if (dict.TryGetValue("EnableCloudSync", out var enableSync) && bool.TryParse(enableSync, out var parsedSync))
+        {
+            settings.EnableCloudSync = parsedSync;
+        }
+
+        if (dict.TryGetValue("CloudSyncApiUrl", out var syncUrl))
+        {
+            settings.CloudSyncApiUrl = syncUrl;
+        }
+
+        if (dict.TryGetValue("CloudSyncSecret", out var syncSecret))
+        {
+            settings.CloudSyncSecret = syncSecret;
+        }
+
+        if (dict.TryGetValue("LastCloudSyncAt", out var lastSync))
+        {
+            settings.LastCloudSyncAt = string.IsNullOrWhiteSpace(lastSync) ? null : lastSync;
+        }
+
+        if (dict.TryGetValue("LastCloudPullAt", out var lastPull))
+        {
+            settings.LastCloudPullAt = string.IsNullOrWhiteSpace(lastPull) ? null : lastPull;
+        }
+
         return settings;
     }
 
@@ -110,6 +257,7 @@ public class SqliteSettingsRepository : ISettingsRepository
         using var transaction = connection.BeginTransaction();
 
         string extString = string.Join(",", settings.SupportedExtensions);
+        bool effectiveEnableVietQr = (settings.QrMode == QrDisplayMode.VietQrAuto);
 
         await connection.ExecuteAsync(@"
             INSERT INTO app_settings (key, value) VALUES ('RootFolder', @RootFolder)
@@ -141,6 +289,90 @@ public class SqliteSettingsRepository : ISettingsRepository
 
             INSERT INTO app_settings (key, value) VALUES ('GuestAliases', @GuestAliases)
             ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('SecondaryBackupFolder', @SecondaryBackupFolder)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('EnableVietQrOnBill', @EnableVietQrOnBill)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('BankBinOrCode', @BankBinOrCode)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('BankAccountNumber', @BankAccountNumber)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('BankAccountName', @BankAccountName)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('WorkshopName', @WorkshopName)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('WorkshopPhone', @WorkshopPhone)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('WorkshopAddress', @WorkshopAddress)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('WorkshopSlogan', @WorkshopSlogan)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('InvoiceFooterMessage', @InvoiceFooterMessage)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('WorkshopLogoPath', @WorkshopLogoPath)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('QrMode', @QrMode)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('CustomQrImagePath', @CustomQrImagePath)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('EnableMobileServer', @EnableMobileServer)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('MobileServerPort', @MobileServerPort)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('AdminPin', @AdminPin)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('StaffPin', @StaffPin)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('MobileAuthSecret', @MobileAuthSecret)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('ShowOrderThumbnails', @ShowOrderThumbnails)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('ThermalPrinterName', @ThermalPrinterName)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('AutoMarkDeliveredOnPrint', @AutoMarkDeliveredOnPrint)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('MinimizeToTrayOnClose', @MinimizeToTrayOnClose)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('AutoStartWithWindows', @AutoStartWithWindows)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('EnableCloudSync', @EnableCloudSync)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('CloudSyncApiUrl', @CloudSyncApiUrl)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('CloudSyncSecret', @CloudSyncSecret)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('LastCloudSyncAt', @LastCloudSyncAt)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+
+            INSERT INTO app_settings (key, value) VALUES ('LastCloudPullAt', @LastCloudPullAt)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
         ", new
         {
             RootFolder = settings.RootFolder,
@@ -152,7 +384,35 @@ public class SqliteSettingsRepository : ISettingsRepository
             EnableIdleScan = settings.EnableIdleScan.ToString(),
             IdleThresholdMinutes = settings.IdleThresholdMinutes.ToString(),
             IdleScanWindowDays = settings.IdleScanWindowDays.ToString(),
-            GuestAliases = string.Join(";", settings.GuestAliases)
+            GuestAliases = string.Join(";", settings.GuestAliases),
+            SecondaryBackupFolder = settings.SecondaryBackupFolder ?? string.Empty,
+            EnableVietQrOnBill = effectiveEnableVietQr.ToString(),
+            BankBinOrCode = settings.BankBinOrCode,
+            BankAccountNumber = settings.BankAccountNumber,
+            BankAccountName = settings.BankAccountName,
+            WorkshopName = settings.WorkshopName,
+            WorkshopPhone = settings.WorkshopPhone,
+            WorkshopAddress = settings.WorkshopAddress,
+            WorkshopSlogan = settings.WorkshopSlogan,
+            InvoiceFooterMessage = settings.InvoiceFooterMessage,
+            WorkshopLogoPath = settings.WorkshopLogoPath ?? string.Empty,
+            QrMode = settings.QrMode.ToString(),
+            CustomQrImagePath = settings.CustomQrImagePath ?? string.Empty,
+            EnableMobileServer = settings.EnableMobileServer.ToString(),
+            MobileServerPort = settings.MobileServerPort.ToString(),
+            AdminPin = settings.AdminPin,
+            StaffPin = settings.StaffPin,
+            MobileAuthSecret = settings.MobileAuthSecret ?? string.Empty,
+            ShowOrderThumbnails = settings.ShowOrderThumbnails.ToString(),
+            ThermalPrinterName = settings.ThermalPrinterName ?? string.Empty,
+            AutoMarkDeliveredOnPrint = settings.AutoMarkDeliveredOnPrint.ToString(),
+            MinimizeToTrayOnClose = settings.MinimizeToTrayOnClose.ToString(),
+            AutoStartWithWindows = settings.AutoStartWithWindows.ToString(),
+            EnableCloudSync = settings.EnableCloudSync.ToString(),
+            CloudSyncApiUrl = settings.CloudSyncApiUrl,
+            CloudSyncSecret = settings.CloudSyncSecret,
+            LastCloudSyncAt = settings.LastCloudSyncAt ?? string.Empty,
+            LastCloudPullAt = settings.LastCloudPullAt ?? string.Empty
         }, transaction: transaction);
 
         transaction.Commit();

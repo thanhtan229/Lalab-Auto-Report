@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
@@ -77,6 +79,21 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
             SELECT DISTINCT cb.* FROM customer_bills cb
             INNER JOIN customer_bill_orders cbo ON cb.id = cbo.bill_id
             WHERE cbo.order_id = @OrderId AND cb.status IN ('Locked', 'Exported')
+            ORDER BY cb.id DESC
+            LIMIT 1
+        ", new { OrderId = orderId });
+
+        if (billDto == null) return null;
+        return await PopulateBillDetailsAsync(connection, billDto);
+    }
+
+    public async Task<CustomerBill?> GetBillByOrderIdAsync(long orderId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        var billDto = await connection.QuerySingleOrDefaultAsync<CustomerBillDto>(@"
+            SELECT DISTINCT cb.* FROM customer_bills cb
+            INNER JOIN customer_bill_orders cbo ON cb.id = cbo.bill_id
+            WHERE cbo.order_id = @OrderId
             ORDER BY cb.id DESC
             LIMIT 1
         ", new { OrderId = orderId });
@@ -228,6 +245,39 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         transaction.Commit();
     }
 
+    public async Task SplitBillAtomicAsync(CustomerBill original, CustomerBill created,
+        IReadOnlyList<long> movedOrderIds, DateTimeOffset expectedUpdatedAt, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var stored = await connection.QuerySingleAsync<CustomerBillDto>(
+                "SELECT * FROM customer_bills WHERE id=@Id", new { original.Id }, transaction);
+            if (stored.status != "Draft" || original.Status != CustomerBillStatus.Draft || created.Status != CustomerBillStatus.Draft)
+                throw new InvalidOperationException("Hãy mở lại hóa đơn trước khi tách đơn.");
+            if (DateTimeOffset.Parse(stored.updated_at) != expectedUpdatedAt || created.Id != 0)
+                throw new InvalidOperationException("Hóa đơn đã thay đổi. Hãy tải lại trước khi tách đơn.");
+            var currentIds = (await connection.QueryAsync<long>(
+                "SELECT order_id FROM customer_bill_orders WHERE bill_id=@Id", new { original.Id }, transaction)).ToHashSet();
+            var movingIds = movedOrderIds.ToHashSet();
+            if (movingIds.Count == 0 || movingIds.Count >= currentIds.Count || !movingIds.IsSubsetOf(currentIds) ||
+                !created.Orders.Select(o => o.OrderId).ToHashSet().SetEquals(movingIds) ||
+                !original.Orders.Select(o => o.OrderId).ToHashSet().SetEquals(currentIds.Except(movingIds)))
+                throw new InvalidOperationException("Danh sách đơn hàng đã thay đổi. Hãy tải lại hóa đơn.");
+            await SaveBillInternalAsync(connection, transaction, created);
+            await SaveBillInternalAsync(connection, transaction, original);
+            var jobs = created.Lines.Select(l => l.ProductJobId).Where(id => id > 0).Distinct().ToArray();
+            if (jobs.Length > 0)
+                await connection.ExecuteAsync("UPDATE order_item_scans SET customer_bill_id=@Id WHERE id IN @Jobs",
+                    new { Id = created.Id, Jobs = jobs }, transaction);
+            cancellationToken.ThrowIfCancellationRequested();
+            transaction.Commit();
+        }
+        catch { transaction.Rollback(); created.Id = 0; throw; }
+    }
+
     public async Task LockCustomerBillAtomicAsync(
         CustomerBill bill,
         IReadOnlyList<long> productJobIds,
@@ -277,7 +327,7 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         using var transaction = connection.BeginTransaction();
         try
         {
-            await SaveBillInternalAsync(connection, transaction, bill);
+            await SaveBillInternalAsync(connection, transaction, bill, allowReopen: true);
 
             if (productJobIds.Count > 0)
             {
@@ -306,22 +356,54 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         }
     }
 
-    private async Task SaveBillInternalAsync(IDbConnection connection, IDbTransaction transaction, CustomerBill bill)
+    private async Task SaveBillInternalAsync(IDbConnection connection, IDbTransaction transaction, CustomerBill bill, bool allowReopen = false)
     {
+        if (bill.Id != 0)
+        {
+            var stored = await connection.QuerySingleOrDefaultAsync<CustomerBillDto>(
+                "SELECT * FROM customer_bills WHERE id = @Id", new { bill.Id }, transaction);
+            if (stored == null) throw new InvalidOperationException("Hóa đơn không còn tồn tại.");
+            // Payment has its own mutation path; a stale review window must not undo it.
+            bill.IsPaid = stored.is_paid == 1;
+            bill.PaidAt = string.IsNullOrEmpty(stored.paid_at) ? null : DateTimeOffset.Parse(stored.paid_at);
+            if (stored.status != "Draft")
+            {
+                var snapshot = await PopulateBillDetailsAsync(connection, stored, transaction);
+                if (SnapshotContent(snapshot) != SnapshotContent(bill))
+                    throw new InvalidOperationException("Hóa đơn đã chốt. Hãy mở lại trước khi sửa nội dung.");
+                if (allowReopen)
+                {
+                    if (bill.Status != CustomerBillStatus.Draft)
+                        throw new InvalidOperationException("Mở lại phải chuyển hóa đơn về Draft.");
+                }
+                else
+                {
+                    if (bill.Status == CustomerBillStatus.Draft ||
+                        (stored.status == "Exported" && bill.Status != CustomerBillStatus.Exported))
+                        throw new InvalidOperationException("Phải dùng thao tác mở lại hóa đơn.");
+                    await connection.ExecuteAsync(@"UPDATE customer_bills SET status=@Status,
+                        export_file_path=@ExportFilePath, exported_at=@ExportedAt, updated_at=@UpdatedAt WHERE id=@Id",
+                        new { bill.Id, Status = bill.Status.ToString(), bill.ExportFilePath,
+                            ExportedAt = bill.ExportedAt?.ToString("o"), UpdatedAt = DateTimeOffset.UtcNow.ToString("o") }, transaction);
+                    return; // Preserve child IDs and the historical snapshot.
+                }
+            }
+            else if (allowReopen) throw new InvalidOperationException("Hóa đơn đã là Draft.");
+        }
 
         if (bill.Id == 0)
         {
             long billId = await connection.QuerySingleAsync<long>(@"
                 INSERT INTO customer_bills (
                     bill_number, bill_type, customer_id, customer_name_snapshot, phone_snapshot,
-                    period_start, period_end, status, product_subtotal, adjustments_total,
-                    grand_total, note, export_file_path, locked_at, exported_at,
-                    created_at, updated_at
+                    shipping_address_snapshot, period_start, period_end, status, product_subtotal,
+                    adjustments_total, grand_total, note, export_file_path, locked_at, exported_at,
+                    is_paid, paid_at, created_at, updated_at
                 ) VALUES (
                     @BillNumber, @BillType, @CustomerId, @CustomerNameSnapshot, @PhoneSnapshot,
-                    @PeriodStart, @PeriodEnd, @Status, @ProductSubtotal, @AdjustmentsTotal,
-                    @GrandTotal, @Note, @ExportFilePath, @LockedAt, @ExportedAt,
-                    @CreatedAt, @UpdatedAt
+                    @ShippingAddressSnapshot, @PeriodStart, @PeriodEnd, @Status, @ProductSubtotal,
+                    @AdjustmentsTotal, @GrandTotal, @Note, @ExportFilePath, @LockedAt, @ExportedAt,
+                    @IsPaid, @PaidAt, @CreatedAt, @UpdatedAt
                 );
                 SELECT last_insert_rowid();
             ", new
@@ -331,6 +413,7 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
                 CustomerId = bill.CustomerId,
                 CustomerNameSnapshot = bill.CustomerNameSnapshot,
                 PhoneSnapshot = bill.PhoneSnapshot,
+                ShippingAddressSnapshot = bill.ShippingAddressSnapshot,
                 PeriodStart = bill.PeriodStart,
                 PeriodEnd = bill.PeriodEnd,
                 Status = bill.Status.ToString(),
@@ -341,6 +424,8 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
                 ExportFilePath = bill.ExportFilePath,
                 LockedAt = bill.LockedAt?.ToString("o"),
                 ExportedAt = bill.ExportedAt?.ToString("o"),
+                IsPaid = bill.IsPaid ? 1 : 0,
+                PaidAt = bill.PaidAt?.ToString("o"),
                 CreatedAt = bill.CreatedAt.ToString("o"),
                 UpdatedAt = bill.UpdatedAt.ToString("o")
             }, transaction: transaction);
@@ -356,6 +441,7 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
                     customer_id = @CustomerId,
                     customer_name_snapshot = @CustomerNameSnapshot,
                     phone_snapshot = @PhoneSnapshot,
+                    shipping_address_snapshot = @ShippingAddressSnapshot,
                     period_start = @PeriodStart,
                     period_end = @PeriodEnd,
                     status = @Status,
@@ -366,6 +452,8 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
                     export_file_path = @ExportFilePath,
                     locked_at = @LockedAt,
                     exported_at = @ExportedAt,
+                    is_paid = @IsPaid,
+                    paid_at = @PaidAt,
                     updated_at = @UpdatedAt
                 WHERE id = @Id
             ", new
@@ -376,6 +464,7 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
                 CustomerId = bill.CustomerId,
                 CustomerNameSnapshot = bill.CustomerNameSnapshot,
                 PhoneSnapshot = bill.PhoneSnapshot,
+                ShippingAddressSnapshot = bill.ShippingAddressSnapshot,
                 PeriodStart = bill.PeriodStart,
                 PeriodEnd = bill.PeriodEnd,
                 Status = bill.Status.ToString(),
@@ -386,6 +475,8 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
                 ExportFilePath = bill.ExportFilePath,
                 LockedAt = bill.LockedAt?.ToString("o"),
                 ExportedAt = bill.ExportedAt?.ToString("o"),
+                IsPaid = bill.IsPaid ? 1 : 0,
+                PaidAt = bill.PaidAt?.ToString("o"),
                 UpdatedAt = bill.UpdatedAt.ToString("o")
             }, transaction: transaction);
 
@@ -539,13 +630,24 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
     public async Task DeleteDraftBillAsync(long billId, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
-        await connection.ExecuteAsync("DELETE FROM customer_bills WHERE id = @Id AND status = 'Draft'", new { Id = billId });
+        using var transaction = connection.BeginTransaction();
+        var status = await connection.QuerySingleOrDefaultAsync<string>("SELECT status FROM customer_bills WHERE id=@Id", new { Id = billId }, transaction);
+        if (status != "Draft") return;
+        await connection.ExecuteAsync("DELETE FROM guest_bill_source_folders WHERE bill_id = @Id", new { Id = billId }, transaction: transaction);
+        await connection.ExecuteAsync("DELETE FROM customer_bill_adjustments WHERE bill_id = @Id", new { Id = billId }, transaction: transaction);
+        await connection.ExecuteAsync("DELETE FROM customer_bill_lines WHERE bill_id = @Id", new { Id = billId }, transaction: transaction);
+        await connection.ExecuteAsync("DELETE FROM customer_bill_orders WHERE bill_id = @Id", new { Id = billId }, transaction: transaction);
+        await connection.ExecuteAsync("DELETE FROM customer_bills WHERE id = @Id AND status = 'Draft'", new { Id = billId }, transaction: transaction);
+        transaction.Commit();
     }
 
     public async Task DeleteBillAsync(long billId, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
         using var transaction = connection.BeginTransaction();
+        var status = await connection.QuerySingleOrDefaultAsync<string>("SELECT status FROM customer_bills WHERE id=@Id", new { Id = billId }, transaction);
+        if (status != null && status != "Draft")
+            throw new InvalidOperationException("Hãy mở lại hóa đơn trước khi xóa.");
         await connection.ExecuteAsync("DELETE FROM guest_bill_source_folders WHERE bill_id = @Id", new { Id = billId }, transaction: transaction);
         await connection.ExecuteAsync("DELETE FROM customer_bill_adjustments WHERE bill_id = @Id", new { Id = billId }, transaction: transaction);
         await connection.ExecuteAsync("DELETE FROM customer_bill_lines WHERE bill_id = @Id", new { Id = billId }, transaction: transaction);
@@ -582,25 +684,89 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         return candidate;
     }
 
-    private static async Task<CustomerBill> PopulateBillDetailsAsync(System.Data.Common.DbConnection connection, CustomerBillDto dto)
+    public async Task SetPaymentStatusAsync(long billId, bool isPaid, DateTimeOffset? paidAt = null, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        string? paidAtStr = isPaid ? (paidAt ?? DateTimeOffset.UtcNow).ToString("o") : null;
+        int affected = await connection.ExecuteAsync(@"
+            UPDATE customer_bills
+            SET is_paid = @IsPaid,
+                paid_at = @PaidAt,
+                updated_at = @UpdatedAt
+            WHERE id = @Id
+        ", new
+        {
+            Id = billId,
+            IsPaid = isPaid ? 1 : 0,
+            PaidAt = paidAtStr,
+            UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
+        }, transaction);
+        if (affected != 1) throw new InvalidOperationException("Bill not found.");
+        await SqliteCloudSyncStateRepository.EnqueueAsync(connection, transaction, "bill_payment", billId, isPaid);
+        transaction.Commit();
+    }
+
+    public async Task<long> GetCustomerTotalDebtAsync(long customerId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        var total = await connection.ExecuteScalarAsync<long?>(@"
+            SELECT SUM(grand_total)
+            FROM customer_bills
+            WHERE customer_id = @CustomerId
+              AND status IN ('Locked', 'Exported')
+              AND is_paid = 0
+        ", new { CustomerId = customerId });
+
+        return total ?? 0L;
+    }
+
+    public async Task<IReadOnlyList<CustomerBill>> GetUnpaidBillsAsync(long? customerId = null, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        string sql = customerId.HasValue
+            ? @"SELECT * FROM customer_bills
+                WHERE status IN ('Locked', 'Exported')
+                  AND is_paid = 0
+                  AND customer_id = @CustomerId
+                ORDER BY id DESC"
+            : @"SELECT * FROM customer_bills
+                WHERE status IN ('Locked', 'Exported')
+                  AND is_paid = 0
+                ORDER BY id DESC";
+
+        var billDtos = (await connection.QueryAsync<CustomerBillDto>(
+            sql, new { CustomerId = customerId })).ToList();
+
+        var bills = new List<CustomerBill>();
+        foreach (var dto in billDtos)
+        {
+            bills.Add(await PopulateBillDetailsAsync(connection, dto));
+        }
+
+        return bills;
+    }
+
+    private static async Task<CustomerBill> PopulateBillDetailsAsync(IDbConnection connection, CustomerBillDto dto, IDbTransaction? transaction = null)
     {
         var bill = MapBill(dto);
+        bill.HasPendingCloudChanges = await connection.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM cloud_operational_outbox WHERE entity_type='bill_payment' AND entity_id=@Id", new { bill.Id }, transaction) > 0;
 
         var orderDtos = await connection.QueryAsync<CustomerBillOrderDto>(
             "SELECT * FROM customer_bill_orders WHERE bill_id = @BillId ORDER BY sort_order, id",
-            new { BillId = bill.Id });
+            new { BillId = bill.Id }, transaction);
 
         var lineDtos = await connection.QueryAsync<CustomerBillLineDto>(
             "SELECT * FROM customer_bill_lines WHERE bill_id = @BillId ORDER BY sort_order, id",
-            new { BillId = bill.Id });
+            new { BillId = bill.Id }, transaction);
 
         var adjDtos = await connection.QueryAsync<CustomerBillAdjustmentDto>(
             "SELECT * FROM customer_bill_adjustments WHERE bill_id = @BillId ORDER BY sort_order, id",
-            new { BillId = bill.Id });
+            new { BillId = bill.Id }, transaction);
 
         var sfDtos = await connection.QueryAsync<GuestBillSourceFolderDto>(
             "SELECT * FROM guest_bill_source_folders WHERE bill_id = @BillId ORDER BY id",
-            new { BillId = bill.Id });
+            new { BillId = bill.Id }, transaction);
 
         var lines = lineDtos.Select(MapLine).ToList();
         var orders = orderDtos.Select(MapOrder).ToList();
@@ -622,6 +788,26 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         return bill;
     }
 
+    private static string SnapshotContent(CustomerBill bill)
+    {
+        var node = JsonSerializer.SerializeToNode(bill)!.AsObject();
+        foreach (var key in new[] { "Status", "LockedAt", "ExportedAt", "ExportFilePath", "IsPaid", "PaidAt", "CreatedAt", "UpdatedAt", "PriceTierSnapshot", "HasPendingCloudChanges" })
+            node.Remove(key);
+        void Strip(JsonNode? item)
+        {
+            if (item is JsonObject obj)
+            {
+                obj.Remove("Id"); obj.Remove("BillId"); obj.Remove("CreatedAt");
+                // Order.Lines is a convenience view of bill.Lines, not another snapshot table.
+                if (obj.ContainsKey("OrderNameSnapshot")) obj.Remove("Lines");
+                foreach (var child in obj.ToList()) Strip(child.Value);
+            }
+            else if (item is JsonArray array) foreach (var child in array) Strip(child);
+        }
+        Strip(node);
+        return node.ToJsonString();
+    }
+
     private static CustomerBill MapBill(CustomerBillDto dto) => new()
     {
         Id = dto.id,
@@ -630,6 +816,7 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         CustomerId = dto.customer_id,
         CustomerNameSnapshot = dto.customer_name_snapshot,
         PhoneSnapshot = dto.phone_snapshot,
+        ShippingAddressSnapshot = dto.shipping_address_snapshot,
         PeriodStart = dto.period_start,
         PeriodEnd = dto.period_end,
         Status = Enum.TryParse<CustomerBillStatus>(dto.status, out var st) ? st : CustomerBillStatus.Draft,
@@ -640,6 +827,8 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         ExportFilePath = dto.export_file_path,
         LockedAt = !string.IsNullOrEmpty(dto.locked_at) ? DateTimeOffset.Parse(dto.locked_at) : null,
         ExportedAt = !string.IsNullOrEmpty(dto.exported_at) ? DateTimeOffset.Parse(dto.exported_at) : null,
+        IsPaid = dto.is_paid == 1,
+        PaidAt = !string.IsNullOrEmpty(dto.paid_at) ? DateTimeOffset.Parse(dto.paid_at) : null,
         CreatedAt = DateTimeOffset.Parse(dto.created_at),
         UpdatedAt = DateTimeOffset.Parse(dto.updated_at)
     };
@@ -720,6 +909,7 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         public long? customer_id { get; set; }
         public string customer_name_snapshot { get; set; } = string.Empty;
         public string? phone_snapshot { get; set; }
+        public string? shipping_address_snapshot { get; set; }
         public string period_start { get; set; } = string.Empty;
         public string period_end { get; set; } = string.Empty;
         public string status { get; set; } = string.Empty;
@@ -730,6 +920,8 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         public string? export_file_path { get; set; }
         public string? locked_at { get; set; }
         public string? exported_at { get; set; }
+        public long is_paid { get; set; }
+        public string? paid_at { get; set; }
         public string created_at { get; set; } = string.Empty;
         public string updated_at { get; set; } = string.Empty;
     }

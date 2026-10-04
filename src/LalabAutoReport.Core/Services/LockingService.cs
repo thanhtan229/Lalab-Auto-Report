@@ -40,7 +40,7 @@ public class LockingService : ILockingService
         }
 
         // 1. Authoritative fresh scan before lock
-        var freshOrder = await _scanService.ScanOrderAsync(order.RelativePath, null, cancellationToken);
+        var freshOrder = await _scanService.ScanOrderInRootAsync(order.RelativePath, order.RootFolderId, null, cancellationToken);
         if (freshOrder == null)
         {
             return new VerificationResult(
@@ -197,7 +197,7 @@ public class LockingService : ILockingService
             return false;
         }
 
-        var freshOrder = await _scanService.ScanOrderAsync(order.RelativePath, null, cancellationToken);
+        var freshOrder = await _scanService.ScanOrderInRootAsync(order.RelativePath, order.RootFolderId, null, cancellationToken);
         if (freshOrder == null)
         {
             return true; // Deleted on disk

@@ -1,0 +1,89 @@
+<Window x:Class="LalabAutoReport.UI.Views.CreateFamilyDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Thêm Dòng Sản Phẩm Mới"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Icon="../Resources/app.ico"
+        FontFamily="{StaticResource Tinix.Font.UI}"
+        Background="{StaticResource Tinix.Color.Bg.Body}">
+
+    <Border Padding="24">
+        <StackPanel>
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <TextBlock Text="✨" FontSize="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="Thêm Dòng Sản Phẩm Mới" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Tên dòng -->
+            <TextBlock Text="Tên dòng sản phẩm:" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+            <TextBox x:Name="txtFamilyName" Height="36" FontSize="13" Margin="0,0,0,16">
+                <TextBox.Resources>
+                    <VisualBrush x:Key="CueFamilyName" AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                        <VisualBrush.Visual>
+                            <TextBlock Text="Ví dụ: Ảnh in ép plastic, Bao da, Khung ảnh..." Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0" FontSize="12"/>
+                        </VisualBrush.Visual>
+                    </VisualBrush>
+                </TextBox.Resources>
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}">
+                        <Style.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter Property="Background" Value="{StaticResource CueFamilyName}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+
+            <!-- Hình thức tính giá -->
+            <TextBlock Text="Hình thức tính giá sản phẩm:" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,8"/>
+            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="12" Margin="0,0,0,16">
+                <StackPanel>
+                    <RadioButton x:Name="rbFileCount" GroupName="BillingTypeGroup" IsChecked="True" Cursor="Hand" Margin="0,0,0,10">
+                        <StackPanel Margin="6,0,0,0">
+                            <TextBlock Text="Theo số lượng file in lẻ (VND/ảnh)" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                            <TextBlock Text="Phù hợp với Ảnh in lẻ, Ảnh ép plastic, Tranh mica, Khung ảnh..." FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="rbAlbum" GroupName="BillingTypeGroup" Cursor="Hand">
+                        <StackPanel Margin="6,0,0,0">
+                            <TextBlock Text="Theo gói Album đóng cuốn (Gói chuẩn + Tờ phát sinh)" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                            <TextBlock Text="Phù hợp với Album, Photobook, Cuốn ảnh phóng..." FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </RadioButton>
+                </StackPanel>
+            </Border>
+
+            <!-- Từ khóa nhận diện ban đầu -->
+            <TextBlock Text="Từ khóa nhận diện ban đầu (phân tách bởi dấu phẩy):" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+            <TextBox x:Name="txtInitialAliases" Height="36" FontSize="13" Margin="0,0,0,18">
+                <TextBox.Resources>
+                    <VisualBrush x:Key="CueAliases" AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                        <VisualBrush.Visual>
+                            <TextBlock Text="Ví dụ: ep, plastic, epplastic hoặc baoda, da" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="8,0" FontSize="12"/>
+                        </VisualBrush.Visual>
+                    </VisualBrush>
+                </TextBox.Resources>
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource Tinix.TextBox.Standard}">
+                        <Style.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter Property="Background" Value="{StaticResource CueAliases}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+
+            <!-- Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Hủy" Width="80" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Click="Cancel_Click" IsCancel="True" Margin="0,0,10,0"/>
+                <Button Content="➕ Tạo Dòng Mới" Height="36" Padding="18,0" Style="{StaticResource Tinix.Button.Primary}" Click="Create_Click" IsDefault="True"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

@@ -41,15 +41,19 @@ public class SqliteOrderRepository : IOrderRepository
         WHERE i.scan_snapshot_id = @SnapshotId
     ";
 
+    private const string BaseOrderSelectSql = @"
+        SELECT o.*, EXISTS(SELECT 1 FROM cloud_operational_outbox pending WHERE pending.entity_id=o.id AND pending.entity_type IN ('order_delivered','order_note')) AS pending_cloud_changes, c.canonical_name AS customer_canonical_name, rf.name AS root_folder_name
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN root_folders rf ON o.root_folder_id = rf.id
+    ";
+
     public async Task<Order?> GetOrderByIdAsync(long id, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
 
-        var orderDto = await connection.QuerySingleOrDefaultAsync<OrderDto>(@"
-            SELECT o.*, c.canonical_name AS customer_canonical_name
-            FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            WHERE o.id = @Id",
+        var orderDto = await connection.QuerySingleOrDefaultAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.id = @Id",
             new { Id = id }
         );
 
@@ -69,11 +73,8 @@ public class SqliteOrderRepository : IOrderRepository
 
         using var connection = _connectionFactory.CreateConnection();
 
-        var orderDto = await connection.QuerySingleOrDefaultAsync<OrderDto>(@"
-            SELECT o.*, c.canonical_name AS customer_canonical_name
-            FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            WHERE o.order_code = @OrderCode",
+        var orderDto = await connection.QuerySingleOrDefaultAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.order_code = @OrderCode",
             new { OrderCode = orderCode.Trim() }
         );
 
@@ -113,11 +114,8 @@ public class SqliteOrderRepository : IOrderRepository
     {
         using var connection = _connectionFactory.CreateConnection();
 
-        var orderDto = await connection.QuerySingleOrDefaultAsync<OrderDto>(@"
-            SELECT o.*, c.canonical_name AS customer_canonical_name
-            FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            WHERE o.relative_path = @RelativePath",
+        var orderDto = await connection.QuerySingleOrDefaultAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.relative_path = @RelativePath",
             new { RelativePath = relativePath }
         );
 
@@ -132,16 +130,29 @@ public class SqliteOrderRepository : IOrderRepository
         return order;
     }
 
+    public async Task<Order?> GetOrderByRootAndRelativePathAsync(long rootFolderId, string relativePath, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+
+        var orderDto = await connection.QuerySingleOrDefaultAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.root_folder_id = @RootFolderId AND o.relative_path = @RelativePath",
+            new { RootFolderId = rootFolderId, RelativePath = relativePath }
+        );
+
+        if (orderDto == null) return null;
+
+        var order = MapOrder(orderDto);
+        var items = await connection.QueryAsync<OrderItemDto>(OrderItemSelectSql, new { OrderId = order.Id });
+        order.Items = items.Select(MapOrderItem).ToList();
+        return order;
+    }
+
     public async Task<IReadOnlyList<Order>> GetOrdersByDateAsync(string date, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
 
-        var orderDtos = await connection.QueryAsync<OrderDto>(@"
-            SELECT o.*, c.canonical_name AS customer_canonical_name
-            FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            WHERE o.work_date = @WorkDate
-            ORDER BY o.original_folder_name",
+        var orderDtos = await connection.QueryAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.work_date = @WorkDate ORDER BY o.original_folder_name",
             new { WorkDate = date }
         );
 
@@ -149,9 +160,7 @@ public class SqliteOrderRepository : IOrderRepository
         foreach (var dto in orderDtos)
         {
             var order = MapOrder(dto);
-
             var items = await connection.QueryAsync<OrderItemDto>(OrderItemSelectSql, new { OrderId = order.Id });
-
             order.Items = items.Select(MapOrderItem).ToList();
             orders.Add(order);
         }
@@ -159,16 +168,42 @@ public class SqliteOrderRepository : IOrderRepository
         return orders;
     }
 
+    public async Task<IReadOnlyList<Order>> GetOrdersByDateAndRootAsync(string date, long rootFolderId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+
+        var orderDtos = await connection.QueryAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.work_date = @WorkDate AND o.root_folder_id = @RootFolderId ORDER BY o.original_folder_name",
+            new { WorkDate = date, RootFolderId = rootFolderId }
+        );
+
+        var orders = new List<Order>();
+        foreach (var dto in orderDtos)
+        {
+            var order = MapOrder(dto);
+            var items = await connection.QueryAsync<OrderItemDto>(OrderItemSelectSql, new { OrderId = order.Id });
+            order.Items = items.Select(MapOrderItem).ToList();
+            orders.Add(order);
+        }
+
+        return orders;
+    }
+
+    public async Task<int> GetOrderCountByRootFolderIdAsync(long rootFolderId, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM orders WHERE root_folder_id = @RootFolderId;",
+            new { RootFolderId = rootFolderId }
+        );
+    }
+
     public async Task<IReadOnlyList<Order>> GetOrdersByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default)
     {
         using var connection = _connectionFactory.CreateConnection();
 
-        var orderDtos = await connection.QueryAsync<OrderDto>(@"
-            SELECT o.*, c.canonical_name AS customer_canonical_name
-            FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            WHERE o.work_date >= @StartDate AND o.work_date <= @EndDate
-            ORDER BY o.work_date, o.original_folder_name",
+        var orderDtos = await connection.QueryAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.work_date >= @StartDate AND o.work_date <= @EndDate ORDER BY o.work_date, o.original_folder_name",
             new { StartDate = startDate, EndDate = endDate }
         );
 
@@ -176,9 +211,7 @@ public class SqliteOrderRepository : IOrderRepository
         foreach (var dto in orderDtos)
         {
             var order = MapOrder(dto);
-
             var items = await connection.QueryAsync<OrderItemDto>(OrderItemSelectSql, new { OrderId = order.Id });
-
             order.Items = items.Select(MapOrderItem).ToList();
             orders.Add(order);
         }
@@ -190,12 +223,8 @@ public class SqliteOrderRepository : IOrderRepository
     {
         using var connection = _connectionFactory.CreateConnection();
 
-        var orderDtos = await connection.QueryAsync<OrderDto>(@"
-            SELECT o.*, c.canonical_name AS customer_canonical_name
-            FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            WHERE o.customer_id = @CustomerId
-            ORDER BY o.work_date, o.original_folder_name",
+        var orderDtos = await connection.QueryAsync<OrderDto>(
+            BaseOrderSelectSql + " WHERE o.customer_id = @CustomerId ORDER BY o.work_date, o.original_folder_name",
             new { CustomerId = customerId }
         );
 
@@ -242,8 +271,8 @@ public class SqliteOrderRepository : IOrderRepository
             }
 
             long orderId = await connection.QuerySingleAsync<long>(@"
-                INSERT INTO orders (order_code, work_date, customer_id, order_kind, order_name, original_folder_name, relative_path, status, is_printed, printed_at, filesystem_changed_after_lock, fingerprint, last_scan_at, created_at, updated_at)
-                VALUES (@OrderCode, @WorkDate, @CustomerId, @OrderKind, @OrderName, @OriginalFolderName, @RelativePath, @Status, @IsPrinted, @PrintedAt, @FilesystemChangedAfterLock, @Fingerprint, @LastScanAt, @CreatedAt, @UpdatedAt);
+                INSERT INTO orders (order_code, work_date, customer_id, order_kind, order_name, original_folder_name, relative_path, status, is_printed, printed_at, print_progress, is_delivered, delivered_at, delivered_by, note, filesystem_changed_after_lock, fingerprint, last_scan_at, created_at, updated_at, root_folder_id, thumbnail_candidate_relative_path)
+                VALUES (@OrderCode, @WorkDate, @CustomerId, @OrderKind, @OrderName, @OriginalFolderName, @RelativePath, @Status, @IsPrinted, @PrintedAt, @PrintProgress, @IsDelivered, @DeliveredAt, @DeliveredBy, @Note, @FilesystemChangedAfterLock, @Fingerprint, @LastScanAt, @CreatedAt, @UpdatedAt, @RootFolderId, @ThumbnailCandidateRelativePath);
                 SELECT last_insert_rowid();
             ", new
             {
@@ -257,11 +286,18 @@ public class SqliteOrderRepository : IOrderRepository
                 Status = order.Status.ToString(),
                 IsPrinted = order.IsPrinted ? 1 : 0,
                 PrintedAt = order.PrintedAt?.ToString("o"),
+                PrintProgress = (int)order.PrintProgress,
+                IsDelivered = order.IsDelivered ? 1 : 0,
+                DeliveredAt = order.DeliveredAt?.ToString("o"),
+                DeliveredBy = order.DeliveredBy,
+                Note = order.Note,
                 FilesystemChangedAfterLock = order.FilesystemChangedAfterLock ? 1 : 0,
                 Fingerprint = order.Fingerprint,
                 LastScanAt = order.LastScanAt?.ToString("o"),
                 CreatedAt = order.CreatedAt.ToString("o"),
-                UpdatedAt = order.UpdatedAt.ToString("o")
+                UpdatedAt = order.UpdatedAt.ToString("o"),
+                RootFolderId = order.RootFolderId,
+                ThumbnailCandidateRelativePath = order.ThumbnailCandidateRelativePath
             }, transaction: transaction);
 
             order.Id = orderId;
@@ -277,10 +313,13 @@ public class SqliteOrderRepository : IOrderRepository
                     status = @Status,
                     is_printed = @IsPrinted,
                     printed_at = @PrintedAt,
+                    print_progress = @PrintProgress,
                     filesystem_changed_after_lock = @FilesystemChangedAfterLock,
                     fingerprint = @Fingerprint,
                     last_scan_at = @LastScanAt,
-                    updated_at = @UpdatedAt
+                    updated_at = @UpdatedAt,
+                    root_folder_id = CASE WHEN @RootFolderId IS NOT NULL THEN @RootFolderId ELSE root_folder_id END,
+                    thumbnail_candidate_relative_path = @ThumbnailCandidateRelativePath
                 WHERE id = @Id
             ", new
             {
@@ -292,10 +331,17 @@ public class SqliteOrderRepository : IOrderRepository
                 Status = order.Status.ToString(),
                 IsPrinted = order.IsPrinted ? 1 : 0,
                 PrintedAt = order.PrintedAt?.ToString("o"),
+                PrintProgress = (int)order.PrintProgress,
+                IsDelivered = order.IsDelivered ? 1 : 0,
+                DeliveredAt = order.DeliveredAt?.ToString("o"),
+                DeliveredBy = order.DeliveredBy,
+                Note = order.Note,
                 FilesystemChangedAfterLock = order.FilesystemChangedAfterLock ? 1 : 0,
                 Fingerprint = order.Fingerprint,
                 LastScanAt = order.LastScanAt?.ToString("o"),
-                UpdatedAt = order.UpdatedAt.ToString("o")
+                UpdatedAt = order.UpdatedAt.ToString("o"),
+                RootFolderId = order.RootFolderId,
+                ThumbnailCandidateRelativePath = order.ThumbnailCandidateRelativePath
             }, transaction: transaction);
         }
 
@@ -331,6 +377,7 @@ public class SqliteOrderRepository : IOrderRepository
                     scan_snapshot_id, order_id, print_specification_id, specification_folder_name,
                     specification_relative_path, source_count, print_count, printable_file_count,
                     selected_print_folder_relative_path, print_folder_status, mismatch_count,
+                    is_printed, printed_at,
                     scan_status, error_message, candidate_print_folders, bill_quantity,
                     quantity_resolution_mode, quantity_resolution_note, billing_metadata_json,
                     folder_resolution_mode, customer_bill_id
@@ -338,6 +385,7 @@ public class SqliteOrderRepository : IOrderRepository
                     @ScanSnapshotId, @OrderId, @PrintSpecificationId, @SpecificationFolderName,
                     @SpecificationRelativePath, @SourceCount, @PrintCount, @PrintableFileCount,
                     @SelectedPrintFolderRelativePath, @PrintFolderStatus, @MismatchCount,
+                    @IsPrinted, @PrintedAt,
                     @ScanStatus, @ErrorMessage, @CandidatePrintFolders, @BillQuantity,
                     @QuantityResolutionMode, @QuantityResolutionNote, @BillingMetadataJson,
                     @FolderResolutionMode, @CustomerBillId
@@ -356,6 +404,8 @@ public class SqliteOrderRepository : IOrderRepository
                 SelectedPrintFolderRelativePath = item.SelectedPrintFolderRelativePath,
                 PrintFolderStatus = item.PrintFolderStatus.ToString(),
                 MismatchCount = item.MismatchCount,
+                IsPrinted = item.IsPrinted ? 1 : 0,
+                PrintedAt = item.PrintedAt?.ToString("o"),
                 ScanStatus = item.ScanStatus.ToString(),
                 ErrorMessage = item.ErrorMessage,
                 CandidatePrintFolders = candidatesJson,
@@ -574,6 +624,8 @@ public class SqliteOrderRepository : IOrderRepository
         if (string.IsNullOrWhiteSpace(relativePath)) return;
 
         using var connection = _connectionFactory.CreateConnection();
+        var count = await connection.QuerySingleAsync<int>("SELECT COUNT(*) FROM orders WHERE relative_path=@RelativePath", new { RelativePath = relativePath });
+        if (count > 1) throw new InvalidOperationException("Đường dẫn có ở nhiều root; cập nhật theo Order ID.");
         await connection.ExecuteAsync(@"
             UPDATE orders
             SET is_printed = @IsPrinted,
@@ -587,6 +639,86 @@ public class SqliteOrderRepository : IOrderRepository
             PrintedAt = printedAt?.ToString("o"),
             UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
         });
+    }
+
+    public async Task UpdateOrderPrintProgressAsync(long orderId, PrintStatus progress, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(@"
+            UPDATE orders
+            SET print_progress = @PrintProgress,
+                is_printed = @IsPrinted,
+                printed_at = @PrintedAt,
+                updated_at = @UpdatedAt
+            WHERE id = @OrderId;
+        ", new
+        {
+            OrderId = orderId,
+            PrintProgress = (int)progress,
+            IsPrinted = isPrinted ? 1 : 0,
+            PrintedAt = printedAt?.ToString("o"),
+            UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
+        });
+    }
+
+    public async Task UpdateOrderItemPrintedStatusAsync(long orderItemId, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(@"
+            UPDATE order_item_scans
+            SET is_printed = @IsPrinted,
+                printed_at = @PrintedAt
+            WHERE id = @OrderItemId;
+        ", new
+        {
+            OrderItemId = orderItemId,
+            IsPrinted = isPrinted ? 1 : 0,
+            PrintedAt = printedAt?.ToString("o")
+        });
+    }
+
+    public async Task UpdateOrderDeliveredStatusAsync(long orderId, bool isDelivered, DateTimeOffset? deliveredAt, string? deliveredBy = null, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        int affected = await connection.ExecuteAsync(@"
+            UPDATE orders
+            SET is_delivered = @IsDelivered,
+                delivered_at = @DeliveredAt,
+                delivered_by = @DeliveredBy,
+                updated_at = @UpdatedAt
+            WHERE id = @Id
+        ", new
+        {
+            Id = orderId,
+            IsDelivered = isDelivered ? 1 : 0,
+            DeliveredAt = deliveredAt?.ToString("o"),
+            DeliveredBy = deliveredBy,
+            UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
+        }, transaction);
+        if (affected != 1) throw new InvalidOperationException("Order not found.");
+        await SqliteCloudSyncStateRepository.EnqueueAsync(connection, transaction, "order_delivered", orderId, isDelivered, deliveredBy);
+        transaction.Commit();
+    }
+
+    public async Task UpdateOrderNoteAsync(long orderId, string? note, CancellationToken cancellationToken = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        int affected = await connection.ExecuteAsync(@"
+            UPDATE orders
+            SET note = @Note,
+                updated_at = @UpdatedAt
+            WHERE id = @Id
+        ", new
+        {
+            Id = orderId,
+            Note = note,
+            UpdatedAt = DateTimeOffset.UtcNow.ToString("o")
+        }, transaction);
+        if (affected != 1) throw new InvalidOperationException("Order not found.");
+        await SqliteCloudSyncStateRepository.EnqueueAsync(connection, transaction, "order_note", orderId, note ?? "");
+        transaction.Commit();
     }
 
     public async Task<IReadOnlyList<ScanSnapshot>> GetScanSnapshotsForOrderAsync(long orderId, CancellationToken cancellationToken = default)
@@ -646,11 +778,20 @@ public class SqliteOrderRepository : IOrderRepository
             Status = Enum.TryParse<OrderStatus>(dto.status, out var st) ? st : OrderStatus.Unscanned,
             IsPrinted = dto.is_printed == 1,
             PrintedAt = !string.IsNullOrEmpty(dto.printed_at) ? DateTimeOffset.Parse(dto.printed_at) : null,
+            PrintProgress = (PrintStatus)dto.print_progress,
+            HasPendingCloudChanges = dto.pending_cloud_changes != 0,
+            IsDelivered = dto.is_delivered == 1,
+            DeliveredAt = !string.IsNullOrEmpty(dto.delivered_at) ? DateTimeOffset.Parse(dto.delivered_at) : null,
+            DeliveredBy = dto.delivered_by,
+            Note = dto.note,
             FilesystemChangedAfterLock = dto.filesystem_changed_after_lock == 1,
             Fingerprint = dto.fingerprint,
             LastScanAt = !string.IsNullOrEmpty(dto.last_scan_at) ? DateTimeOffset.Parse(dto.last_scan_at) : null,
             CreatedAt = DateTimeOffset.Parse(dto.created_at),
-            UpdatedAt = DateTimeOffset.Parse(dto.updated_at)
+            UpdatedAt = DateTimeOffset.Parse(dto.updated_at),
+            RootFolderId = dto.root_folder_id,
+            RootFolderName = dto.root_folder_name,
+            ThumbnailCandidateRelativePath = dto.thumbnail_candidate_relative_path
         };
 
         if (dto.customer_id.HasValue && !string.IsNullOrEmpty(dto.customer_canonical_name))
@@ -681,6 +822,8 @@ public class SqliteOrderRepository : IOrderRepository
             SelectedPrintFolderRelativePath = dto.selected_print_folder_relative_path,
             PrintFolderStatus = Enum.TryParse<PrintFolderResolutionStatus>(dto.print_folder_status, out var pfs) ? pfs : PrintFolderResolutionStatus.NoPrintFolder,
             MismatchCount = (int?)dto.mismatch_count,
+            IsPrinted = dto.is_printed == 1,
+            PrintedAt = !string.IsNullOrEmpty(dto.printed_at) ? DateTimeOffset.Parse(dto.printed_at) : null,
             ScanStatus = Enum.TryParse<ScanStatus>(dto.scan_status, out var ss) ? ss : ScanStatus.Pending,
             ErrorMessage = dto.error_message,
             BillQuantity = (int?)dto.bill_quantity,
@@ -723,6 +866,7 @@ public class SqliteOrderRepository : IOrderRepository
 
     private class OrderDto
     {
+        public int pending_cloud_changes { get; set; }
         public long id { get; set; }
         public string? order_code { get; set; }
         public string work_date { get; set; } = string.Empty;
@@ -734,12 +878,20 @@ public class SqliteOrderRepository : IOrderRepository
         public string status { get; set; } = string.Empty;
         public long is_printed { get; set; }
         public string? printed_at { get; set; }
+        public int print_progress { get; set; }
+        public long is_delivered { get; set; }
+        public string? delivered_at { get; set; }
+        public string? delivered_by { get; set; }
+        public string? note { get; set; }
         public long filesystem_changed_after_lock { get; set; }
         public string? fingerprint { get; set; }
         public string? last_scan_at { get; set; }
         public string created_at { get; set; } = string.Empty;
         public string updated_at { get; set; } = string.Empty;
         public string? customer_canonical_name { get; set; }
+        public long? root_folder_id { get; set; }
+        public string? root_folder_name { get; set; }
+        public string? thumbnail_candidate_relative_path { get; set; }
     }
 
     private class OrderItemDto
@@ -756,6 +908,8 @@ public class SqliteOrderRepository : IOrderRepository
         public string? selected_print_folder_relative_path { get; set; }
         public string print_folder_status { get; set; } = string.Empty;
         public long? mismatch_count { get; set; }
+        public long is_printed { get; set; }
+        public string? printed_at { get; set; }
         public string scan_status { get; set; } = string.Empty;
         public string? error_message { get; set; }
         public string? candidate_print_folders { get; set; }

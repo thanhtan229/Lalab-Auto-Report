@@ -85,7 +85,9 @@ public record DiscoveredOrder(
     string RelativePath,
     IReadOnlyList<DiscoveredSpecification> Specifications,
     OrderKind Kind = OrderKind.Implicit,
-    string? OrderName = null
+    string? OrderName = null,
+    long? RootFolderId = null,
+    string? DiscoveryError = null
 );
 
 
@@ -171,6 +173,13 @@ public record ScanProgress(
 /// </summary>
 public interface IScanService
 {
+    Task<Order?> ScanOrderInRootAsync(string relativePath, long? rootFolderId,
+        IProgress<ScanProgress>? progress = null, CancellationToken cancellationToken = default)
+        => ScanOrderAsync(relativePath, progress, cancellationToken);
+    Task<OrderItemScan?> ScanSpecificationInRootAsync(string relativePath, long? rootFolderId,
+        CancellationToken cancellationToken = default)
+        => ScanSpecificationAsync(relativePath, cancellationToken);
+
     Task<IReadOnlyList<Order>> ScanDateAsync(
         string dateString,
         IProgress<ScanProgress>? progress = null,
@@ -227,7 +236,10 @@ public interface IOrderRepository
     Task<Order?> GetOrderByCodeAsync(string orderCode, CancellationToken cancellationToken = default);
     Task<int> GetMaxOrderSequenceForDateAsync(string workDate, CancellationToken cancellationToken = default);
     Task<Order?> GetOrderByRelativePathAsync(string relativePath, CancellationToken cancellationToken = default);
+    Task<Order?> GetOrderByRootAndRelativePathAsync(long rootFolderId, string relativePath, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetOrdersByDateAsync(string date, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Order>> GetOrdersByDateAndRootAsync(string date, long rootFolderId, CancellationToken cancellationToken = default);
+    Task<int> GetOrderCountByRootFolderIdAsync(long rootFolderId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetOrdersByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Order>> GetOrdersByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
     Task SaveOrderAsync(Order order, ScanSnapshot snapshot, CancellationToken cancellationToken = default);
@@ -242,7 +254,30 @@ public interface IOrderRepository
     Task UpdateFolderCustomerIdAsync(string workDate, string originalFolderName, long? customerId, string? orderName = null, CancellationToken cancellationToken = default);
     Task UpdateOrderPrintedStatusAsync(long orderId, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default);
     Task UpdateOrderPrintedStatusByRelativePathAsync(string relativePath, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default);
+    Task UpdateOrderPrintProgressAsync(long orderId, PrintStatus progress, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default);
+    Task UpdateOrderItemPrintedStatusAsync(long orderItemId, bool isPrinted, DateTimeOffset? printedAt, CancellationToken cancellationToken = default);
+    Task UpdateOrderDeliveredStatusAsync(long orderId, bool isDelivered, DateTimeOffset? deliveredAt, string? deliveredBy = null, CancellationToken cancellationToken = default);
+    Task UpdateOrderNoteAsync(long orderId, string? note, CancellationToken cancellationToken = default);
     Task DeleteOrderAsync(long orderId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Repository for managing multiple physical root folders (workspaces)
+/// </summary>
+public interface IRootFolderRepository
+{
+    Task<IReadOnlyList<RootFolder>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RootFolder>> GetActiveRootsAsync(CancellationToken cancellationToken = default);
+    Task<RootFolder?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<RootFolder?> GetByPathAsync(string fullPath, CancellationToken cancellationToken = default);
+    Task<RootFolder?> GetDefaultRootAsync(CancellationToken cancellationToken = default);
+    Task<long> InsertAsync(RootFolder rootFolder, CancellationToken cancellationToken = default);
+    Task UpdateAsync(RootFolder rootFolder, CancellationToken cancellationToken = default);
+    Task UpdatePathAsync(long id, string newPath, CancellationToken cancellationToken = default);
+    Task SetActiveAsync(long id, bool isActive, CancellationToken cancellationToken = default);
+    Task SetDefaultAsync(long id, CancellationToken cancellationToken = default);
+    Task DeleteAsync(long id, CancellationToken cancellationToken = default);
+    Task<bool> HasOrdersAsync(long rootFolderId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -251,6 +286,7 @@ public interface IOrderRepository
 public interface IDatabaseMigrator
 {
     Task MigrateAsync(CancellationToken cancellationToken = default);
+    Task MigrateToVersionAsync(int targetVersion, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -303,6 +339,7 @@ public interface IProductRepository : IPrintSpecificationRepository
     Task UpdateFamilyAsync(ProductFamily family, CancellationToken cancellationToken = default);
     Task DeleteFamilyAsync(long familyId, CancellationToken cancellationToken = default);
     Task AddFamilyAliasAsync(long familyId, string aliasText, CancellationToken cancellationToken = default);
+    Task UpdateFamilyAliasAsync(long aliasId, string newAliasText, CancellationToken cancellationToken = default);
     Task RemoveFamilyAliasAsync(long aliasId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ProductFamilyAlias>> GetAllFamilyAliasesAsync(CancellationToken cancellationToken = default);
 
@@ -553,10 +590,15 @@ public interface ICustomerBillRepository
     Task<IReadOnlyList<CustomerBill>> GetBillsByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
     Task<CustomerBill?> GetLastLockedOrExportedBillByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
     Task<CustomerBill?> GetLockedBillByOrderIdAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<CustomerBill?> GetBillByOrderIdAsync(long orderId, CancellationToken cancellationToken = default)
+        => GetLockedBillByOrderIdAsync(orderId, cancellationToken);
     Task<CustomerBill?> GetActiveDraftByCustomerIdAsync(long customerId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CustomerBill>> GetBillsBySourceFolderPathAsync(string normalizedFolderPath, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<GuestBillSourceFolder>> GetSourceFoldersByBillIdAsync(long billId, CancellationToken cancellationToken = default);
     Task SaveBillAsync(CustomerBill bill, CancellationToken cancellationToken = default);
+    Task SplitBillAtomicAsync(CustomerBill original, CustomerBill created, IReadOnlyList<long> movedOrderIds,
+        DateTimeOffset expectedUpdatedAt, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Repository must support transactional bill split.");
     Task LockCustomerBillAtomicAsync(CustomerBill bill, IReadOnlyList<long> productJobIds, IReadOnlyList<long> orderIds, CancellationToken cancellationToken = default);
     Task ReopenCustomerBillAtomicAsync(CustomerBill bill, IReadOnlyList<long> productJobIds, IReadOnlyList<long> orderIds, CancellationToken cancellationToken = default);
     Task DeleteDraftBillAsync(long billId, CancellationToken cancellationToken = default);
@@ -565,6 +607,9 @@ public interface ICustomerBillRepository
     Task<IReadOnlyList<CustomerBill>> GetBillsByMonthAsync(string yearMonth, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CustomerBill>> GetBillsByDateRangeAsync(string startDate, string endDate, CancellationToken cancellationToken = default);
     Task<string> GenerateNextBillNumberAsync(string date, CancellationToken cancellationToken = default);
+    Task SetPaymentStatusAsync(long billId, bool isPaid, DateTimeOffset? paidAt = null, CancellationToken cancellationToken = default);
+    Task<long> GetCustomerTotalDebtAsync(long customerId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerBill>> GetUnpaidBillsAsync(long? customerId = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -572,16 +617,19 @@ public interface ICustomerBillRepository
 /// </summary>
 public interface ICustomerBillingService
 {
+    Task<CustomerBill?> GetBillSnapshotAsync(long billId, CancellationToken cancellationToken = default)
+        => Task.FromResult<CustomerBill?>(null);
     Task<CustomerUnbilledSummary> GetCustomerUnbilledSummaryAsync(long customerId, CancellationToken cancellationToken = default);
     Task<CustomerBillDraftResult> BuildOrRefreshDraftAsync(long customerId, bool forceRescan = true, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DuplicateFolderWarning>> CheckDuplicateSourceFoldersAsync(IEnumerable<string> folderPaths, CancellationToken cancellationToken = default);
-    Task<CustomerBillDraftResult> BuildGuestBillDraftAsync(IReadOnlyList<string> sourceFolderPaths, string? customGuestName = null, long? existingDraftId = null, CancellationToken cancellationToken = default);
+    Task<CustomerBillDraftResult> BuildGuestBillDraftAsync(IReadOnlyList<string> sourceFolderPaths, string? customGuestName = null, long? existingDraftId = null, bool persistDraft = false, CancellationToken cancellationToken = default);
     Task<Customer> ConvertGuestBillToCustomerAsync(long billId, string customerCanonicalName, CancellationToken cancellationToken = default);
     CustomerBill RecalculateTotals(CustomerBill bill);
     Task<CustomerBill> LockBillAsync(CustomerBill draft, CancellationToken cancellationToken = default);
     Task ReopenBillAsync(long billId, string reason, CancellationToken cancellationToken = default);
     Task RecordBillExportedAsync(long billId, string exportFilePath, CancellationToken cancellationToken = default);
     Task DetachOrderFromCustomerBillAsync(long orderId, CancellationToken cancellationToken = default);
+    Task<CustomerBill> SplitOrdersToNewBillAsync(long currentBillId, IReadOnlyList<long> orderIdsToMove, CancellationToken cancellationToken = default);
     Task SyncBillWithScannedOrderAsync(Order scannedOrder, CancellationToken cancellationToken = default);
 }
 
@@ -600,4 +648,123 @@ public interface IExcelBillExporter
 {
     Task<string> ExportBillToExcelAsync(CustomerBill bill, string? destinationDirectory = null, CancellationToken cancellationToken = default);
 }
+
+public record PurgePreviewResult(
+    DateTime CutoffDate,
+    int OrderCount,
+    int BillCount,
+    int OrderItemCount,
+    int SnapshotCount
+);
+
+public record PurgeExecutionResult(
+    DateTime CutoffDate,
+    int OrdersDeleted,
+    int BillsDeleted,
+    string BackupFilePath
+);
+
+/// <summary>
+/// Data maintenance service for purging and archiving old operational data
+/// </summary>
+public interface IDataPurgeService
+{
+    Task<PurgePreviewResult> GetPurgePreviewAsync(DateTime cutoffDate, CancellationToken cancellationToken = default);
+    Task<PurgeExecutionResult> PurgeOperationalDataBeforeDateAsync(DateTime cutoffDate, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Type of global search result
+/// </summary>
+public enum GlobalSearchResultType
+{
+    Order,
+    Bill
+}
+
+/// <summary>
+/// Result item from global search across history
+/// </summary>
+public record GlobalSearchResult(
+    GlobalSearchResultType ResultType,
+    long Id,
+    string CodeOrNumber,
+    string Title,
+    string Subtitle,
+    string Date,
+    long? Amount,
+    string? FolderPath,
+    bool IsPaid,
+    string Status
+);
+
+/// <summary>
+/// Service for searching across all orders and bills in history
+/// </summary>
+public interface IGlobalSearchService
+{
+    Task<IReadOnlyList<GlobalSearchResult>> SearchAsync(string query, int limit = 50, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Thermal shipping label / package slip generator (75x100mm)
+/// </summary>
+public interface IShippingLabelExporter
+{
+    Task<string> ExportShippingLabelImageAsync(CustomerBill bill, string? destinationPath = null, CancellationToken cancellationToken = default);
+    Task PrintShippingLabelAsync(CustomerBill bill, bool silent = false, CancellationToken cancellationToken = default);
+    Task<string> ExportOrderShippingLabelImageAsync(Order order, string? destinationPath = null, CancellationToken cancellationToken = default);
+    Task PrintOrderShippingLabelAsync(Order order, bool silent = false, CancellationToken cancellationToken = default);
+    Task PrintTestSampleLabelAsync(string? printerName = null, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Service for authenticating mobile web users and managing sessions
+/// </summary>
+public interface IMobileAuthService
+{
+    string GenerateToken(MobileUserRole role);
+    bool TryValidateToken(string token, out MobileUserRole role);
+    MobileUserRole? AuthenticateWithPin(string pin, AppSettings settings);
+}
+
+/// <summary>
+/// Status of mobile web server
+/// </summary>
+public record MobileServerStatus(
+    bool IsRunning,
+    int Port,
+    string? LocalIp,
+    string? LocalUrl,
+    string? RemoteUrl,
+    string? ErrorMessage = null
+);
+
+/// <summary>
+/// Embedded Kestrel web server for mobile access
+/// </summary>
+public interface IMobileWebServer
+{
+    Task StartAsync(CancellationToken cancellationToken = default);
+    Task StopAsync(CancellationToken cancellationToken = default);
+    bool IsRunning { get; }
+    MobileServerStatus GetStatus();
+    event EventHandler? StatusChanged;
+}
+
+
+/// <summary>
+/// Manages Windows system tray notification icon, context menu and minimize-to-tray lifecycle
+/// </summary>
+public interface ISystemTrayManager : IDisposable
+{
+    void Initialize();
+    void ShowFirstTimeMinimizedNotification();
+    void UpdateStatus(string statusText);
+    void UpdateRemoteUrl(string? remoteUrl);
+    bool IsVisible { get; }
+}
+
+
+
 

@@ -14,17 +14,22 @@ public class DatabaseBackupService : IDatabaseBackupService
 {
     private const int MaxDefaultBackupsToKeep = 20;
     private readonly ISqliteConnectionFactory _connectionFactory;
+    private readonly ISettingsRepository? _settingsRepository;
     private readonly ILogger<DatabaseBackupService>? _logger;
 
-    public DatabaseBackupService(ISqliteConnectionFactory connectionFactory, ILogger<DatabaseBackupService>? logger = null)
+    public DatabaseBackupService(
+        ISqliteConnectionFactory connectionFactory, 
+        ISettingsRepository? settingsRepository = null,
+        ILogger<DatabaseBackupService>? logger = null)
     {
         _connectionFactory = connectionFactory;
+        _settingsRepository = settingsRepository;
         _logger = logger;
     }
 
     public string GetDatabasePath() => _connectionFactory.DatabasePath;
 
-    public Task<DatabaseBackupInfo> CreateBackupAsync(string? customDestinationPath = null, CancellationToken cancellationToken = default)
+    public async Task<DatabaseBackupInfo> CreateBackupAsync(string? customDestinationPath = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -75,6 +80,29 @@ public class DatabaseBackupService : IDatabaseBackupService
             CleanupOldBackups();
         }
 
+        // Secondary backup copy if configured (Google Drive / OneDrive / NAS)
+        if (_settingsRepository != null)
+        {
+            try
+            {
+                var settings = await _settingsRepository.GetSettingsAsync(cancellationToken);
+                if (!string.IsNullOrWhiteSpace(settings.SecondaryBackupFolder))
+                {
+                    if (!Directory.Exists(settings.SecondaryBackupFolder))
+                    {
+                        Directory.CreateDirectory(settings.SecondaryBackupFolder);
+                    }
+                    string secondaryDest = Path.Combine(settings.SecondaryBackupFolder, Path.GetFileName(destinationPath));
+                    File.Copy(destinationPath, secondaryDest, overwrite: true);
+                    _logger?.LogInformation("Secondary database backup successfully copied to '{SecondaryDestination}'", secondaryDest);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to copy backup to secondary location: {Message}", ex.Message);
+            }
+        }
+
         var fileInfo = new FileInfo(destinationPath);
         _logger?.LogInformation("Database backup successfully created. Size: {Size} bytes", fileInfo.Length);
 
@@ -85,7 +113,7 @@ public class DatabaseBackupService : IDatabaseBackupService
             CreatedAtUtc: fileInfo.CreationTimeUtc
         );
 
-        return Task.FromResult(result);
+        return result;
     }
 
     public async Task RestoreBackupAsync(string backupFilePath, CancellationToken cancellationToken = default)
@@ -95,6 +123,15 @@ public class DatabaseBackupService : IDatabaseBackupService
         if (!File.Exists(backupFilePath))
         {
             throw new FileNotFoundException($"File sao lưu không tồn tại: {backupFilePath}");
+        }
+
+        using var lifecycle = await DatabaseLifecycleGuard.EnterAsync(_connectionFactory.DatabasePath, cancellationToken);
+        using (var current = _connectionFactory.CreateConnection())
+            await DatabaseLifecycleGuard.EnsureLocalOnlyAsync(current);
+        using (var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = backupFilePath, Mode = SqliteOpenMode.ReadOnly }.ToString()))
+        {
+            source.Open();
+            await DatabaseLifecycleGuard.EnsureLocalOnlyAsync(source);
         }
 
         _logger?.LogInformation("Initiating database restore from '{BackupPath}'", backupFilePath);

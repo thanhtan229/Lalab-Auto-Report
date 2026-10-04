@@ -17,6 +17,26 @@ public class PrintFolderResolverTests
         ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".webp", ".heic"
     };
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ProductionScan_UnreadableDeepestBranchCannotResolveParent(bool failFiles)
+    {
+        using var fixture = new TestFileSystemFixture();
+        string spec = fixture.CreateDirectory(@"2026-10-02\Customer\13x18 in");
+        fixture.CreateFile(@"2026-10-02\Customer\13x18 in\source.jpg");
+        string leaf = fixture.CreateDirectory(@"2026-10-02\Customer\13x18 in\final");
+        fixture.CreateFile(@"2026-10-02\Customer\13x18 in\final\print.jpg");
+        var fs = new FailingEnumerationAdapter { FailedPath = leaf, FailFiles = failFiles };
+        var resolver = new PrintFolderResolver(fs);
+        var failed = resolver.ResolvePrintFolder(spec, fixture.RootPath, _supportedExts);
+        failed.Status.Should().NotBe(PrintFolderResolutionStatus.Resolved);
+        failed.PrintCount.Should().BeNull();
+        failed.ErrorMessage.Should().Contain("Access denied");
+        fs.FailedPath = null;
+        resolver.ResolvePrintFolder(spec, fixture.RootPath, _supportedExts).SelectedPrintFolderFullPath.Should().Be(leaf);
+    }
+
     [Fact]
     public void Scenario1_DirectImagesInProductFolder_ShouldResolve_ProductFolderItself()
     {

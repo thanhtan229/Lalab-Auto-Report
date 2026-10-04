@@ -1,0 +1,4 @@
+FORGED_ADMIN_WITH_UNCONFIGURED_JWT status=200 body={"authenticated":true,"role":"Admin","workshopName":"XƯỞNG IN ẢNH CHUYÊN NGHIỆP","workshopPhone":"","workshopAddress":""}
+STAFF_PAYMENT status=200 body={"success":true,"isPaid":true,"paidAt":"2026-10-02T11:29:43.931Z"} writes=2
+CLOUD_BILL_CONTRACT body={"id":1,"billNumber":"AUDIT-1","customerNameSnapshot":"Audit Customer","periodDate":"2026-10-02","totalAmount":75000,"isPaid":false,"hasJpeg":false,"lines":[],"adjustments":[]}
+EVENT_CURSOR first=500 second=0 permanentlySkipped=1

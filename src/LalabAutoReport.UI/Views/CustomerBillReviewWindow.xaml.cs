@@ -11,4 +11,13 @@ public partial class CustomerBillReviewWindow : Window
         DataContext = viewModel;
         viewModel.RequestClose += () => Close();
     }
+
+    protected override async void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (DataContext is CustomerBillReviewViewModel vm)
+        {
+            await vm.SaveCurrentStateAsync();
+        }
+    }
 }

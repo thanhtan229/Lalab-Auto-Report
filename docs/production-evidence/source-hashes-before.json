@@ -1,0 +1,838 @@
+[
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\LalabAutoReport.Core.csproj",
+    "Hash": "0F4E770DBA0B70D2EB6BF7C21ECDFF6805D16AFB9A82A704867C3D6EA826E4D2"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Domain\\Enums.cs",
+    "Hash": "A118A0FF71EE6EEDFCE61CA8903AA30F76E491579EF7BCD8F04FFF580651673E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Domain\\FolderFingerprint.cs",
+    "Hash": "879AF49D5968E2382D34CA122BAF0AFCAFD81C931BCBCDC3E5AC2EC0EE75BBE7"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Domain\\Models.cs",
+    "Hash": "3E97885A36A798BA78C165E0949A0F8560C69681A82648B4F996E1B157A2D136"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Domain\\UpdateInfo.cs",
+    "Hash": "D345E76311A08853654673AF3BE7DA401E25EDF2ADF1C80983C57F08556E54E1"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Domain\\VietnameseBanks.cs",
+    "Hash": "A2DDD544A1C2DD8F6C8E4D41B1FB82AC12B53E26BC33AE9789C2BA1E41B668CB"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IAutoScanCoordinator.cs",
+    "Hash": "9643780101C3E146EAEE170713109FACFFED2570825BA669CC99D14F30DFD625"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\ICloudMediaSyncService.cs",
+    "Hash": "9F56D8F59E3D3E249F075541D53EC1D8456BA79C6F968C1C0DE3AB86BC7423AC"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\ICloudSyncService.cs",
+    "Hash": "8308232D9C27BB69BF68E59EDF45D264F7A6ED8C4E45D96192CB4A793CA21302"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IContextMenuIntegrationService.cs",
+    "Hash": "0F2D091541DF74709BAD1BC94E38FE25421D04ACDCC0277131A5B87B1F4AE7A4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IFolderFingerprintService.cs",
+    "Hash": "1C42C3D838C2869AE5AF5199F4ED52CA9E9A80A4A67AD8E21F082C4C56A169A0"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IFolderPrintRepository.cs",
+    "Hash": "AC6B819DE2D7E3429C07F548D7D86313B4112C23E0936031E9CD6D963161D5F8"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IFolderVisualMarkerService.cs",
+    "Hash": "0CCF3F34CB577F3476B5A0EEE0A6FAB3B5C45E10688ACADF35438CD1B36B0EB4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IIdleDetectionService.cs",
+    "Hash": "E75C425A3EED2D6488846BE78480AB0F15E7CCD768B3F53298D01AE12824517B"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\Interfaces.cs",
+    "Hash": "E7A031C85A2000487CF8E18658E69B8DA9DD6652F7D85195173CA7ACD61D6F23"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IPrintStatusService.cs",
+    "Hash": "A3DFC4BC72C30D9408575CEAC3777664BDA5684DCA869F4F5C0DB403D912C7C5"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IThumbnailService.cs",
+    "Hash": "C0FAF655A42444DEA11004365A9286651F67917E53375BD2C8B649A550A38629"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Interfaces\\IUpdateService.cs",
+    "Hash": "5A8658CE467A14DE9C3AD6572A1226BC4C398602A1FF0475B364162ED1B25848"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\AutoScanCoordinator.cs",
+    "Hash": "5C13AAF29029475FC905DAC5C3DE44BD59FD71B094A39A2580F0172735605A95"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\BillingService.cs",
+    "Hash": "20D69428DEC3586DFF3246EF93CD719D1DC05D88679DDED6DCBB7B89D63112F1"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\CustomerBillingService.cs",
+    "Hash": "9424C1AEDDB8B45D00A38B69FE3E7BFAB536880EC3E4AB5912FF8A6B0F604E3D"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\CustomerNormalizer.cs",
+    "Hash": "504C3018BA4C93ED2B8C67F15B24BBA6A1BF63D768AFF6BD7AABFF22170B545F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\CustomerResolver.cs",
+    "Hash": "6BD5643A1E14FA8BE8D5DC6B24B9393BE5881E8548823FB21BB3BB511C39FE34"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\FolderFingerprintService.cs",
+    "Hash": "3FF8F0E7CF8B3453ED64BBF376ADEB23DECC2D090C2BD5FCB8C883CCF2B59AE0"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\FolderStructureParser.cs",
+    "Hash": "A13A69FD05B0E6043639C51E5042866001FB72E651D0F82EA52230B295F0CEF3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\LockingService.cs",
+    "Hash": "C3519BAA85D41BD78AC7F8F61E6BCD6AF6C8E9CE17F01621FC6C2EAB2FC26BC7"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\MobileAuthService.cs",
+    "Hash": "77863F6530F112829E3CF8480EC3A02D339526AF8C1E5E84F21C0106C741D5B8"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\NaturalStringComparer.cs",
+    "Hash": "1CB782C94072D92DC4A265D25E297F06234B038B27D4B5F47487DA44564F2A99"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\OrderCodeGenerator.cs",
+    "Hash": "C50C13E246F2A304C6C2AEF843B1BBBE9AF048FA9D16CE9CC45EC7DB132BA95C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\PathNormalizer.cs",
+    "Hash": "B7DD5AAED83AB8A6241B746D965F5D7C939DEFCB0E2D687D73D57DCED0167C62"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\PrintFolderResolver.cs",
+    "Hash": "23BE205990C8EA0A6BA294BB9420ADE67542DCFFE206CE2BB35FA0AE2BEE433E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\PrintSpecificationResolver.cs",
+    "Hash": "CE073FE81B8479CA7A171C694734D899472308A22228E29EC1948E78FEF2076A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\PrintStatusService.cs",
+    "Hash": "CA960C2D6823B95A7760A315232FB7342F9733A796E2459B229AF87F63CA569F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\ProductResolver.cs",
+    "Hash": "2F5888C5126E4DB9BA7322A0903D69B0D99CCF6D2BB43A516F3FD8410F71E7E6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\ReportService.cs",
+    "Hash": "DFDE7AB9E1330CAE9471C3C5F6CF73683CC63B750F94A268FAC7D14DA607672C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\ScanService.cs",
+    "Hash": "E35D23EB6D204C95A3E2383264DE7FB047DF388D1F48559CD2C11E3C763F472B"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Core\\Services\\SizeNormalizer.cs",
+    "Hash": "BC22F68E07AC3C893E54B0B576003EF4779050A79932ED27CEFB6B4DE84070BC"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\LalabAutoReport.Infrastructure.csproj",
+    "Hash": "601A9E6940B3375A5364533FAF55F0F12FFD7D3E270E3C3C8F7703EC8FCA9FFD"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\DatabaseBackupService.cs",
+    "Hash": "F0A5FA5447121A52D281B2268C404320C0F26196FD295431564B3EE3D2C4C97A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\DatabaseMigrator.cs",
+    "Hash": "C8A095685F2F5775C8B55AA26D56EFF85B0376BF475DFAFBE8465C731DE7E26E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\DatabaseResetService.cs",
+    "Hash": "F601503F3DD9D98644008F6E92C29210B17CBD1FFAF1C704B54137643786F566"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\DataPurgeService.cs",
+    "Hash": "946B339B6E925B3AA4AD0E13ED01375C36C9B0018E438666D604428C9C757AB1"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteBillRepository.cs",
+    "Hash": "9DC7472A341EF4BB595327EFADD30DD173EFE1045C9CE9B6B0B695BEC59ECC8A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteConnectionFactory.cs",
+    "Hash": "608B40F5A723F36EAF88961852FEE9F14476ACB51F6FF18147E0C4D775672990"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteCustomerBillRepository.cs",
+    "Hash": "B9DE6A6C9CEA812ACD2630208E705BDC5E74A1537FC862F06C0935474DF1028A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteCustomerRepository.cs",
+    "Hash": "56BAE4EE549976837DC101B6C46EA533AC4772834FE68B671A4F66CC6196C60D"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteFolderPrintRepository.cs",
+    "Hash": "401C59F81AA77016F4B135C5F37A62D5EB5A3CFD291446A26ACB062C56EFB1DF"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteOrderRepository.cs",
+    "Hash": "5B1D7701C96902252C397009CD7DBADA38BC4F847631B92486EC3CEEBF8EAABD"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqlitePrintSpecificationRepository.cs",
+    "Hash": "A59583E81D3093F26D51AB0176890427B047E049F643455802FF70B5753943D6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteProductRepository.cs",
+    "Hash": "1819C3984298DED5DBBB3973B5A93B2FE5FF02FBE67823B09C760EC5950DB5E9"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteRootFolderRepository.cs",
+    "Hash": "3320E4DD49FEF2DCE5D6A80FFA39C6A9F60BFD86459AD3C03C56E46E55D952D0"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Data\\SqliteSettingsRepository.cs",
+    "Hash": "F83E6325131246DF1217C399145F0B1ADDDE51DE16CD125C6559B636B05EFCCC"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\FileSystem\\PhysicalFileSystemAdapter.cs",
+    "Hash": "4F82D08D762B129CA89DF8227A70183A031771C5EB326D675FA79ACC36D8C98B"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Logging\\LoggingSetup.cs",
+    "Hash": "B40EE64970EF8A02941C26AEB212042C619465733F4B2417999F0E946D2413F9"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Reporting\\ClosedXmlBillExporter.cs",
+    "Hash": "820F73B883D13A780795D3F0C02ADD8229025CC9231C7EDE57F1023239770EF4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Reporting\\IBillVisualRenderer.cs",
+    "Hash": "3FAF1EE1F545AFBC2FCBCB65EEBAB3F8E41C237CCEBD3BD47BDC2647D049A5FC"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Reporting\\VietQrGenerator.cs",
+    "Hash": "81CD7E8D24477BD6DF55D57055B7A69D5D2C36F4FACA207A67886B1CFAD8B60A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Reporting\\WpfJpegBillExporter.cs",
+    "Hash": "3034054A8385237F11357B7C6A4AAC526BCF3D705CE9E2319CF72240C1065121"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Reporting\\WpfShippingLabelExporter.cs",
+    "Hash": "BD828221BE3AD2DED36C712AED92AB729DFC0FD085AF8FF2DC6806EF55E673E3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Services\\CloudMediaSyncService.cs",
+    "Hash": "D643DC180AB526EFD72786642102208D6D1727783013E64B8D90EEA9DC147D0A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Services\\CloudSyncService.cs",
+    "Hash": "C821FF43C21605758FEF73491FAB13735F36296733571431AC7843C5E95DFFE6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Services\\GitHubUpdateService.cs",
+    "Hash": "F36C4F192DF6254B5B20B414E598573EF446511BE7D89728E73995E12A01D875"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Services\\NetworkAddressHelper.cs",
+    "Hash": "8B52F87DAB4B7887CD66FDB3601CE1E9757D313ED4B81B592C793A806022FB86"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Services\\SqliteGlobalSearchService.cs",
+    "Hash": "708EF31CA8D803ACF79A5BA744DD4E7005211BCE04A2CA313856B54DD5B6729D"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Services\\ThumbnailService.cs",
+    "Hash": "102EF13ED1986E074497CA139B151C5ACC77B14D9EFEF718E245C82180A2D77C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Windows\\FolderVisualMarkerService.cs",
+    "Hash": "B955A5AB320954438663354002339C79C66F6A51D26A7CC322F9F84E8856103B"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Windows\\NativeShellMethods.cs",
+    "Hash": "0B2B1B1AF6CE70FAAC0E9F7E7777BBC6C57E76654B8011A8F245F81862C77092"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Windows\\WindowsContextMenuIntegrationService.cs",
+    "Hash": "ED6208F33B49B1746C57F70BDA95A7EF776ACB2F3D7907098FB133C3D775D5DB"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.Infrastructure\\Windows\\WindowsIdleDetector.cs",
+    "Hash": "7A1FB294BBA88FC3FD9CAECD64FE5BBF07E7EE81395F66E8467F72FCDE7CA798"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\App.xaml",
+    "Hash": "F6A7D1075B04C21AB87FDEF85C2CF6833882B9E41D992BBD046D602B2DB046F3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\App.xaml.cs",
+    "Hash": "0C03E4EC66A7EDFBA058B840B19533D50F96572452A30DC0A341630476018F7C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\AssemblyInfo.cs",
+    "Hash": "3FAC2AF92385F676E9A941BEFD23FE38F0A5FA6167D4A3A88F07E730C5595CA3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\LalabAutoReport.UI.csproj",
+    "Hash": "01B5C4421076872478D8098EBC3F5D85FE586562722FEA86821477D0C3FB4807"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\MainWindow.xaml",
+    "Hash": "1862472075FEC2416A5206D93C8B7E9A9D34233CFE95804C4B3247F01E46244D"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\MainWindow.xaml.cs",
+    "Hash": "CD1392980114AF4882E5148CBC92E1676B0AAC2BE9515DD8E90A944404C90646"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Behaviors\\NumericInputBehavior.cs",
+    "Hash": "40F009B076C13C56EE343821584B6E9BDA69A9E27F97AF58F51CB6C3E229956C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Converters\\BoolToVisibilityConverter.cs",
+    "Hash": "3918E4FE7D1662F72CC3AFF70207F229BDA15FF89E0CE0A274E88A951C417105"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Converters\\EnumToBooleanConverter.cs",
+    "Hash": "AE2FC5D89B1DD4A37708FB8B731FBC0AB7420A649230E2FA8A49BD62D428A40F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Converters\\InverseBooleanConverter.cs",
+    "Hash": "7C4DBAF44080F7163CECE8B3D69BEEF0E377A431C6B478CB69CA7B0A8A12DA1A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Converters\\NumberThousandsConverter.cs",
+    "Hash": "A45BE1DE813FBB0DAF7B426FEF59A702DF2E50888F81925946B64F58A2E8BD82"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Resources\\app.ico",
+    "Hash": "C2E01FCFF6BA019C48A2A375722BC45AE597DA4911A6A04F4C7EBC40EA8BDD1E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Resources\\quick_bill.ico",
+    "Hash": "BDBFD0FBE60C51CD80D9BDA2F0C1F60681876990885FB7F2C0DBFD3165ECF26E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Resources\\TinixStyles.xaml",
+    "Hash": "6B535AB8AC756AEE3EF5A3D8C38518142CB823F7A28FE11D10B208754E3EDC22"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Resources\\TinixTokens.xaml",
+    "Hash": "F55022DE6EC0DB32F911EFC1BE15EF937536A77312459AB32F69408D89313ADB"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Services\\QuickBillLauncher.cs",
+    "Hash": "9E47DBB9626703035CC359D92DE2E44E563D121AB8705DAFD548412037D97D9C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Services\\SystemTrayManager.cs",
+    "Hash": "35A81DD4C2E5EE7AE07CA2F0530909FE1808646CFD7A3DE4140381BBE227D183"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Services\\WindowsStartupHelper.cs",
+    "Hash": "1D89BBAD5DEBF702273626E0B1392A9DC96BFEF1FC695492152631ED2550E06A"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\AssignCustomerViewModel.cs",
+    "Hash": "CA313D217A34CA1A4EC446D95454EC69E1047630BA7FB824470195C1F58E3E80"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\CustomerBillAdjustmentDisplayModel.cs",
+    "Hash": "58FED1D501C275DB84BEA7FA6DB2EDB0961646A0BB868F39C8DB9D0184943C25"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\CustomerBillLineDisplayModel.cs",
+    "Hash": "E36AF1B453589B776C3926003C9C0766163FA81DE0434475250E057D613E1E91"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\CustomerBillOrderDisplayModel.cs",
+    "Hash": "642C13D3CEE13B951A4AAB943663D90D7112E326D7EE70B9661196825834171D"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\CustomerBillReviewViewModel.cs",
+    "Hash": "883F27518361B74C60074B2381F059AB48052C50FD512A52DF5FCAAA028BFCD2"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\CustomersViewModel.cs",
+    "Hash": "FD7B7B1FCB542098246A64C4F8C8BBDF1CF293ED834FA75AA8BD4B1B14998C00"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\DashboardViewModel.cs",
+    "Hash": "B5E802833103DCD50E913758600ADAD06FCBD29CACAA7F531AFBF39AF7323444"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\GlobalSearchViewModel.cs",
+    "Hash": "335CA42FD24ED8A45FD4B71865CB418F29F7DFCD72F5873EDFD830EB2EB4EC27"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\InvoicesViewModel.cs",
+    "Hash": "71779BDB29B18EB015C3FF207679E36151A4047944F62DA09C97C4CD0AC8FE38"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\MainViewModel.cs",
+    "Hash": "9C209D158EF4EA728972E679AE3CDAAF739DFE5DD2A3D914772054595C33A8EE"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\ManageFamilyAliasesViewModel.cs",
+    "Hash": "0E6288ABD14C2E89503D5308E18B664932EA4E999DB769D1E86F8039B87DFDEB"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\OrderDisplayModel.cs",
+    "Hash": "B569BD8D1C9BF691DEF12BBED3C4B9C1B9ADBF728BB66CA978934358F6C87C12"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\PriceListViewModel.cs",
+    "Hash": "C0C678DE1E0673BE87ECFAD0B5202FAF83C3E6F7D3DCD919A4BBA9004B6B56D7"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\ReportsViewModel.cs",
+    "Hash": "46F9E7CBF7A4837593953E4C22ED0B95FED4C7CC2AF578BD8DC214A7261A379F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\RootFolderDisplayItem.cs",
+    "Hash": "A783602387009F9275ABC84FACCD3CF8A81D8C6AD73D078B045CCC86CD34F137"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\SettingsViewModel.cs",
+    "Hash": "D9EB689D0A92188BED02B830EA284EA35A47724BBB9870B37EB6FD709030B38F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\ViewModels\\UpdateViewModel.cs",
+    "Hash": "7935CDDE1D1366AAC3FBC4F5B81AAD6105246EDDF850A254298E63CAD1BEC1B7"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\AssignCustomerWindow.xaml",
+    "Hash": "252866F22D02E353656D6EC1CBF62F34BE358871BECF90C7D8D651012881958F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\AssignCustomerWindow.xaml.cs",
+    "Hash": "6787A5A55321D849A489204D4A1EB8B2F633FA51FA3FE1352CEACF0AB73F6B70"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\BillPreviewWindow.xaml",
+    "Hash": "244770E317FF754B57DD11521B371DDF3E0C7F90B6EE0BDC81458C05EE69BEB7"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\BillPreviewWindow.xaml.cs",
+    "Hash": "BBF60D31A94C3C242B2F4EA673E6B0CD303E6415965B688602904DC61AD22283"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\CreateFamilyDialog.xaml",
+    "Hash": "F9104D0DEC2CCC9625FF360C8990CD1F82DDB3191FAE4AAEB0016873EC577F22"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\CreateFamilyDialog.xaml.cs",
+    "Hash": "764E3E5C476FC2C9A6161E7512080AF9C4E49A61470F859A2B297A83A051D21F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\CustomerBillReviewWindow.xaml",
+    "Hash": "D4D411A8339AC517286101182BEB82CB95B35A4C4B6F7B2428B317E27245C615"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\CustomerBillReviewWindow.xaml.cs",
+    "Hash": "E400D37280F24D4F6929D21D824A489B15E1C05E811092628E1FEB43CC61CBB3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\CustomersView.xaml",
+    "Hash": "5B79F6A5C8A2B3C8795C91B46EFE9402E264EBB894646168C8302941346E56D3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\CustomersView.xaml.cs",
+    "Hash": "99D6C887E7B4946F6CF30AA7F3181ECA24B2C24C6C3CF72921343810A6053CC5"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\DashboardView.xaml",
+    "Hash": "748A1A7F2B899A6368C4ADE16ACD163BCF25DC9D7A4FF1B48D348F172CCA1908"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\DashboardView.xaml.cs",
+    "Hash": "9DA43511613151813ECA23C12617A33C68C3BD35CC1C225575324670C3C15C91"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\GlobalSearchWindow.xaml",
+    "Hash": "01D441025477C89F449EE56716C8A70C312A202C51590D19967085262B4E7A91"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\GlobalSearchWindow.xaml.cs",
+    "Hash": "DE775637F7FEECF654A239D0372C36EB7A5890C233D15558B9EEEB955E42C8F9"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\InputDialog.xaml",
+    "Hash": "A0D81F3D308C83D5F39C34012751AFC0F40746DF289DEE6AB8BBBC1D057AC8B4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\InputDialog.xaml.cs",
+    "Hash": "CF5D837FF0F618DEE9BC061123FD4B6E09B6AFD82739467602E4DFCCCAF899D5"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\InvoicesView.xaml",
+    "Hash": "2AFBF17E8D9694455BA7F3372460D3817A244563FFD5378B7D87C54C66A0D5E6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\InvoicesView.xaml.cs",
+    "Hash": "673D5D74F36DADEA9E922ED33A8248C1404B206F9C171F9839BEFF0B1D6070E5"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ManageFamilyAliasesDialog.xaml",
+    "Hash": "ADCB023F51220CF4AAC1A4E07E088DA1B514804DC20E74F239CD59864F18B292"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ManageFamilyAliasesDialog.xaml.cs",
+    "Hash": "B8E3620E7E9B85D7F3D9918E341E289442DCBC281252BC9E0A1E62B0400684CE"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\PriceListView.xaml",
+    "Hash": "440CB9AADB8ABC4419C03C8B235253FF8D7F7690B112E5643C291DD5118702D4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\PriceListView.xaml.cs",
+    "Hash": "4E9E9D7328E246BF491DCD353B5610AA08DE6FAC3A5A411410CF717F76939710"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ReportsView.xaml",
+    "Hash": "04F501E317635B6B1E248EFE6703D35CCF1BB78D5D8A86F054E8078C8211FBB2"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ReportsView.xaml.cs",
+    "Hash": "BAD34FAE648D70B4C93350F4CA4B8F2EDC37F05966E18B91ADE928AE5E943836"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ResetConfirmationDialog.xaml",
+    "Hash": "9728FD19832E7597C692EFB7F777149D39817660E0A418198517C26EB7484437"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ResetConfirmationDialog.xaml.cs",
+    "Hash": "C8C5805F0115089D20327C95001819DD834B13A0F501A96D0B3772092C7A6764"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\SettingsView.xaml",
+    "Hash": "6258FF627C81B786027999EC883855E1DA2C1091BF5CFD1937A8878E1E0DF78E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\SettingsView.xaml.cs",
+    "Hash": "64E3ED6FEC5D14B55D84C8729449D2B7BACD1D52D2E5EC9A97DE64E2393DCEBD"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ShippingLabelPreviewWindow.xaml",
+    "Hash": "1686BE847B58DBD317EFB05F03C41FE6255DFFC623C3457B3495A04887C09E7C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\ShippingLabelPreviewWindow.xaml.cs",
+    "Hash": "040EBA3AEDBD48FDEB75459A3D8E656C2FAE422831359A2983AB662102A29CA9"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\UpdateDialog.xaml",
+    "Hash": "EA130D19BF2C6437C1882F20C380B8C3101B0743CB75BA153E6665360CC38E42"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Views\\UpdateDialog.xaml.cs",
+    "Hash": "FC6FE419EB6F308B260D0B693A8D3B0D6986AB3E4A8223CDDEB3D94F74600C2E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Web\\KestrelMobileWebServer.cs",
+    "Hash": "6D2971AC6FA4378E6364682D18810B964B150A09D5CC30C500CBA4DCB8ADEB49"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\src\\LalabAutoReport.UI\\Web\\MobileSpaHtmlProvider.cs",
+    "Hash": "14C3C08A137274D7403F13FACD228C50D77254FCD6A6BFF74D20E69E14E8FB1B"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\AssemblyInfo.cs",
+    "Hash": "E1E6BF35402B9D682FC3D3AAE7946F74A8580EFC4006485FF546A5031B447D18"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\AutoScanAndFingerprintTests.cs",
+    "Hash": "7D7B1EFE807BA27C168BE333C7CC64B2C89D370652B2CDEEC6C27B0255052DA2"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\BillingEngineTests.cs",
+    "Hash": "4F2D1D8B07FFE3EBA9D5AE02AC672D8330C560D140225B41BC460A515B491764"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\CloudMediaSyncServiceTests.cs",
+    "Hash": "16C6E3703DEC5ED98A080C7A0D06A3FB779FB8917CFE0B2B182BCF8E640176BA"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\CloudSyncServiceTests.cs",
+    "Hash": "0C864267F138A1B81567CD8BB9E0C501B8FBC02F459DD5B02C7218AF727B304F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ContextMenuIntegrationTests.cs",
+    "Hash": "9E61FD79BE0665254B276722C28A86F506F4A6745D3FA2C08F26022FF93CAE49"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ConverterTests.cs",
+    "Hash": "06C2708C7D7D7B15C6AD5317F4BBF776FD786E63A7451B108353A10798838294"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\CustomerBillingTests.cs",
+    "Hash": "F143F73451705DE3DDDCCE378EEF7C1482C5C0D1A38B5DF6CBA349CF7C85E5D6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\CustomerNormalizerTests.cs",
+    "Hash": "E733E471BF0650CBB2EDE43D7E60FDCE55E424CE42F1F18F771D7145012E4080"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\CustomerResolutionTests.cs",
+    "Hash": "4534541B97DC7BF70959F20D3A1A7CC8970D0BDB476E60108098227E0CBA2464"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\DatabaseResetServiceTests.cs",
+    "Hash": "EF61578B0AD9CFE586E90193AC8C5C1F6DE501943286E795738AFEFB0BFF724E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\EffectiveBillingFolderTests.cs",
+    "Hash": "64E97D51FB06125B2CE17989F48A8EB2CF592DC69D454F85FFD3E33AE53BF228"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ExcelBillExporterTests.cs",
+    "Hash": "52BA6B5013E859B848B3C1847EE69C895DA1FD1216611FDA62CE9D7F3A0B3D35"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\FinalPrintFolderAndBillingTests.cs",
+    "Hash": "CD8D0C9592EDFA7C3D38E0E29AB22EC9EEE1E01F864F7C449F23445DE66A3BB6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\FolderPrintStatusTests.cs",
+    "Hash": "2515473D60E41FE77BF252878A48BA050106384121C791E2059E25F71EC0F957"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\GlobalSearchTests.cs",
+    "Hash": "8DD9793C1B4C64B8A6A9199E8F9071CB3B33F5B9C2E8556616561FB864C55BC7"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\GuestBillingTests.cs",
+    "Hash": "43D675EDE654DDCE0F8080229ABB66D6B219D29841AF047FD3F483E9FBAB731E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\HardeningTests.cs",
+    "Hash": "9D67C38B7DC65259BBF2BF649251B7102EED12790069C2D226E57DAC9AE0D9C4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\InvoiceHistoryAndReorganizationTests.cs",
+    "Hash": "4B9F737AC794AA6C07F8FEEF785C555C999556360EB01A74106447C7B4888556"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\InvoicesViewModelTests.cs",
+    "Hash": "A598B6E51EC4CF83F0B7C967BDB74D43465E3295C1B01A769335D6B663A77414"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\LalabAutoReport.Tests.csproj",
+    "Hash": "4A96522B90024190752BF1D1F54568C4F62CF1F4400FD609793E4AC6B9A10971"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\LockingServiceTests.cs",
+    "Hash": "3D751A29768C445B6F608B420E70CB04B51355C35C43F6A6379F0CDBCDB1CA49"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ManageFamilyAliasesViewModelTests.cs",
+    "Hash": "5ACA16E586C622FE675C978678DEE06AADD4433099751A78C9AF3E26DFE07E56"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\MobileAuthServiceTests.cs",
+    "Hash": "F9EBBB26B2C80D864C03A4BC3E2EE7B368927436AE168A597D4E818854FFC557"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\MobileSpaScriptSyntaxTests.cs",
+    "Hash": "0CEE15E1CF2718A2CADCBD1142845A8C110786A58390EE318154DACC05D924A0"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\MobileWebServerTests.cs",
+    "Hash": "AB98E6FF5017F3EA6E896DE798CE610B2453DD883A4DCC1D236E41691E43BE49"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\MultiRootFolderTests.cs",
+    "Hash": "544D9B4B29954104297134DA222AF2D2B679C40977F83F83ADAACDAE29828C1F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\NetworkAddressHelperTests.cs",
+    "Hash": "7FC6AC702E4EC54009CABFACC77D4F10828DD7A2FF16AB5B9D4015C3AB9665F6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\OrderCodeTests.cs",
+    "Hash": "77EF258E30EF3D253C4F3A9A9ED6E7A02AB2FE94A7AD83B984DE9E3BA0ADE645"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\OrderDeliveryAndNoteTests.cs",
+    "Hash": "72C40B0105E101F007385B79A34DF3C79BCF1360ED2766CB7ABBE8DF71CE3B10"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\OrderDetectionTests.cs",
+    "Hash": "9CAFC4F28237C2F5C5278FBAD198ABD785EDABAA34DA5325A1EAB5F4FD3EC221"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\OrderItemDisplayModelTests.cs",
+    "Hash": "544848AB671FB667EDA130CE6BC98944555306B9D3370452D0A2CF34AD52FEC6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\PaymentStatusAndDebtTests.cs",
+    "Hash": "236576CD79EC6E859057441FA06359447A30403B1674CF22CF898AA7D3962CA3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\PrintFolderResolverTests.cs",
+    "Hash": "BCC8A1D3EC76111A185535EB4B9FB0632F8E6DCD0D5CF26FFBFFECA1BEF40417"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\PrintProgressWorkflowTests.cs",
+    "Hash": "9DE7A85635D704FB2B599C6EB200E7BE327B72E46F947711E6272BF9E51780C3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ProductResolverTests.cs",
+    "Hash": "2CAFC714B56FAC44E8029D2F334FEB10D68ADA73663D3A30E9767CC11D2D647F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\RenameAndCustomerEditTests.cs",
+    "Hash": "676C0A07CBB54EE5A5307A883C4B19B6F7D9BFA32E2E8153CB3C327A65CD321F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ReportServiceTests.cs",
+    "Hash": "91399AC42256E61983B62EE0C66391D904EC894B241876AE975D2434B54DF99D"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ScanServiceIntegrationTests.cs",
+    "Hash": "7E0C18362E13C139F496FE65013EA979DFFA2202CA869FE1DCA91863EF8EC14B"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ShippingLabelTests.cs",
+    "Hash": "91E0A0EDCE796BB954AFB942CFEFE59F4CA7B811BFC2B9479E20F5F60747F908"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\SizeNormalizerTests.cs",
+    "Hash": "40452BCE66359D525BD8B9E2AD6D71D27789F879104568814FE495692F72C5C6"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\SmartScanAndSnapshotTests.cs",
+    "Hash": "E66764DED784CC6C9D341D879D03BC9EB7BC515C2B7ABD711B261C4F518EF361"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\SplitBillTests.cs",
+    "Hash": "315C38A83C26491AB11165AB5BFCA81411B19CC82D24206408EF966D7CCF188B"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\SystemTrayAndBackgroundDaemonTests.cs",
+    "Hash": "B2C93CBB656F7B205EEA2D6ACF9602EDFF17CE6C5C9CC1A3A00F5E88E0B3C616"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\TabNavigationUiTests.cs",
+    "Hash": "3595BE827E93278376027E9369C1E581E30C226624DCEBF15FA4A57D3290D29E"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\TestFileSystemFixture.cs",
+    "Hash": "95C37E87403CE495EC08AA165856865E5E295EA5251E927C1CDF36DAB3AFF6CF"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\ThumbnailServiceTests.cs",
+    "Hash": "05306090718B3A88F0A62AAA740C3B58CFDE822E5D570C4155F6F71218A5455F"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\TieredPricingTests.cs",
+    "Hash": "395F6001B8EDF052E76474D3DF00A73046D6B2B20590990AA7A37DF716F5B0A1"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\UpdateServiceTests.cs",
+    "Hash": "F062D5D82F1F29BE6AEA76782D67C9478C4279EE9ADE3FEFC27F674B25EFD745"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\V2UpgradeFeatureTests.cs",
+    "Hash": "5D3837AB421DF8463D26E67B11D9AAC189A7F48FA76692EE2393F6AADBE3BD9C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\VietQrGeneratorTests.cs",
+    "Hash": "BFE5E75D87C60028453B25FED2E9AF22CF1CFFA3C137749BD7DF5B0890C0F0E4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\WhiteLabelAndQrSettingsTests.cs",
+    "Hash": "0A91E391EA7DB1F0E7934D7A42EC614AFF45D8339B9C03E97EF2A23C5D5FB4C3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\XamlResourceIntegrityTests.cs",
+    "Hash": "0C0350A097704C8C3AB9FE72E8A9BF1F0AFCC00BFCB548AF60D844AB0A37EDAD"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\tests\\LalabAutoReport.Tests\\xunit.runner.json",
+    "Hash": "130F5FC30C42655FAA4732DD2CF4D51862C59E07B824DD81AFEABE7FA21FBA33"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\package-lock.json",
+    "Hash": "CEFB9A852D2BE51D68DEF369693C3387B97F6CA6BAA4C981C293138A88E0FDAD"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\package.json",
+    "Hash": "CC0A96B4423C4F3077F312C678650FC88CF70AA9A790100DF22142EC2FD79B3C"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\README.md",
+    "Hash": "3D16200FF4CDB21C54B581D0D48C16CBC691AF2A99385669620C1742B1E696FE"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\tsconfig.json",
+    "Hash": "32DA28ACC904EADDB16CA4410EC26254CB777AC2CEB0969773D1547793606253"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\wrangler.jsonc",
+    "Hash": "2DDD224EDF3C618C3B1A4ED61EF00E93C22DDA0AEC96C531A9B05F7F6B841CD3"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\migrations\\0001_init.sql",
+    "Hash": "E4E855D0B6A26FD6F529E8B17AB205708AEAE70ABA2DC8A9AF75BC62AB078050"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\migrations\\0002_operational_sync.sql",
+    "Hash": "6D23D7A5AE0DA7F31244DE1281FAC5A8FDE6AD77F0A8DEA178D2A2D62D3FADB5"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\migrations\\0003_media_heartbeat_printqueue.sql",
+    "Hash": "13642EB6852524752351918E38959E92EFEE1E7D3D2C4911C60A50D6EA37B670"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\public\\index.html",
+    "Hash": "7D2FC5B4175B4739C78D018F7D1649DF8D633D6A0AB0B40399BB619DDDE7C832"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\public\\manifest.json",
+    "Hash": "F89106E876FD28B295A015EFCD6F5891C27DC5086673A4DD7D12ACE3B93E0A94"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\public\\sw.js",
+    "Hash": "24439AB451520B1FBE871E9C45EE8A42ECF13E0153DF020CC396F993836BADE5"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\src\\auth.ts",
+    "Hash": "1F15574363B83871401879B823A5DF7B1C1ECACD86D263320E6DA33631F7CECF"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\src\\db.ts",
+    "Hash": "E4E9A113CF0DA45F7EDCF200A4A34DB54320BDC95E0F363FF487E450A81447AC"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\src\\index.ts",
+    "Hash": "EEDF716BF104F0CFB64BC03527156744D30957DC6200F77EACB562A8CD771B13"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\src\\types.ts",
+    "Hash": "0869F81EF04F9B406BCB0BADC9DDEB130640831E3E21BDACD6CAA906074B1C73"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\test\\api.spec.ts",
+    "Hash": "62B8159C262E67CB72324977A59A904696B2C401BD0009E4E610F70FED8DF9D4"
+  },
+  {
+    "Path": "D:\\___TOOLS\\__TINIX\\Lalab Auto Report Antigravity\\cloud\\worker\\test\\health.spec.ts",
+    "Hash": "7BB3A138072D54B0C08991987994A2AB2B9AE06D3A75C9BBDE6EE1B298A14892"
+  }
+]

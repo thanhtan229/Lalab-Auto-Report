@@ -1,0 +1,57 @@
+{
+  "activeVersionId": "982d60eb-a645-49d6-a452-21c3868b1178",
+  "codeDeployVersionId": "681ef6eb-3938-49bc-a865-b53f433e61a0",
+  "predeploySha256": "87bad586efebe2d63d2fc290a12bcb57d5e51933053df6be49447f940655d30e",
+  "postdeploySha256": "803f7a6d5acfaca0b74671d6a2f1ae28c6558103b531d38b2c7f8cdc23f8a66c",
+  "exportedSnapshotIntegrity": "ok",
+  "dataChecks": {
+    "cloud_orders": {
+      "beforeRows": 18,
+      "afterRows": 18,
+      "originalColumnsUnchanged": true,
+      "changedColumns": []
+    },
+    "cloud_bills": {
+      "beforeRows": 20,
+      "afterRows": 20,
+      "originalColumnsUnchanged": true,
+      "changedColumns": []
+    },
+    "cloud_operational_events": {
+      "beforeRows": 8,
+      "afterRows": 8,
+      "originalColumnsUnchanged": true,
+      "changedColumns": []
+    },
+    "cloud_print_commands": {
+      "beforeRows": 0,
+      "afterRows": 0,
+      "originalColumnsUnchanged": true,
+      "changedColumns": []
+    },
+    "cloud_reports": {
+      "beforeRows": 3,
+      "afterRows": 3,
+      "originalColumnsUnchanged": true,
+      "changedColumns": []
+    },
+    "cloud_heartbeats": {
+      "beforeRows": 1,
+      "afterRows": 1,
+      "originalColumnsUnchanged": false,
+      "changedColumns": [
+        "last_heartbeat_at"
+      ]
+    }
+  },
+  "heartbeatNote": "Expected periodic Desktop heartbeat changed last_heartbeat_at; business tables unchanged.",
+  "priorSyncMetaPreserved": true,
+  "appliedMigrations": [
+    "0001_init.sql",
+    "0002_operational_sync.sql",
+    "0003_media_heartbeat_printqueue.sql",
+    "0004_versioned_operations.sql",
+    "0005_event_stream_identity.sql",
+    "0006_bill_snapshots_and_print_claims.sql"
+  ]
+}

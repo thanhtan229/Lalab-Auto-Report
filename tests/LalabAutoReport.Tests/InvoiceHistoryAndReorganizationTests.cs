@@ -118,6 +118,30 @@ public class InvoiceHistoryAndReorganizationTests
 
         public Task<string> GenerateNextBillNumberAsync(string date, CancellationToken cancellationToken = default)
             => Task.FromResult($"BILL-{date}-0001");
+
+        public Task SetPaymentStatusAsync(long billId, bool isPaid, DateTimeOffset? paidAt = null, CancellationToken cancellationToken = default)
+        {
+            var bill = Store.FirstOrDefault(b => b.Id == billId);
+            if (bill != null)
+            {
+                bill.IsPaid = isPaid;
+                bill.PaidAt = isPaid ? (paidAt ?? DateTimeOffset.UtcNow) : null;
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task<long> GetCustomerTotalDebtAsync(long customerId, CancellationToken cancellationToken = default)
+        {
+            var total = Store.Where(b => b.CustomerId == customerId && (b.Status == CustomerBillStatus.Locked || b.Status == CustomerBillStatus.Exported) && !b.IsPaid).Sum(b => b.GrandTotal);
+            return Task.FromResult(total);
+        }
+
+        public Task<IReadOnlyList<CustomerBill>> GetUnpaidBillsAsync(long? customerId = null, CancellationToken cancellationToken = default)
+        {
+            var q = Store.Where(b => (b.Status == CustomerBillStatus.Locked || b.Status == CustomerBillStatus.Exported) && !b.IsPaid);
+            if (customerId.HasValue) q = q.Where(b => b.CustomerId == customerId.Value);
+            return Task.FromResult<IReadOnlyList<CustomerBill>>(q.ToList());
+        }
     }
 
     private class FakeCustomerBillingService : ICustomerBillingService
@@ -131,7 +155,7 @@ public class InvoiceHistoryAndReorganizationTests
         public Task<IReadOnlyList<DuplicateFolderWarning>> CheckDuplicateSourceFoldersAsync(IEnumerable<string> folderPaths, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<DuplicateFolderWarning>>(new List<DuplicateFolderWarning>());
 
-        public Task<CustomerBillDraftResult> BuildGuestBillDraftAsync(IReadOnlyList<string> sourceFolderPaths, string? customGuestName = null, long? existingDraftId = null, CancellationToken cancellationToken = default)
+        public Task<CustomerBillDraftResult> BuildGuestBillDraftAsync(IReadOnlyList<string> sourceFolderPaths, string? customGuestName = null, long? existingDraftId = null, bool persistDraft = false, CancellationToken cancellationToken = default)
             => Task.FromResult(new CustomerBillDraftResult(new CustomerBill { BillType = BillType.Guest }, new List<string>(), new List<string>()));
 
         public Task<Customer> ConvertGuestBillToCustomerAsync(long billId, string customerCanonicalName, CancellationToken cancellationToken = default)
@@ -153,6 +177,9 @@ public class InvoiceHistoryAndReorganizationTests
 
         public Task SyncBillWithScannedOrderAsync(Order scannedOrder, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task<CustomerBill> SplitOrdersToNewBillAsync(long originalBillId, IReadOnlyList<long> orderIdsToMove, CancellationToken cancellationToken = default)
+            => Task.FromResult(new CustomerBill());
     }
 
     private class FakeJpegExporter : IJpegBillExporter
@@ -401,52 +428,6 @@ public class InvoiceHistoryAndReorganizationTests
         vm.CustomerBills.Should().HaveCount(1);
         vm.CustomerBills.First().BillNumber.Should().Be("B-20");
 
-        // 3. Select Guest Customer Item (Id = -1)
-        vm.SelectedCustomer = vm.FilteredCustomers.First(c => c.Id == -1);
-        vm.IsGuestSelected.Should().BeTrue();
-        await vm.RefreshBillsAsync();
-        vm.CustomerBills.Should().HaveCount(1);
-        vm.CustomerBills.First().BillNumber.Should().Be("B-GUEST");
-    }
-
-    [Fact]
-    public async Task CustomersViewModel_GuestAliases_SavedToSettings()
-    {
-        var custRepo = new FakeCustomerRepo();
-        var settingsRepo = new FakeSettingsRepo
-        {
-            CurrentSettings = new AppSettings
-            {
-                GuestAliases = new List<string> { "khach_le", "khách lẻ" }
-            }
-        };
-
-        var vm = new CustomersViewModel(
-            custRepo,
-            new FakeCustomerBillingService(),
-            new FakeCustomerBillRepository(),
-            new FakeJpegExporter(),
-            settingsRepo
-        );
-
-        await vm.LoadCustomersAsync();
-
-        // Select guest
-        vm.SelectedCustomer = vm.FilteredCustomers.First(c => c.Id == -1);
-        vm.IsGuestSelected.Should().BeTrue();
-
-        // Add a new guest alias
-        vm.NewAliasText = "chup_lay_lien";
-        await vm.AddAliasCommand.ExecuteAsync(null);
-
-        // Verify settings were updated
-        var updatedSettings = await settingsRepo.GetSettingsAsync();
-        updatedSettings.GuestAliases.Should().Contain("chup_lay_lien");
-
-        // Cannot delete guest customer
-        bool deleteResult = await vm.DeleteCustomerAsync();
-        deleteResult.Should().BeFalse();
-        vm.StatusMessage.Should().Contain("cố định của hệ thống");
     }
 
     [Fact]
@@ -460,3 +441,4 @@ public class InvoiceHistoryAndReorganizationTests
         Order.IsGuestFolderName("2026-09-30_khách lẻ", null, null).Should().BeTrue(); // default built-in
     }
 }
+

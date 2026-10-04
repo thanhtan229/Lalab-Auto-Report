@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 22,
+  "integrity": "ok",
+  "foreignKeyViolations": 0,
+  "cloudReconciliationRequired": true,
+  "printLedgerRows": 0
+}

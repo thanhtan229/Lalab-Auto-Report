@@ -206,4 +206,60 @@ public class DatabaseResetServiceTests : IDisposable
         Assert.Single(restoredOrders);
         Assert.Equal("2026-09-30\\Khách Test Phục Hồi", restoredOrders[0].RelativePath);
     }
+    [Theory]
+    [InlineData(ResetDataScope.OperationalOnly, "stream")]
+    [InlineData(ResetDataScope.FactoryReset, "stream")]
+    [InlineData(ResetDataScope.OperationalOnly, "pending")]
+    [InlineData(ResetDataScope.FactoryReset, "pending")]
+    [InlineData(ResetDataScope.OperationalOnly, "disabled-secret")]
+    [InlineData(ResetDataScope.FactoryReset, "enabled")]
+    public async Task Reset_CloudLifecycleIsBound_RejectsWithoutDeletingData(ResetDataScope scope, string state)
+    {
+        using (var c = _connectionFactory.CreateConnection())
+        {
+            await c.ExecuteAsync("INSERT INTO orders(id,work_date,original_folder_name,relative_path,status,created_at,updated_at) VALUES(123,'2026-10-02','Old','Old','Scanned',datetime('now'),datetime('now'))");
+            if (state == "stream") await c.ExecuteAsync("UPDATE cloud_sync_state SET stream_id='old-stream',endpoint='https://cloud' WHERE id=1");
+            if (state == "pending") await c.ExecuteAsync("INSERT INTO cloud_operational_outbox(operation_id,entity_type,entity_id,value_json,created_at) VALUES('old-op','order_note',123,'true',datetime('now'))");
+            if (state == "disabled-secret") await c.ExecuteAsync("INSERT OR REPLACE INTO app_settings(key,value) VALUES('EnableCloudSync','False'),('CloudSyncSecret','previous-secret')");
+            if (state == "enabled") await c.ExecuteAsync("INSERT OR REPLACE INTO app_settings(key,value) VALUES('EnableCloudSync','True'),('CloudSyncSecret','configured-secret')");
+        }
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _resetService.ResetDataAsync(scope));
+        Assert.Contains("Cloud", ex.Message);
+        using var check = _connectionFactory.CreateConnection();
+        Assert.Equal(1, await check.ExecuteScalarAsync<int>("SELECT count(*) FROM orders WHERE id=123"));
+        if (state == "pending") Assert.Equal(1, await check.ExecuteScalarAsync<int>("SELECT count(*) FROM cloud_operational_outbox"));
+    }
+
+    [Fact]
+    public async Task OperationalReset_PreservesIdentityHighWaterMark()
+    {
+        using (var c = _connectionFactory.CreateConnection())
+            await c.ExecuteAsync("INSERT INTO orders(id,work_date,original_folder_name,relative_path,status,created_at,updated_at) VALUES(123,'2026-10-02','Old','Old','Scanned',datetime('now'),datetime('now'))");
+        await _resetService.ResetDataAsync(ResetDataScope.OperationalOnly);
+        using var next = _connectionFactory.CreateConnection();
+        long id = await next.ExecuteScalarAsync<long>("INSERT INTO orders(work_date,original_folder_name,relative_path,status,created_at,updated_at) VALUES('2026-10-02','New','New','Scanned',datetime('now'),datetime('now')); SELECT last_insert_rowid()");
+        Assert.True(id > 123);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Restore_CloudBoundSourceOrTarget_RejectsBeforeReplacement(bool bindSource)
+    {
+        var backup = await _backupService.CreateBackupAsync(Path.Combine(_tempRoot, "restore-source.db"));
+        if (bindSource)
+        {
+            using var c = new SqliteConnection($"Data Source={backup.BackupPath}"); c.Open();
+            await c.ExecuteAsync("UPDATE cloud_sync_state SET stream_id='old-stream' WHERE id=1");
+        }
+        else
+        {
+            using var c = _connectionFactory.CreateConnection();
+            await c.ExecuteAsync("UPDATE cloud_sync_state SET stream_id='old-stream' WHERE id=1");
+        }
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _backupService.RestoreBackupAsync(backup.BackupPath));
+        using var check = _connectionFactory.CreateConnection();
+        Assert.Equal(bindSource ? 0 : 1, await check.ExecuteScalarAsync<int>("SELECT count(*) FROM cloud_sync_state WHERE stream_id='old-stream'"));
+    }
+
 }

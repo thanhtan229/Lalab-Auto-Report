@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "send_metrics": false,
+  "name": "lalab-cloud-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-24",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lalab-db",
+      "database_id": "ab8e3864-3544-4d89-85cb-0afe9ce1f615",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "lalab-media"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "lalab.tinix.io.vn",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "WORKSHOP_NAME": "XƯỞNG IN ẢNH CHUYÊN NGHIỆP",
+    "CUSTOM_DOMAIN": "lalab.tinix.io.vn"
+  }
+}

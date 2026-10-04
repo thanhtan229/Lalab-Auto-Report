@@ -45,76 +45,18 @@ public class PhysicalFileSystemAdapter : IFileSystemAdapter
 
     public IEnumerable<string> EnumerateDirectories(string path)
     {
-        try
-        {
-            if (!Directory.Exists(path))
-            {
-                return Array.Empty<string>();
-            }
-            return Directory.EnumerateDirectories(path).ToList();
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _logger?.LogWarning(ex, "Access denied while enumerating directories in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (DirectoryNotFoundException ex)
-        {
-            _logger?.LogWarning(ex, "Directory not found while enumerating directories in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (PathTooLongException ex)
-        {
-            _logger?.LogWarning(ex, "Path too long while enumerating directories in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (IOException ex)
-        {
-            _logger?.LogWarning(ex, "I/O error while enumerating directories in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Unexpected error enumerating directories in '{Path}'", path);
-            return Array.Empty<string>();
-        }
+        // Enumeration failure is different from an empty directory. Materialize here
+        // so deferred I/O exceptions reach the scoped scanner/resolver boundary.
+        try { return Directory.EnumerateDirectories(path).ToList(); }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+        { _logger?.LogWarning(ex, "Cannot enumerate directories in {Path}", path); throw; }
     }
 
     public IEnumerable<string> EnumerateFiles(string path)
     {
-        try
-        {
-            if (!Directory.Exists(path))
-            {
-                return Array.Empty<string>();
-            }
-            return Directory.EnumerateFiles(path).ToList();
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _logger?.LogWarning(ex, "Access denied while enumerating files in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (DirectoryNotFoundException ex)
-        {
-            _logger?.LogWarning(ex, "Directory not found while enumerating files in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (PathTooLongException ex)
-        {
-            _logger?.LogWarning(ex, "Path too long while enumerating files in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (IOException ex)
-        {
-            _logger?.LogWarning(ex, "I/O error while enumerating files in '{Path}'", path);
-            return Array.Empty<string>();
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Unexpected error enumerating files in '{Path}'", path);
-            return Array.Empty<string>();
-        }
+        try { return Directory.EnumerateFiles(path).ToList(); }
+        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+        { _logger?.LogWarning(ex, "Cannot enumerate files in {Path}", path); throw; }
     }
 
     public string GetRelativePath(string relativeTo, string path)

@@ -15,17 +15,98 @@
                         <TextBlock Text="Cài Đặt Hệ Thống &amp; Lưu Trữ" FontFamily="{StaticResource Tinix.Font.Display}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
                     </StackPanel>
 
-                    <!-- Root Folder -->
-                    <TextBlock Text="Thư mục gốc chứa ảnh (Root Folder)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
-                    <TextBlock Text="Cấu trúc thư mục mong đợi: Root / YYYY-MM-DD / Tên Khách Hàng / Quy Cách In / ..." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,8"/>
-                    <Grid Margin="0,0,0,18">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Text="{Binding RootFolder, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13"/>
-                        <Button Grid.Column="1" Command="{Binding BrowseRootFolderCommand}" Content="Chọn thư mục..." Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Secondary}" Height="36" Padding="16,0"/>
-                    </Grid>
+                    <!-- Multi-Root Folders Section -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,0,0,24">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Quản Lý Kho Dữ Liệu &amp; Thư Mục Gốc (Multi-Root)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Hỗ trợ nhiều thư mục gốc đồng thời (kho năm nay, kho lưu trữ năm cũ, ổ cứng ngoài). Bấm 'Sửa đường dẫn' để trỏ sang ổ đĩa hoặc thư mục mới bất cứ lúc nào mà không làm mất lịch sử đơn hàng và hóa đơn." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Command="{Binding AddRootFolderCommand}" Content="➕ Thêm Kho Mới..." Height="36" Style="{StaticResource Tinix.Button.Primary}" Padding="14,0" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            </Grid>
+
+                            <!-- List of root folders -->
+                            <ItemsControl ItemsSource="{Binding RootFolders}" Margin="0,4,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="14" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <!-- Header: Name, Default badge, Status -->
+                                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+
+                                                    <!-- Default badge -->
+                                                    <Border Grid.Column="1" Background="{StaticResource Tinix.Color.Primary.Subtle}" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding IsDefault, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="MẶC ĐỊNH" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Primary}"/>
+                                                    </Border>
+
+                                                    <!-- Status badge -->
+                                                    <TextBlock Grid.Column="3" Text="{Binding StatusBadgeText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                </Grid>
+
+                                                <!-- Full Path -->
+                                                <TextBlock Grid.Row="1" Text="{Binding PathDisplay}" FontFamily="{StaticResource Tinix.Font.Mono}" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                                                <!-- Action Buttons Toolbar -->
+                                                <WrapPanel Grid.Row="2">
+                                                    <Button Command="{Binding DataContext.BrowseAndUpdatePathCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Content="📂 Sửa Đường Dẫn..." 
+                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+                                                            Height="30" Padding="10,0" FontSize="11" Margin="0,0,8,4"/>
+
+                                                    <Button Command="{Binding DataContext.RenameRootFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Content="✏️ Đổi Tên" 
+                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+                                                            Height="30" Padding="10,0" FontSize="11" Margin="0,0,8,4"/>
+
+                                                    <Button Command="{Binding DataContext.ToggleActiveRootCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Content="{Binding ToggleActiveButtonText}" 
+                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+                                                            Height="30" Padding="10,0" FontSize="11" Margin="0,0,8,4"/>
+
+                                                    <Button Command="{Binding DataContext.SetDefaultRootCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Content="⭐ Đặt Mặc Định" 
+                                                            IsEnabled="{Binding CanSetDefault}"
+                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+                                                            Height="30" Padding="10,0" FontSize="11" Margin="0,0,8,4"/>
+
+                                                    <Button Command="{Binding DataContext.DeleteRootFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            Content="🗑️ Xóa Kho" 
+                                                            Style="{StaticResource Tinix.Button.Secondary}" 
+                                                            Height="30" Padding="10,0" FontSize="11" Margin="0,0,0,4"/>
+                                                </WrapPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="{Binding RootFolderStatusMessage}" Foreground="{StaticResource Tinix.Color.Info}" FontWeight="SemiBold" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Bill Export Folder -->
                     <TextBlock Text="Thư mục xuất Bill (Bill Export Folder)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
@@ -42,6 +123,161 @@
                     <!-- Supported Extensions -->
                     <TextBlock Text="Định dạng file ảnh hỗ trợ (phân cách bằng dấu phẩy)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
                     <TextBox Text="{Binding SupportedExtensions, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13" Margin="0,0,0,18"/>
+
+                    <!-- THÔNG TIN THƯƠNG HIỆU & XƯỞNG IN (BRANDING PROFILE) -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Thông Tin Thương Hiệu &amp; Nhận Diện Xưởng In (Branding &amp; Contact)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Thông tin hiển thị trên phần đầu của Hóa đơn ảnh JPEG, Hóa đơn Excel và Tem vận chuyển bưu kiện (75x100mm)." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,16" TextWrapping="Wrap"/>
+
+                            <!-- Logo xưởng -->
+                            <TextBlock Text="Ảnh Logo xưởng (Tùy chọn — hiển thị góc trên hóa đơn &amp; tem dán):" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,0,6"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Logo Preview Box -->
+                                <Border Grid.Column="0" Width="100" Height="60" Background="White" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="4" Margin="0,0,14,0" VerticalAlignment="Center">
+                                    <Grid>
+                                        <Image Source="{Binding WorkshopLogoPath}" Stretch="Uniform" Margin="4" Visibility="{Binding HasWorkshopLogo, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Text="Chưa có logo" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding HasWorkshopLogo, Converter={StaticResource InverseBoolConverter}}"/>
+                                    </Grid>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Command="{Binding BrowseWorkshopLogoCommand}" Content="📂 Chọn Ảnh Logo..." Style="{StaticResource Tinix.Button.Secondary}" Height="32" Padding="12,0" FontSize="12" Margin="0,0,8,0"/>
+                                        <Button Command="{Binding RemoveWorkshopLogoCommand}" Content="🗑️ Xóa Logo" Style="{StaticResource Tinix.Button.Secondary}" Height="32" Padding="12,0" FontSize="12" Visibility="{Binding HasWorkshopLogo, Converter={StaticResource BoolToVis}}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Hỗ trợ file PNG, JPG (ảnh nền trong suốt PNG hiển thị đẹp nhất)." Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="11"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Workshop Name -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Tên xưởng in / Cửa hàng:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,10"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WorkshopName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13" Margin="0,0,0,10"/>
+
+                                <!-- Workshop Slogan -->
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Khẩu hiệu / Dòng phụ:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,10"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WorkshopSlogan, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13" Margin="0,0,0,10" ToolTip="Dòng phụ in thanh lịch dưới tên xưởng (vd: Dịch vụ in ấn ảnh &amp; Album chuyên nghiệp)"/>
+
+                                <!-- Workshop Phone -->
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Số điện thoại / Hotline:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,10"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding WorkshopPhone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13" Margin="0,0,0,10"/>
+
+                                <!-- Workshop Address -->
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Địa chỉ xưởng:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,10"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding WorkshopAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13" Margin="0,0,0,10"/>
+
+                                <!-- Footer Message -->
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Lời cảm ơn chân trang:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,0"/>
+                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding InvoiceFooterMessage, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13" ToolTip="Câu cảm ơn / ghi chú in ở chân tất cả các trang hóa đơn"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CẤU HÌNH PHƯƠNG THỨC THANH TOÁN & MÃ QR -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Cấu Hình Thanh Toán &amp; Mã QR Hóa Đơn (Payment &amp; QR Code)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Chọn hình thức mã QR hiển thị ở khối thanh toán góc dưới hóa đơn ảnh và file Excel." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <!-- QR Mode Options -->
+                            <StackPanel Margin="0,0,0,16">
+                                <RadioButton Content="⚡ VietQR tự động (Napas247 — Tự sinh mã có số tiền và mã hóa đơn từng đơn, quét là trả đúng tiền)" 
+                                             IsChecked="{Binding IsVietQrMode}" 
+                                             GroupName="QrModeGroup" 
+                                             FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
+                                
+                                <RadioButton Content="🖼️ Dùng ảnh mã QR có sẵn (Tải lên ảnh QR MoMo, ZaloPay hoặc mã QR tài khoản riêng của xưởng)" 
+                                             IsChecked="{Binding IsCustomQrMode}" 
+                                             GroupName="QrModeGroup" 
+                                             FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
+                                
+                                <RadioButton Content="🚫 Không hiển thị mã QR trên hóa đơn" 
+                                             IsChecked="{Binding IsQrDisabled}" 
+                                             GroupName="QrModeGroup" 
+                                             FontWeight="SemiBold" FontSize="13"/>
+                            </StackPanel>
+
+                            <!-- Sub-panel for Custom QR Image -->
+                            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="14" Margin="0,0,0,16" Visibility="{Binding IsCustomQrMode, Converter={StaticResource BoolToVis}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- QR Image Preview -->
+                                    <Border Grid.Column="0" Width="80" Height="80" Background="White" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="4" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <Grid>
+                                            <Image Source="{Binding CustomQrImagePath}" Stretch="Uniform" Margin="4" Visibility="{Binding HasCustomQrImage, Converter={StaticResource BoolToVis}}"/>
+                                            <TextBlock Text="Chưa có ảnh QR" FontSize="10" Foreground="{StaticResource Tinix.Color.Text.Muted}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="4" Visibility="{Binding HasCustomQrImage, Converter={StaticResource InverseBoolConverter}}"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Ảnh mã QR thanh toán của bạn:" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <Button Command="{Binding BrowseCustomQrImageCommand}" Content="📂 Chọn Ảnh Mã QR..." Style="{StaticResource Tinix.Button.Secondary}" Height="32" Padding="12,0" FontSize="12" Margin="0,0,8,0"/>
+                                            <Button Command="{Binding RemoveCustomQrImageCommand}" Content="🗑️ Xóa Ảnh QR" Style="{StaticResource Tinix.Button.Secondary}" Height="32" Padding="12,0" FontSize="12" Visibility="{Binding HasCustomQrImage, Converter={StaticResource BoolToVis}}"/>
+                                        </StackPanel>
+                                        <TextBlock Text="Hệ thống sẽ nhúng ảnh QR này vào vị trí mã thanh toán trên hóa đơn." Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="11"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Bank Information Fields (Visible for both VietQR and Custom QR) -->
+                            <StackPanel Visibility="{Binding IsQrDisabled, Converter={StaticResource InverseBoolConverter}}">
+                                <TextBlock Text="Thông tin tài khoản ngân hàng (in chữ cạnh mã QR và chân file Excel):" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,0,10"/>
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Bank Selection Dropdown -->
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Ngân hàng thụ hưởng:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,10"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="1" 
+                                              ItemsSource="{Binding AvailableBanks}" 
+                                              SelectedItem="{Binding SelectedBank}" 
+                                              DisplayMemberPath="DisplayName" 
+                                              Height="34" FontSize="13" 
+                                              VerticalContentAlignment="Center" 
+                                              Margin="0,0,0,10"/>
+
+                                    <!-- Account Number -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Số tài khoản nhận tiền:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,10"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BankAccountNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13" Margin="0,0,0,10"/>
+
+                                    <!-- Account Name -->
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Tên chủ tài khoản:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" FontSize="13" Margin="0,0,12,0"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding BankAccountName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="13"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Tự Động Quét Thích Ứng (Idle Smart Scan) -->
                     <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
@@ -78,6 +314,40 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Ảnh Thu Nhỏ Đơn Hàng (Order Thumbnails & Cache) -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="🖼️" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Ảnh Thu Nhỏ Đơn Hàng (Order Thumbnails &amp; Cache)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="Tự động hiển thị ảnh đầu tiên của đơn hàng trên thẻ đơn để thợ nhận diện trực quan nhanh chóng. Bấm vào ảnh nhỏ để mở xem ảnh gốc với trình xem của Windows." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <!-- Enable Thumbnails Checkbox -->
+                            <CheckBox Content="Hiển thị ảnh thu nhỏ (thumbnail) ở đầu mỗi thẻ đơn hàng (Khuyên dùng)" IsChecked="{Binding ShowOrderThumbnails}" FontWeight="SemiBold" Margin="0,0,0,14" FontSize="13"/>
+
+                            <!-- Cache details and Clear button -->
+                            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <TextBlock Text="Dung lượng bộ nhớ đệm (Disk Cache): " FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                            <TextBlock Text="{Binding ThumbnailCacheSizeText}" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Tinix.Color.Primary}"/>
+                                        </StackPanel>
+                                        <TextBlock Text="Lưu trong thư mục %LocalAppData% và tự động dọn dẹp các thumbnail không dùng quá 30 ngày." FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Command="{Binding ClearThumbnailCacheCommand}" Content="🧹 Xóa Bộ Nhớ Đệm Thumbnail" Style="{StaticResource Tinix.Button.Secondary}" Height="34" Padding="14,0" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="{Binding ThumbnailCacheStatusMessage}" Foreground="{StaticResource Tinix.Color.Success}" FontWeight="SemiBold" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Database info -->
                     <TextBlock Text="Cơ sở dữ liệu SQLite cục bộ (Local-first)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="13"/>
                     <Grid Margin="0,0,0,20">
@@ -94,6 +364,17 @@
                         <StackPanel>
                             <TextBlock Text="Sao Lưu &amp; Phục Hồi Dữ Liệu" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,6"/>
                             <TextBlock Text="Dữ liệu quyết định (giá, quy cách, khách hàng, đơn đã khóa) được lưu an toàn trong SQLite. Hãy định kỳ sao lưu dữ liệu." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <!-- Secondary Backup Directory -->
+                            <TextBlock Text="Thư mục sao lưu thứ cấp (tùy chọn: Google Drive / OneDrive / NAS LAN)" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4" FontSize="12"/>
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding SecondaryBackupFolder, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="34" FontSize="12"/>
+                                <Button Grid.Column="1" Command="{Binding BrowseSecondaryBackupFolderCommand}" Content="Chọn thư mục..." Margin="8,0,0,0" Style="{StaticResource Tinix.Button.Secondary}" Height="34" Padding="14,0"/>
+                            </Grid>
 
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                                 <Button Command="{Binding BackupNowCommand}" Content="⚡ Sao Lưu Ngay" Height="36" Style="{StaticResource Tinix.Button.Primary}" Padding="18,0"/>
@@ -155,6 +436,273 @@
 
                             <TextBlock Text="{Binding ContextMenuStatusMessage}" Foreground="{StaticResource Tinix.Color.Info}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4" TextWrapping="Wrap"/>
                             <TextBlock Text="* Mặc định hệ thống luôn tự động kích hoạt menu chuột phải trong HKCU — Không yêu cầu quyền Administrator." Foreground="{StaticResource Tinix.Color.Text.Muted}" FontSize="11" FontStyle="Italic"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Data Retention & Purge Section -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="🧹" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Dọn Dẹp Dữ Liệu Cũ (Data Retention &amp; Purge)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="Giải phóng dung lượng phần mềm bằng cách dọn dẹp các đơn hàng, lịch sử quét và hóa đơn cũ trước một mốc thời gian đã chọn. Danh mục Khách hàng, Bảng giá và Quy cách in luôn được BẢO TOÀN NGUYÊN VẸN 100%. Hệ thống luôn tự động tạo bản sao lưu an toàn trước khi dọn." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                            <!-- Options: Presets and DatePicker -->
+                            <TextBlock Text="Chọn mốc thời gian cần dọn dẹp (xóa dữ liệu trước ngày này):" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="150"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Mốc thời gian:" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,10,0"/>
+                                <ComboBox Grid.Column="1" SelectedValuePath="Tag" SelectedValue="{Binding PurgePeriodPreset}" Height="34" FontSize="13" VerticalContentAlignment="Center">
+                                    <ComboBoxItem Content="Cũ hơn 6 tháng trước" Tag="6Months"/>
+                                    <ComboBoxItem Content="Cũ hơn 1 năm trước" Tag="1Year"/>
+                                    <ComboBoxItem Content="Tùy chọn ngày cụ thể" Tag="Custom"/>
+                                </ComboBox>
+
+                                <TextBlock Grid.Column="3" Text="Ngày dọn (trước ngày):" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,10,0"/>
+                                <DatePicker Grid.Column="4" SelectedDate="{Binding PurgeCutoffDate}" Height="34" VerticalContentAlignment="Center" FontSize="13"/>
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Button Command="{Binding PreviewPurgeCommand}" Content="🔍 1. Xem Trước Số Lượng Dọn Dẹp" Height="36" Style="{StaticResource Tinix.Button.Secondary}" Padding="16,0" IsEnabled="{Binding IsPurging, Converter={StaticResource InverseBoolConverter}}"/>
+                                <Button Command="{Binding ExecutePurgeCommand}" Content="🧹 2. Bắt Đầu Dọn Dẹp Dữ Liệu" Height="36" Style="{StaticResource Tinix.Button.Danger}" Padding="18,0" Margin="10,0,0,0" IsEnabled="{Binding HasPurgePreview}"/>
+                            </StackPanel>
+
+                            <!-- Preview Summary Card -->
+                            <Border Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="14" Margin="0,0,0,12" Visibility="{Binding HasPurgePreview, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="KẾT QUẢ PHÂN TÍCH DỮ LIỆU CẦN DỌN:" FontSize="11" FontWeight="Bold" Foreground="#92400E" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding PurgePreviewSummary}" FontFamily="{StaticResource Tinix.Font.Mono}" FontSize="12" Foreground="#92400E" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="{Binding PurgeStatusMessage}" Foreground="{StaticResource Tinix.Color.Info}" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Thermal Printer Settings Section (75x100mm) -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="🏷️" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Máy In Nhiệt Tem Bưu Kiện / Giao Hàng (Khổ Chuẩn 75x100mm)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Cấu hình máy in nhiệt để in ngầm trực tiếp (Silent Print) từ máy tính hoặc bấm in tức thì qua điện thoại nhân viên đóng gói." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Command="{Binding RefreshPrintersCommand}" Content="🔄 Làm mới máy in" Style="{StaticResource Tinix.Button.Secondary}" Height="34" Padding="12,0" Margin="0,0,8,0"/>
+                                    <Button Command="{Binding TestPrintThermalCommand}" Content="🖨️ In thử 1 tem mẫu" Style="{StaticResource Tinix.Button.Primary}" Height="34" Padding="14,0" IsEnabled="{Binding IsTestPrinting, Converter={StaticResource InverseBoolConverter}}" ToolTip="Gửi lệnh in ngầm một tem mẫu 75x100mm để kiểm tra máy in"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,4,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Chọn máy in -->
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Chọn máy in nhiệt tem bưu kiện:" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
+                                    <ComboBox ItemsSource="{Binding AvailablePrinters}" SelectedItem="{Binding SelectedThermalPrinter}" Height="36" FontSize="13" VerticalContentAlignment="Center"/>
+                                    <TextBlock Text="Hỗ trợ các máy in nhiệt USB như Xprinter XP-420B, XP-350B, HPRT, Shoptida... In ngầm không hiện popup xác nhận." FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="0,4,0,0"/>
+                                </StackPanel>
+
+                                <!-- Tự động đánh dấu đã giao -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <CheckBox IsChecked="{Binding AutoMarkDeliveredOnPrint}" Content="Tự động đánh dấu ĐÃ GIAO khi in tem" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                    <TextBlock Text="Khi nhân viên bấm in tem trên điện thoại hoặc PC, hệ thống tự động đổi trạng thái đơn sang 'Đã giao' và ghi nhận thời gian." FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="20,4,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Thông báo in thử -->
+                            <TextBlock Text="{Binding TestPrintStatusMessage}" Foreground="{StaticResource Tinix.Color.Info}" FontWeight="SemiBold" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Mobile Web Access & Remote Connection Section -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="📱" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Truy Cập Trên Điện Thoại (Mobile Web App &amp; Remote Access)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Xem thông tin đơn hàng, quy cách in, bảng kê hóa đơn, tem giao hàng và báo cáo doanh thu từ điện thoại trong mạng Wi-Fi tiệm hoặc từ xa." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Command="{Binding ToggleMobileServerCommand}" Content="{Binding MobileServerStatusText, StringFormat='Trạng thái: {0}'}" Style="{StaticResource Tinix.Button.Secondary}" Height="34" Padding="14,0" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Server Config: Enable, Port, PINs -->
+                            <Grid Margin="0,4,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Cổng Server -->
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Cổng kết nối nội bộ (Port):" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
+                                    <TextBox Text="{Binding MobileServerPort, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13"/>
+                                </StackPanel>
+
+                                <!-- Mã PIN Admin -->
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Mã PIN Chủ tiệm (Admin):" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
+                                    <TextBox Text="{Binding AdminPin, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13" ToolTip="Xem toàn quyền: Báo cáo tài chính, công nợ, đơn hàng, tem giao"/>
+                                </StackPanel>
+
+                                <!-- Mã PIN Staff -->
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="Mã PIN Nhân viên (In ấn):" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
+                                    <TextBox Text="{Binding StaffPin, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13" ToolTip="Chỉ xem đơn hàng, quy cách in, tem giao hàng. Không xem doanh thu và công nợ"/>
+                                </StackPanel>
+                            </Grid>
+
+
+
+                            <!-- Chạy ngầm khay hệ thống (System Tray & Auto-Start) -->
+                            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="14" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="⚙️ Chạy Ngầm &amp; Duy Trì Kết Nối 24/7" FontSize="13" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Đảm bảo Web Server di động và kết nối Cloudflare luôn hoạt động liên tục chừng nào máy tính xưởng còn bật." FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+                                    <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}" 
+                                              Content="Thu nhỏ xuống khay hệ thống (Taskbar Tray) khi bấm nút đóng [X] thay vì tắt hẳn phần mềm" 
+                                              FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+
+                                    <CheckBox IsChecked="{Binding AutoStartWithWindows}" 
+                                              Content="Tự động khởi động cùng Windows ở chế độ chạy ngầm (Khuyên dùng để điện thoại kết nối được ngay khi bật máy)" 
+                                              FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- QR Codes Section -->
+                            <TextBlock Text="QUÉT MÃ QR ĐỂ ĐĂNG NHẬP NHANH VÀO ĐIỆN THOẠI" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Muted}" Margin="0,0,0,8"/>
+                            
+                            <!-- Toggle Link Type: LAN vs Remote -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <RadioButton GroupName="QrSourceGroup" IsChecked="{Binding IsLanSourceSelected}" Content="Mạng Wi-Fi Tiệm (LAN)" FontSize="12" Margin="0,0,16,0" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                <RadioButton GroupName="QrSourceGroup" IsChecked="{Binding IsRemoteSourceSelected}" Content="Từ xa (Internet / Cloudflare)" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                            </StackPanel>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Admin QR Card -->
+                                <Border Grid.Column="0" Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Primary}" BorderThickness="1.5" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="16">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="👑 MÃ QR CHO CHỦ TIỆM (ADMIN)" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Tinix.Color.Primary}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        
+                                        <Border Background="White" CornerRadius="8" Padding="6" HorizontalAlignment="Center" Margin="0,0,0,10" Width="180" Height="180">
+                                            <Image Source="{Binding AdminQrCodeImage}" Width="168" Height="168" Stretch="Uniform"/>
+                                        </Border>
+
+                                        <TextBlock Text="Toàn quyền xem: Báo cáo, Doanh thu, Công nợ, Đơn hàng, Bill" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                        <Button Command="{Binding CopyAdminUrlCommand}" Content="📋 Sao Chép Link Admin" Style="{StaticResource Tinix.Button.Secondary}" Height="30" Padding="12,0" FontSize="11" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Staff QR Card -->
+                                <Border Grid.Column="2" Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="16">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="👷 MÃ QR CHO NHÂN VIÊN" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Primary}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        
+                                        <Border Background="White" CornerRadius="8" Padding="6" HorizontalAlignment="Center" Margin="0,0,0,10" Width="180" Height="180">
+                                            <Image Source="{Binding StaffQrCodeImage}" Width="168" Height="168" Stretch="Uniform"/>
+                                        </Border>
+
+                                        <TextBlock Text="Dành cho bàn in: Xem quy cách, số lượng, tem giao hàng. Ẩn doanh thu" FontSize="11" Foreground="{StaticResource Tinix.Color.Text.Secondary}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                        <Button Command="{Binding CopyStaffUrlCommand}" Content="📋 Sao Chép Link Nhân Viên" Style="{StaticResource Tinix.Button.Secondary}" Height="30" Padding="12,0" FontSize="11" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Cloud Read Replica 24/7 (Cloudflare Sync) Section -->
+                    <Border Background="{StaticResource Tinix.Color.Bg.Subtle}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Md}" Padding="18" Margin="0,4,0,24">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="☁️" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Đồng Bộ Đám Mây 24/7 (Xem Trên Điện Thoại Khi Tắt Máy Tính)" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Tinix.Color.Text.Primary}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Tự động sao lưu dữ liệu đơn hàng, bảng kê và hóa đơn lên Cloudflare Serverless Read Replica. Khi máy tính ở xưởng tắt, điện thoại vẫn xem được bình thường tại lalab.tinix.io.vn." Foreground="{StaticResource Tinix.Color.Text.Secondary}" FontSize="12" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Command="{Binding SyncCloudNowCommand}" Content="🔄 Đồng Bộ Ngay" Style="{StaticResource Tinix.Button.Primary}" Height="34" Padding="14,0" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Checkbox enable -->
+                            <CheckBox IsChecked="{Binding EnableCloudSync}" Content="Kích hoạt tự động đồng bộ lên Cloudflare 24/7 (Khi khóa hóa đơn, xuất ảnh bill hoặc quét đơn)" FontSize="13" Foreground="{StaticResource Tinix.Color.Text.Primary}" Margin="0,4,0,12"/>
+
+                            <!-- Fields: URL and Secret -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Địa chỉ Cloudflare Worker API:" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
+                                    <TextBox Text="{Binding CloudSyncApiUrl, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Mã khóa bí mật đồng bộ (Sync Secret):" FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}" Margin="0,0,0,6"/>
+                                    <TextBox Text="{Binding CloudSyncSecret, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Tinix.TextBox.Standard}" Height="36" FontSize="13"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Button Command="{Binding ExportCloudReconciliationCommand}" Content="Xuất báo cáo đối soát" Padding="12,6" Margin="0,0,8,0"/>
+                                <Button Command="{Binding ApplyCloudReconciliationCommand}" Content="Áp dụng báo cáo đã duyệt" Padding="12,6"/>
+                            </StackPanel>
+                            <TextBlock Text="Thay đổi offline là pending cho đến khi server xác nhận. Cursor cũ cần đối soát; không tự ghi lại lịch sử." TextWrapping="Wrap" Margin="0,0,0,10"/>
+                            <!-- Status message and last synced timestamp -->
+                            <Border Background="{StaticResource Tinix.Color.Bg.Surface}" BorderBrush="{StaticResource Tinix.Color.Border.Subtle}" BorderThickness="1" CornerRadius="{StaticResource Tinix.Radius.Sm}" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Lần đồng bộ gần nhất: " FontSize="12" Foreground="{StaticResource Tinix.Color.Text.Secondary}"/>
+                                        <TextBlock Text="{Binding LastCloudSyncAt}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Tinix.Color.Text.Primary}"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding CloudSyncStatusMessage}" FontSize="12" FontWeight="Medium" Foreground="{StaticResource Tinix.Color.Info}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 

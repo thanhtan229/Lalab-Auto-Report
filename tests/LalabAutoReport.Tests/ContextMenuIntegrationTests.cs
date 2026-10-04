@@ -235,6 +235,56 @@ public class ContextMenuIntegrationTests : IDisposable
         }
     }
 
+    [Fact]
+    public async System.Threading.Tasks.Task SettingsViewModel_BankDropdownSelection_UpdatesBankBinAndPersists()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "Lalab_SettingsBankTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        string dbPath = Path.Combine(tempDir, "test_settings_bank.db");
+
+        try
+        {
+            var connFactory = new LalabAutoReport.Infrastructure.Data.SqliteConnectionFactory(dbPath);
+            var migrator = new LalabAutoReport.Infrastructure.Data.DatabaseMigrator(connFactory);
+            await migrator.MigrateAsync();
+
+            var repo = new LalabAutoReport.Infrastructure.Data.SqliteSettingsRepository(connFactory);
+            var fakeBackup = new FakeDatabaseBackupService();
+            var fakeCtx = new FakeContextMenuService { IsRegistered = true };
+
+            var vm = new LalabAutoReport.UI.ViewModels.SettingsViewModel(repo, fakeBackup, fakeCtx);
+            await vm.LoadSettingsAsync();
+
+            // Default is MB Bank (970422)
+            vm.SelectedBank.Should().NotBeNull();
+            vm.SelectedBank!.Bin.Should().Be("970422");
+            vm.SelectedBank!.ShortName.Should().Be("MB Bank (MB)");
+
+            // Select Vietcombank
+            var vcb = vm.AvailableBanks.First(b => b.Bin == "970436");
+            vm.SelectedBank = vcb;
+            vm.BankBinOrCode.Should().Be("970436");
+
+            // Save settings
+            await vm.SaveSettingsCommand.ExecuteAsync(null);
+
+            // Reload and verify persistence
+            var reloadedSettings = await repo.GetSettingsAsync();
+            reloadedSettings.BankBinOrCode.Should().Be("970436");
+
+            // Load into a new VM
+            var vm2 = new LalabAutoReport.UI.ViewModels.SettingsViewModel(repo, fakeBackup, fakeCtx);
+            await vm2.LoadSettingsAsync();
+            vm2.SelectedBank.Should().NotBeNull();
+            vm2.SelectedBank!.Bin.Should().Be("970436");
+            vm2.SelectedBank!.ShortName.Should().Be("Vietcombank (VCB)");
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+    }
+
     public void Dispose()
     {
         try

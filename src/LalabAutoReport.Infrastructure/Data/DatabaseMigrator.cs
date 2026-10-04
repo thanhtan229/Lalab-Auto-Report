@@ -28,6 +28,11 @@ public class DatabaseMigrator : IDatabaseMigrator
 
     public async Task MigrateAsync(CancellationToken cancellationToken = default)
     {
+        await MigrateToVersionAsync(int.MaxValue, cancellationToken);
+    }
+
+    public async Task MigrateToVersionAsync(int targetVersion, CancellationToken cancellationToken = default)
+    {
         using var connection = _connectionFactory.CreateConnection();
 
         // 1. Ensure migrations table exists
@@ -43,7 +48,9 @@ public class DatabaseMigrator : IDatabaseMigrator
 
         // List of all migrations in order
         var migrations = GetMigrations();
-        var pendingMigrations = migrations.Where(m => !appliedMigrations.Contains(m.Version)).ToList();
+        var pendingMigrations = migrations
+            .Where(m => !appliedMigrations.Contains(m.Version) && m.Version <= targetVersion)
+            .ToList();
 
         if (pendingMigrations.Count > 0 && _backupService != null)
         {
@@ -58,42 +65,67 @@ public class DatabaseMigrator : IDatabaseMigrator
             }
         }
 
-        foreach (var migration in pendingMigrations)
+        if (pendingMigrations.Count == 0)
         {
-            _logger?.LogInformation("Applying migration {Version}: {Name}", migration.Version, migration.Name);
+            return;
+        }
 
-            using var transaction = connection.BeginTransaction();
-            try
+        // Disable foreign keys outside of any transaction to allow table rebuild migrations
+        await connection.ExecuteAsync("PRAGMA foreign_keys = OFF;");
+        try
+        {
+            foreach (var migration in pendingMigrations)
             {
-                if (!string.IsNullOrWhiteSpace(migration.Sql))
-                {
-                    await connection.ExecuteAsync(migration.Sql, transaction: transaction);
-                }
+                _logger?.LogInformation("Applying migration {Version}: {Name}", migration.Version, migration.Name);
 
-                if (migration.PostAction != null)
+                using var transaction = connection.BeginTransaction();
+                try
                 {
-                    await migration.PostAction(connection, transaction, _logger);
-                }
-
-                await connection.ExecuteAsync(
-                    "INSERT INTO schema_migrations (version, name, applied_at) VALUES (@Version, @Name, @AppliedAt)",
-                    new
+                    if (!string.IsNullOrWhiteSpace(migration.Sql))
                     {
-                        Version = migration.Version,
-                        Name = migration.Name,
-                        AppliedAt = DateTimeOffset.UtcNow.ToString("o")
-                    },
-                    transaction: transaction
-                );
-                transaction.Commit();
-                _logger?.LogInformation("Successfully applied migration {Version}: {Name}", migration.Version, migration.Name);
+                        await connection.ExecuteAsync(migration.Sql, transaction: transaction);
+                    }
+
+                    if (migration.PostAction != null)
+                    {
+                        await migration.PostAction(connection, transaction, _logger);
+                    }
+
+                    // Check foreign key consistency before committing this migration
+                    var fkErrors = (await connection.QueryAsync<FkViolationDto>(
+                        "PRAGMA foreign_key_check;", transaction: transaction)).ToList();
+                    if (fkErrors.Count > 0)
+                    {
+                        var details = string.Join("; ", fkErrors.Select(e => $"Table '{e.table}', rowid {e.rowid} -> parent '{e.parent}'"));
+                        throw new InvalidOperationException(
+                            $"Foreign key check failed after migration {migration.Version} ({migration.Name}): {details}");
+                    }
+
+                    await connection.ExecuteAsync(
+                        "INSERT INTO schema_migrations (version, name, applied_at) VALUES (@Version, @Name, @AppliedAt)",
+                        new
+                        {
+                            Version = migration.Version,
+                            Name = migration.Name,
+                            AppliedAt = DateTimeOffset.UtcNow.ToString("o")
+                        },
+                        transaction: transaction
+                    );
+                    transaction.Commit();
+                    _logger?.LogInformation("Successfully applied migration {Version}: {Name}", migration.Version, migration.Name);
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    _logger?.LogError(ex, "Failed to apply migration {Version}: {Name}", migration.Version, migration.Name);
+                    throw;
+                }
             }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                _logger?.LogError(ex, "Failed to apply migration {Version}: {Name}", migration.Version, migration.Name);
-                throw;
-            }
+        }
+        finally
+        {
+            // Re-enable foreign keys outside transaction
+            await connection.ExecuteAsync("PRAGMA foreign_keys = ON;");
         }
     }
 
@@ -567,7 +599,158 @@ public class DatabaseMigrator : IDatabaseMigrator
                 ALTER TABLE orders ADD COLUMN is_printed INTEGER NOT NULL DEFAULT 0;
                 ALTER TABLE orders ADD COLUMN printed_at TEXT;
             "
+            },
+            new MigrationDefinition
+            {
+                Version = 13,
+                Name = "AddMultiRootFoldersAndBackfill",
+                Sql = @"
+                CREATE TABLE IF NOT EXISTS root_folders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    full_path TEXT NOT NULL UNIQUE,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    is_default INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_root_folders_active ON root_folders(is_active);
+                CREATE INDEX IF NOT EXISTS idx_root_folders_default ON root_folders(is_default);
+            ",
+                PostAction = MigrateRootFoldersAndBackfillAsync
+            },
+            new MigrationDefinition
+            {
+                Version = 14,
+                Name = "AddBillPaymentStatusAndDebtTracking",
+                Sql = @"
+                ALTER TABLE customer_bills ADD COLUMN is_paid INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE customer_bills ADD COLUMN paid_at TEXT;
+
+                CREATE INDEX IF NOT EXISTS idx_customer_bills_customer_paid 
+                ON customer_bills(customer_id, is_paid);
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 15,
+                Name = "AddCustomerAddressAndShippingLabel",
+                Sql = @"
+                ALTER TABLE customers ADD COLUMN address TEXT;
+                ALTER TABLE customer_bills ADD COLUMN shipping_address_snapshot TEXT;
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 16,
+                Name = "AddTieredPricingAndCustomerPriceTier",
+                Sql = @"
+                ALTER TABLE customers ADD COLUMN price_tier TEXT NOT NULL DEFAULT 'Retail';
+
+                ALTER TABLE product_variants ADD COLUMN unit_price_studio INTEGER;
+                ALTER TABLE product_variants ADD COLUMN unit_price_vip INTEGER;
+                ALTER TABLE product_variants ADD COLUMN base_price_studio INTEGER;
+                ALTER TABLE product_variants ADD COLUMN base_price_vip INTEGER;
+                ALTER TABLE product_variants ADD COLUMN extra_sheet_price_studio INTEGER;
+                ALTER TABLE product_variants ADD COLUMN extra_sheet_price_vip INTEGER;
+
+                ALTER TABLE print_specifications ADD COLUMN unit_price_studio INTEGER;
+                ALTER TABLE print_specifications ADD COLUMN unit_price_vip INTEGER;
+                ALTER TABLE print_specifications ADD COLUMN base_price_studio INTEGER;
+                ALTER TABLE print_specifications ADD COLUMN base_price_vip INTEGER;
+                ALTER TABLE print_specifications ADD COLUMN extra_sheet_price_studio INTEGER;
+                ALTER TABLE print_specifications ADD COLUMN extra_sheet_price_vip INTEGER;
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 17,
+                Name = "AddThumbnailCandidateRelativePathToOrders",
+                Sql = @"
+                ALTER TABLE orders ADD COLUMN thumbnail_candidate_relative_path TEXT;
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 18,
+                Name = "AddDeliveryStatusAndNoteToOrders",
+                Sql = @"
+                ALTER TABLE orders ADD COLUMN is_delivered INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE orders ADD COLUMN delivered_at TEXT;
+                ALTER TABLE orders ADD COLUMN delivered_by TEXT;
+                ALTER TABLE orders ADD COLUMN note TEXT;
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 19,
+                Name = "AddPrintProgressAndItemPrintStatus",
+                Sql = @"
+                ALTER TABLE orders ADD COLUMN print_progress INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE order_item_scans ADD COLUMN is_printed INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE order_item_scans ADD COLUMN printed_at TEXT;
+                ALTER TABLE folder_print_statuses ADD COLUMN printed_sub_count INTEGER;
+                ALTER TABLE folder_print_statuses ADD COLUMN total_sub_count INTEGER;
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 20,
+                Name = "AddCloudSyncQueue",
+                Sql = @"
+                CREATE TABLE IF NOT EXISTS cloud_sync_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    entity_type TEXT NOT NULL,
+                    entity_id INTEGER NOT NULL,
+                    action TEXT NOT NULL DEFAULT 'upsert',
+                    payload_json TEXT,
+                    status TEXT NOT NULL DEFAULT 'Pending',
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    last_error TEXT,
+                    created_at TEXT NOT NULL,
+                    processed_at TEXT
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_cloud_sync_queue_status ON cloud_sync_queue(status);
+                CREATE INDEX IF NOT EXISTS idx_cloud_sync_queue_entity ON cloud_sync_queue(entity_type, entity_id);
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 21,
+                Name = "DurableCloudOperationsAndIdCheckpoint",
+                Sql = @"
+                CREATE TABLE cloud_sync_state (
+                    id INTEGER PRIMARY KEY CHECK(id = 1), cursor INTEGER NOT NULL DEFAULT 0,
+                    requires_reconciliation INTEGER NOT NULL DEFAULT 0, stream_id TEXT, endpoint TEXT);
+                INSERT INTO cloud_sync_state(id, requires_reconciliation)
+                SELECT 1, CASE WHEN EXISTS(SELECT 1 FROM app_settings WHERE key = 'LastCloudPullAt' AND length(trim(value)) > 0) THEN 1 ELSE 0 END;
+                CREATE TABLE cloud_applied_events (id INTEGER PRIMARY KEY, event_json TEXT NOT NULL);
+                CREATE TABLE cloud_field_revisions (
+                    entity_type TEXT NOT NULL, entity_id INTEGER NOT NULL, revision INTEGER NOT NULL,
+                    payload_json TEXT NOT NULL, PRIMARY KEY(entity_type, entity_id));
+                CREATE TABLE cloud_operational_outbox (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT, operation_id TEXT NOT NULL UNIQUE,
+                    entity_type TEXT NOT NULL, entity_id INTEGER NOT NULL, value_json TEXT NOT NULL,
+                    delivered_by TEXT, created_at TEXT NOT NULL);
+                CREATE INDEX idx_cloud_outbox_entity ON cloud_operational_outbox(entity_type, entity_id);
+                CREATE TABLE cloud_reconciliation_reports(report_id TEXT PRIMARY KEY, report_json TEXT NOT NULL, created_at TEXT NOT NULL, approved_at TEXT);
+                CREATE TABLE cloud_applied_event_archive(stream_id TEXT NOT NULL,id INTEGER NOT NULL,event_json TEXT NOT NULL,archived_at TEXT NOT NULL,PRIMARY KEY(stream_id,id));
+            "
+            },
+            new MigrationDefinition
+            {
+                Version = 22,
+                Name = "DurableRemotePrintLedger",
+                Sql = @"
+                CREATE TABLE cloud_print_command_ledger (
+                    endpoint TEXT NOT NULL, stream_id TEXT NOT NULL, command_id INTEGER NOT NULL,
+                    claim_token TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('STARTED','COMPLETED','FAILED')),
+                    error_message TEXT, acknowledged INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(endpoint,stream_id,command_id));"
             }
+
         };
     }
 
@@ -1011,6 +1194,141 @@ public class DatabaseMigrator : IDatabaseMigrator
         logger?.LogInformation("Migration V10 (AddOrderCodeAndBackfill) completed successfully.");
     }
 
+    private static async Task MigrateRootFoldersAndBackfillAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ILogger? logger)
+    {
+        long defaultRootId = 0;
+
+        // 1. Check if root_folder exists in app_settings
+        int settingsTableExists = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='app_settings';",
+            transaction: transaction);
+
+        if (settingsTableExists > 0)
+        {
+            string? existingRoot = await connection.ExecuteScalarAsync<string?>(
+                "SELECT value FROM app_settings WHERE key = 'RootFolder' LIMIT 1;", transaction: transaction);
+
+            if (!string.IsNullOrWhiteSpace(existingRoot))
+            {
+                string now = DateTimeOffset.UtcNow.ToString("O");
+                await connection.ExecuteAsync(@"
+                    INSERT OR IGNORE INTO root_folders (name, full_path, is_active, is_default, created_at, updated_at)
+                    VALUES ('Kho chính', @FullPath, 1, 1, @Now, @Now);
+                ", new { FullPath = existingRoot.Trim(), Now = now }, transaction: transaction);
+            }
+        }
+
+        // Get default root id if exists
+        defaultRootId = await connection.ExecuteScalarAsync<long>(
+            "SELECT id FROM root_folders WHERE is_default = 1 LIMIT 1;", transaction: transaction);
+
+        if (defaultRootId == 0)
+        {
+            defaultRootId = await connection.ExecuteScalarAsync<long>(
+                "SELECT id FROM root_folders ORDER BY id ASC LIMIT 1;", transaction: transaction);
+        }
+
+        if (defaultRootId == 0)
+        {
+            int orderCount = await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM orders;", transaction: transaction);
+            if (orderCount > 0)
+            {
+                string now = DateTimeOffset.UtcNow.ToString("O");
+                defaultRootId = await connection.QuerySingleAsync<long>(@"
+                    INSERT INTO root_folders (name, full_path, is_active, is_default, created_at, updated_at)
+                    VALUES ('Kho chính', 'C:\\LalabData', 1, 1, @Now, @Now);
+                    SELECT last_insert_rowid();
+                ", new { Now = now }, transaction: transaction);
+            }
+        }
+
+        // 2. Recreate orders table to support composite UNIQUE(root_folder_id, relative_path)
+        int ordersExists = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='orders';", transaction: transaction);
+
+        if (ordersExists > 0)
+        {
+            await connection.ExecuteAsync(@"
+                CREATE TABLE orders_tmp (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_code TEXT,
+                    work_date TEXT NOT NULL,
+                    customer_id INTEGER,
+                    order_kind TEXT NOT NULL DEFAULT 'Implicit',
+                    order_name TEXT,
+                    original_folder_name TEXT NOT NULL,
+                    relative_path TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    is_printed INTEGER NOT NULL DEFAULT 0,
+                    printed_at TEXT,
+                    filesystem_changed_after_lock INTEGER NOT NULL DEFAULT 0,
+                    fingerprint TEXT,
+                    last_scan_at TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    root_folder_id INTEGER,
+                    FOREIGN KEY(customer_id) REFERENCES customers(id),
+                    FOREIGN KEY(root_folder_id) REFERENCES root_folders(id)
+                );
+            ", transaction: transaction);
+
+            await connection.ExecuteAsync(@"
+                INSERT INTO orders_tmp (
+                    id, order_code, work_date, customer_id, order_kind, order_name,
+                    original_folder_name, relative_path, status, is_printed, printed_at,
+                    filesystem_changed_after_lock, fingerprint, last_scan_at, created_at, updated_at,
+                    root_folder_id
+                )
+                SELECT
+                    id, order_code, work_date, customer_id, order_kind, order_name,
+                    original_folder_name, relative_path, status, is_printed, printed_at,
+                    filesystem_changed_after_lock, fingerprint, last_scan_at, created_at, updated_at,
+                    CASE WHEN @DefaultRootId > 0 THEN @DefaultRootId ELSE NULL END
+                FROM orders;
+            ", new { DefaultRootId = defaultRootId }, transaction: transaction);
+
+            await connection.ExecuteAsync("DROP TABLE orders;", transaction: transaction);
+            await connection.ExecuteAsync("ALTER TABLE orders_tmp RENAME TO orders;", transaction: transaction);
+
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_orders_work_date ON orders(work_date);", transaction: transaction);
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);", transaction: transaction);
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_orders_root_folder_id ON orders(root_folder_id);", transaction: transaction);
+            await connection.ExecuteAsync("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_order_code ON orders(order_code);", transaction: transaction);
+            await connection.ExecuteAsync("CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_root_relpath ON orders(root_folder_id, relative_path);", transaction: transaction);
+        }
+
+        // 3. Clean up any pre-existing orphaned records in child tables
+        int guestFoldersTableExists = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='guest_bill_source_folders';",
+            transaction: transaction);
+
+        if (guestFoldersTableExists > 0)
+        {
+            int cleaned = await connection.ExecuteAsync(@"
+                DELETE FROM guest_bill_source_folders 
+                WHERE bill_id NOT IN (SELECT id FROM customer_bills);
+            ", transaction: transaction);
+            if (cleaned > 0)
+            {
+                logger?.LogInformation("Cleaned up {Count} orphaned guest_bill_source_folders records.", cleaned);
+            }
+        }
+
+        logger?.LogInformation("Migration V13 (AddMultiRootFoldersAndBackfill) completed successfully.");
+    }
+
+    private class FkViolationDto
+    {
+        public string? table { get; set; }
+        public long rowid { get; set; }
+        public string? parent { get; set; }
+        public int fkid { get; set; }
+    }
+
     private class OrderBackfillDto
     {
         public long id { get; set; }
@@ -1028,4 +1346,3 @@ public class DatabaseMigrator : IDatabaseMigrator
         public int pk { get; set; }
     }
 }
-
