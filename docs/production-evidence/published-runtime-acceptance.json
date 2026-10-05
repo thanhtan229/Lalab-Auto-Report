@@ -1,9 +1,9 @@
 {
-  "fixture": "isolated synthetic profile",
-  "recordedUtc": "2026-10-02T13:20:21.3456474Z",
-  "persistentLanLogin": "PASS",
-  "newPid": 96296,
-  "lockedBillAfterRestart": "PASS",
-  "oldPid": 101128,
-  "singleInstanceIpc": "PASS"
+    "singleInstanceIpc":  "PASS",
+    "oldPid":  89736,
+    "newPid":  112460,
+    "lockedBillAfterRestart":  "PASS",
+    "persistentLanLogin":  "PASS",
+    "recordedUtc":  "2026-10-05T09:19:00.1361772Z",
+    "fixture":  "isolated synthetic profile"
 }

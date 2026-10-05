@@ -1,22 +1,32 @@
 {
-  "createdUtc": "2026-10-02T13:23:45.524668+00:00",
-  "head": "bc54840de5648db3c9a66cb927ed96f4d707218b",
-  "workingTree": "dirty, includes preserved pre-existing changes; HEAD alone does not identify this build",
-  "version": "1.0.0",
-  "assemblyVersion": "1.0.0.0",
+  "createdUtc": "2026-10-05T09:23:01Z",
+  "head": "54385f770817abd4d87521f234b84a1f1ca6182f",
+  "workingTree": "clean at release tag; Gate 5 reconciled",
+  "version": "2.0.0",
+  "assemblyVersion": "2.0.0.0",
   "target": "win-x64 self-contained single-file",
-  "sqliteMigration": 21,
+  "sqliteMigration": 22,
   "d1Migrations": [
     "0004_versioned_operations.sql",
-    "0005_event_stream_identity.sql"
+    "0005_event_stream_identity.sql",
+    "0006_remote_print_ledger.sql"
   ],
-  "remoteDeployed": false,
-  "releaseTagCreated": false,
+  "remoteDeployed": true,
+  "workerVersion": "5028af59-2fce-4952-9ea3-8c8b88abbc4f",
+  "releaseTagCreated": true,
+  "releaseTag": "v2.0",
+  "releaseId": 403550194,
+  "releaseUrl": "https://github.com/thanhtan229/LalabReport/releases/tag/v2.0",
   "artifacts": [
     {
-      "path": "artifacts\\windows\\LalabAutoReport.UI.exe",
-      "bytes": 202963884,
-      "sha256": "d7e5dd766f2d8e4ea0486876323861cc1bbdf444f7d69fe3523b4de68d194c0b"
+      "path": "publish\\LalabAutoReport.exe",
+      "bytes": 203004332,
+      "sha256": "66f7d9d9f4ea2f2aa627624d15d9914566c302064ced76363438b6e533f95d4f"
+    },
+    {
+      "path": "publish\\LalabAutoReport.UI.exe",
+      "bytes": 203004332,
+      "sha256": "66f7d9d9f4ea2f2aa627624d15d9914566c302064ced76363438b6e533f95d4f"
     },
     {
       "path": "artifacts\\worker\\index.js",

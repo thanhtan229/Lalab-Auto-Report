@@ -7,7 +7,7 @@ Trạng thái các Production Gates thực tế:
 - **Gate 2 (Real LAN Mobile PWA):** `PASS` (Đã nghiệm thu trên iPhone thật: truy cập LAN, phân quyền Admin/Staff, đột biến note/delivery, Wi-Fi reconnect).
 - **Gate 3 (Workshop Storage / Multi-Root):** `PASS for current deployment` (2 local roots phân tách order, scoped rescan, NAS vật lý không áp dụng cho topology hiện tại).
 - **Gate 4 (Production Cloud Acceptance):** `PASS` (Worker V2 deployed version `5028af59-2fce-4952-9ea3-8c8b88abbc4f`, D1 backup tạo, 24/24 automated smoke PASS; manual production acceptance verified by ChatGPT Project Control: Real phone Cloud Admin login PASS, Admin Cloud bill detail PASS, Real phone Cloud Staff permission matrix PASS, Cloud -> Desktop note sync trên order test PASS, Desktop -> Cloud note sync trên cùng order test PASS).
-- **Gate 5 (GitHub Release & Auto-Update):** `BLOCKED / PENDING` (Chưa thực hiện; Gate 4 đã hoàn tất, chờ quyết định cho Gate 5).
+- **Gate 5 (GitHub Release & Auto-Update):** `PASS` (Release v2.0 tạo thành công tại tag `v2.0` commit `54385f770817abd4d87521f234b84a1f1ca6182f`; artifact `LalabAutoReport.exe` 203,004,332 bytes SHA256 `66F7D9D9F4EA2F2AA627624D15D9914566C302064CED76363438B6E533F95D4F` uploaded; updater happy path, checksum mismatch rejection, locked target recovery và live GitHub acceptance 5/5 PASS).
 
 ---
 
@@ -191,13 +191,29 @@ Trạng thái các Production Gates thực tế:
    - *Kế hoạch Rollback:* Khi cần hoàn tác mã nguồn Worker, thực hiện `npx wrangler rollback --version-id 681ef6eb-3938-49bc-a865-b53f433e61a0`. D1 không cần rollback do schema đã tương thích.
 
 5. **Gate 5 — Phát Hành Phiên Bản & Thử Nghiệm Tự Động Cập Nhật (GitHub Release & Auto-Update):**
-   - **Trạng thái:** `BLOCKED / PENDING`
-   - Chưa thực hiện; Gate 4 đã hoàn tất nghiệm thu sản xuất; chờ lập kế hoạch và ủy quyền chính thức từ người dùng cho Gate 5.
+   - **Trạng thái:** `PASS`
+   - **Ủy quyền:** Người dùng đã ủy quyền chính thức: "Cho phép Gate 5 GitHub Release & Auto-Update".
+   - **Phiên bản & Tag:** Tag `v2.0` (commit `54385f770817abd4d87521f234b84a1f1ca6182f` hậu duệ trực tiếp của reconciled commit `464617aa5b943e61e8574c2b9ac2287aa4a41644` chỉ chứa metadata version 2.0.0).
+   - **Release Artifacts trên GitHub:** Release ID `403550194` (https://github.com/thanhtan229/LalabReport/releases/tag/v2.0)
+     - `LalabAutoReport.exe` (203,004,332 bytes, SHA256: `66F7D9D9F4EA2F2AA627624D15D9914566C302064CED76363438B6E533F95D4F`)
+     - `LalabAutoReport.UI.exe` (203,004,332 bytes, SHA256: `66F7D9D9F4EA2F2AA627624D15D9914566C302064CED76363438B6E533F95D4F`)
+     - `LalabAutoReport.exe.sha256` (90 bytes)
+   - **Bằng chứng Nghiệm thu Cập nhật Tự động (Auto-Update Acceptance Evidence):**
+     - Staged acceptance tests (`scripts/Test-StagedUpdaterAcceptance.ps1`): 5/5 PASS (tampered checksum rejection, atomic replace, locked destination retry preservation, restart & report version 2.0.0, profile DB preservation).
+     - Live GitHub Release acceptance tests (`LiveAutoUpdateAcceptanceTests.cs`): 5/5 PASS (phát hiện release v2.0 khi app ở v1.0, không phát hiện update khi app ở v2.0, tải trực tiếp artifact 203MB từ GitHub và xác minh mã băm SHA256 khớp tuyệt đối `66F7...5D4F`, áp dụng cập nhật nguyên tử, bảo toàn bản sao `.previous-*`, xử lý từ chối tải file bị sửa đổi và bảo vệ file đang bị khóa).
+     - Standalone runtime smoke: Single-instance IPC PASS, token LAN đăng nhập bền vững PASS, hóa đơn khóa giữ nguyên sau restart PASS (`docs/production-evidence/published-runtime-acceptance.json`).
+   - **Kế hoạch Rollback:**
+     - Bản phát hành trước: `v1.0` (commit `bc54840de5648db3c9a66cb927ed96f4d707218b`, asset `LalabAutoReport.UI.exe`, SHA256 `0943def48b8f0cb7ae171ae4814135128e7f6271640c37d2f80f15fa176fffec`).
+     - Tệp sao lưu tự động `.previous-*` được giữ trong thư mục ứng dụng để khôi phục tức thời. Cơ sở dữ liệu tự động backup trước migration 22.
 
 ---
 
 ## 9. Kết Luận Chung
 
-- **Trạng thái Gate 4:** `PASS`
-- **Trạng thái Phase 10:** `BLOCKED / NOT READY` (Gate 4 Cloud acceptance đã PASS; Gate 5 GitHub Release & Auto-Update chưa thực hiện và Gate 1 máy in nhiệt USER DEFERRED).
-- **Tiếp theo:** Không bắt đầu Gate 5; hoàn tất đối soát danh tính mã nguồn và chờ chỉ thị tiếp theo.
+- **Trạng thái Gate 5:** `PASS`
+- **Đề xuất trạng thái Phase 10:** `COMPLETE WITH DEFERRED ITEMS` (Gate 2, Gate 3, Gate 4, Gate 5 đều PASS; Gate 1 máy in nhiệt giữ nguyên trạng thái `NOT TESTED — USER DEFERRED` do chưa có thiết bị máy in tại xưởng).
+- **Đề xuất mức độ sẵn sàng phát hành (Release Readiness Proposal):** `READY WITH DOCUMENTED NON-BLOCKING ISSUES`
+  - Limitation 1: Gate 1 thermal printer hardware chưa nghiệm thu trên thiết bị thật (giữ nguyên cờ `USER DEFERRED`, không tự ý chuyển thành `PASS`).
+  - Limitation 2: Topology xưởng hiện tại sử dụng lưu trữ cục bộ phân vùng độc lập, không dùng NAS vật lý SMB chuyên dụng.
+  - Technical debt: Hàm nội bộ chưa dùng `ScanService.HasFilesystemChangedFromCustomerBill`.
+- **Tiếp theo:** Đệ trình bằng chứng nghiệm thu Gate 5 và đề xuất trạng thái Phase 10 lên ChatGPT Project Control để xem xét và duyệt đóng Phase 10.
