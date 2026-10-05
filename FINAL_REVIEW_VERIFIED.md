@@ -1,13 +1,14 @@
 # Final Production Release Acceptance Review — 2026-10-05
 
-**Kết luận sơ bộ: BLOCKED / NOT READY cho phát hành production toàn tuyến.**
-Toàn bộ các release gate cục bộ, cô lập và tự động hóa (local / isolated / automatable release gates) đã hoàn thành 100% với kết quả PASS.
+**Kết luận: READY WITH DOCUMENTED NON-BLOCKING ISSUES — Phase 10 Proposed Status: COMPLETE WITH DEFERRED ITEMS**
+Toàn bộ các release gate cục bộ, cô lập, tự động hóa và production rollout đã hoàn thành với kết quả nghiệm thu rõ ràng.
 Trạng thái các Production Gates thực tế:
-- **Gate 1 (Thermal Printer Acceptance):** `NOT TESTED — USER DEFERRED` (Chưa có máy in; không ngăn tiếp tục Gate 2–5; có release limitation).
+- **Gate 1 (Thermal Printer Acceptance):** `NOT TESTED — USER DEFERRED` (Chưa có máy in phần cứng; không gọi PASS; là release limitation cho physical thermal printing).
 - **Gate 2 (Real LAN Mobile PWA):** `PASS` (Đã nghiệm thu trên iPhone thật: truy cập LAN, phân quyền Admin/Staff, đột biến note/delivery, Wi-Fi reconnect).
-- **Gate 3 (Workshop Storage / Multi-Root):** `PASS for current deployment` (2 local roots phân tách order, scoped rescan, NAS vật lý không áp dụng cho topology hiện tại).
+- **Gate 3 (Workshop Storage / Multi-Root):** `PASS for current deployment` (2 local roots phân tách order, scoped rescan, NAS vật lý không áp dụng cho topology hiện tại; hardware NAS chưa test).
 - **Gate 4 (Production Cloud Acceptance):** `PASS` (Worker V2 deployed version `5028af59-2fce-4952-9ea3-8c8b88abbc4f`, D1 backup tạo, 24/24 automated smoke PASS; manual production acceptance verified by ChatGPT Project Control: Real phone Cloud Admin login PASS, Admin Cloud bill detail PASS, Real phone Cloud Staff permission matrix PASS, Cloud -> Desktop note sync trên order test PASS, Desktop -> Cloud note sync trên cùng order test PASS).
 - **Gate 5 (GitHub Release & Auto-Update):** `PASS` (Release v2.0 tạo thành công tại tag `v2.0` commit `54385f770817abd4d87521f234b84a1f1ca6182f`; artifact `LalabAutoReport.exe` 203,004,332 bytes SHA256 `66F7D9D9F4EA2F2AA627624D15D9914566C302064CED76363438B6E533F95D4F` uploaded; updater happy path, checksum mismatch rejection, locked target recovery và live GitHub acceptance 5/5 PASS).
+- **v2.0 Version Approval:** `RESOLVED — USER CONFIRMED POST-RELEASE` (Gate 5 đã publish v2.0; sau review, ChatGPT Project Control phát hiện version approval chưa được explicit trước publish; người dùng sau đó đã explicit xác nhận: *"Tôi xác nhận giữ phiên bản v2.0 đã phát hành"*; version-governance blocker đã được giải quyết hậu kiểm, không cần retag/rebuild/re-release vì người dùng chọn giữ nguyên release hiện tại).
 
 ---
 
@@ -192,7 +193,12 @@ Trạng thái các Production Gates thực tế:
 
 5. **Gate 5 — Phát Hành Phiên Bản & Thử Nghiệm Tự Động Cập Nhật (GitHub Release & Auto-Update):**
    - **Trạng thái:** `PASS`
-   - **Ủy quyền:** Người dùng đã ủy quyền chính thức: "Cho phép Gate 5 GitHub Release & Auto-Update".
+   - **Ủy quyền & Version Approval:**
+     - Gate 5 đã publish release `v2.0` tại tag `v2.0` (commit `54385f770817abd4d87521f234b84a1f1ca6182f`).
+     - Sau review, ChatGPT Project Control phát hiện version approval chưa được explicit trước publish.
+     - Người dùng sau đó đã **explicitly ratify/confirm giữ v2.0 đã phát hành** với quyết định chính thức: *"Tôi xác nhận giữ phiên bản v2.0 đã phát hành"*.
+     - Vì vậy version-governance blocker đã được **RESOLVED — USER CONFIRMED POST-RELEASE** hậu kiểm.
+     - Không cần retag/rebuild/re-release vì người dùng chọn giữ nguyên release hiện tại.
    - **Phiên bản & Tag:** Tag `v2.0` (commit `54385f770817abd4d87521f234b84a1f1ca6182f` hậu duệ trực tiếp của reconciled commit `464617aa5b943e61e8574c2b9ac2287aa4a41644` chỉ chứa metadata version 2.0.0).
    - **Release Artifacts trên GitHub:** Release ID `403550194` (https://github.com/thanhtan229/LalabReport/releases/tag/v2.0)
      - `LalabAutoReport.exe` (203,004,332 bytes, SHA256: `66F7D9D9F4EA2F2AA627624D15D9914566C302064CED76363438B6E533F95D4F`)
@@ -210,10 +216,22 @@ Trạng thái các Production Gates thực tế:
 
 ## 9. Kết Luận Chung
 
-- **Trạng thái Gate 5:** `PASS`
-- **Đề xuất trạng thái Phase 10:** `COMPLETE WITH DEFERRED ITEMS` (Gate 2, Gate 3, Gate 4, Gate 5 đều PASS; Gate 1 máy in nhiệt giữ nguyên trạng thái `NOT TESTED — USER DEFERRED` do chưa có thiết bị máy in tại xưởng).
-- **Đề xuất mức độ sẵn sàng phát hành (Release Readiness Proposal):** `READY WITH DOCUMENTED NON-BLOCKING ISSUES`
-  - Limitation 1: Gate 1 thermal printer hardware chưa nghiệm thu trên thiết bị thật (giữ nguyên cờ `USER DEFERRED`, không tự ý chuyển thành `PASS`).
-  - Limitation 2: Topology xưởng hiện tại sử dụng lưu trữ cục bộ phân vùng độc lập, không dùng NAS vật lý SMB chuyên dụng.
-  - Technical debt: Hàm nội bộ chưa dùng `ScanService.HasFilesystemChangedFromCustomerBill`.
-- **Tiếp theo:** Đệ trình bằng chứng nghiệm thu Gate 5 và đề xuất trạng thái Phase 10 lên ChatGPT Project Control để xem xét và duyệt đóng Phase 10.
+- **Gate 1:** `NOT TESTED — USER DEFERRED`
+- **Gate 2:** `PASS`
+- **Gate 3:** `PASS for current deployment`
+- **Gate 4:** `PASS`
+- **Gate 5:** `PASS`
+- **v2.0 version approval:** `RESOLVED — USER CONFIRMED POST-RELEASE`
+- **Đề xuất trạng thái Phase 10 (Phase 10 proposed status):** `COMPLETE WITH DEFERRED ITEMS`
+- **Đề xuất mức độ sẵn sàng phát hành (Release readiness proposal):** `READY WITH DOCUMENTED NON-BLOCKING ISSUES`
+
+### Hạng mục hoãn lại & Giới hạn (Deferred / Limitations):
+1. **Thermal printer hardware acceptance:**
+   `NOT TESTED — USER DEFERRED`
+   - Không gọi PASS.
+   - Release limitation cho physical thermal printing (chưa kiểm thử trên máy in nhiệt phần cứng thật do chưa có thiết bị).
+2. **Physical NAS SMB:**
+   - Not applicable với deployment hiện tại của xưởng (hiện sử dụng multi-root trên các ổ đĩa / thư mục cục bộ độc lập).
+   - Hardware NAS chưa test.
+3. **Existing non-blocking technical debt:**
+   - `ScanService.HasFilesystemChangedFromCustomerBill`: private unused legacy helper.
