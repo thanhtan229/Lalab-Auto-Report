@@ -43,7 +43,7 @@ public partial class OrderDisplayModel : ObservableObject
     public bool HasRootFolder => !string.IsNullOrWhiteSpace(RootFolderName);
     public string RootBadgeText => !string.IsNullOrWhiteSpace(RootFolderName) ? $"📁 {RootFolderName}" : "📁 Kho";
 
-    public bool IsGuest => !HasCustomer && (Order.IsGuest || Order.IsGuestFolderName(OriginalFolderName, Order.OrderName));
+    public bool IsGuest => !HasCustomer;
 
     public string CustomerBadgeText
     {
@@ -53,43 +53,24 @@ public partial class OrderDisplayModel : ObservableObject
             {
                 return $"👤 {CanonicalCustomerName}";
             }
-            if (IsGuest)
+
+            string guestName = !string.IsNullOrWhiteSpace(OrderName) ? OrderName : OriginalFolderName;
+            if (string.IsNullOrWhiteSpace(guestName) ||
+                string.Equals(guestName, "khach_le", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(guestName, "khách lẻ", StringComparison.OrdinalIgnoreCase))
             {
                 return "⚡ Khách lẻ";
             }
-            return "⚠️ Chưa gán khách";
+
+            return $"⚡ Khách lẻ: {guestName}";
         }
     }
 
-    public string CustomerBadgeBg
-    {
-        get
-        {
-            if (HasCustomer) return "#E0F2FE";
-            if (IsGuest) return "#FEF3C7";
-            return "#FEE2E2";
-        }
-    }
+    public string CustomerBadgeBg => HasCustomer ? "#E0F2FE" : "#FEF3C7";
 
-    public string CustomerBadgeBorder
-    {
-        get
-        {
-            if (HasCustomer) return "#7DD3FC";
-            if (IsGuest) return "#FCD34D";
-            return "#FCA5A5";
-        }
-    }
+    public string CustomerBadgeBorder => HasCustomer ? "#7DD3FC" : "#FCD34D";
 
-    public string CustomerBadgeFg
-    {
-        get
-        {
-            if (HasCustomer) return "#0369A1";
-            if (IsGuest) return "#B45309";
-            return "#B91C1C";
-        }
-    }
+    public string CustomerBadgeFg => HasCustomer ? "#0369A1" : "#B45309";
 
     public string CustomerMappingTooltip
     {
@@ -109,12 +90,7 @@ public partial class OrderDisplayModel : ObservableObject
                 return $"Khách hàng chuẩn: {CanonicalCustomerName}\n(Nhấn vào đây để đổi khách hàng)";
             }
 
-            if (IsGuest)
-            {
-                return $"Thư mục '{OriginalFolderName}' được đánh dấu là Khách lẻ trực tiếp.\n(Nhấn vào đây để gán vào khách quen)";
-            }
-
-            return $"Thư mục '{OriginalFolderName}' chưa được gán vào khách hàng nào trong hệ thống.\n(Nhấn vào đây để chọn khách hàng)";
+            return $"Thư mục '{OriginalFolderName}' được xếp vào phân loại Khách lẻ (áp dụng bảng giá lẻ).\n(Nhấn vào đây để gán vào khách quen nếu cần)";
         }
     }
 

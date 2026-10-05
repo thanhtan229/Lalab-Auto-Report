@@ -32,4 +32,21 @@ describe('Financial role boundary', () => {
   it('refuses unauthenticated financial access', async () => {
     expect((await worker.fetch(new Request('https://local/api/bills/1/image'), env, ctx)).status).toBe(401);
   });
+  it.each(['/api/reports/monthly', '/api/customers/unpaid'])('refuses Staff financial report endpoint %s', async path => {
+    const token = await createAuthToken('Staff', env.JWT_SECRET);
+    const res = await worker.fetch(new Request('https://local' + path, {
+      method: 'GET',
+      headers: { Authorization: 'Bearer ' + token }
+    }), env, ctx);
+    expect(res.status).toBe(403);
+  });
+  it('refuses Staff remote-print with billId', async () => {
+    const token = await createAuthToken('Staff', env.JWT_SECRET);
+    const res = await worker.fetch(new Request('https://local/api/orders/1/remote-print', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ billId: 1 })
+    }), env, ctx);
+    expect(res.status).toBe(403);
+  });
 });

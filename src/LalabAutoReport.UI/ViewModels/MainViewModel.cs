@@ -223,6 +223,10 @@ public partial class MainViewModel : ObservableObject
     {
         CurrentView = DashboardVM;
         ActiveTab = "Dashboard";
+        if (DashboardVM != null)
+        {
+            _ = DashboardVM.LoadOrdersForSelectedDateAsync();
+        }
     }
 
     [RelayCommand]

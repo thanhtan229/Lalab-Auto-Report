@@ -132,6 +132,8 @@
                 <!-- Pill-like Filter Controls -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <RadioButton Content="Tất cả" IsChecked="{Binding CurrentFilter, ConverterParameter=All, Mode=OneWay}" Click="FilterAll_Click" Style="{StaticResource Tinix.FilterPill}"/>
+                    <RadioButton Content="👤 Khách quen" IsChecked="{Binding CurrentFilter, ConverterParameter=Regular, Mode=OneWay}" Click="FilterRegular_Click" Style="{StaticResource Tinix.FilterPill}"/>
+                    <RadioButton Content="⚡ Khách lẻ" IsChecked="{Binding CurrentFilter, ConverterParameter=Guest, Mode=OneWay}" Click="FilterGuest_Click" Style="{StaticResource Tinix.FilterPill}"/>
                     <RadioButton Content="Cần xử lý (!)" IsChecked="{Binding CurrentFilter, ConverterParameter=NeedsReview, Mode=OneWay}" Click="FilterNeedsReview_Click" Style="{StaticResource Tinix.FilterPill}"/>
                     <RadioButton Content="Sẵn sàng (✓)" IsChecked="{Binding CurrentFilter, ConverterParameter=Ready, Mode=OneWay}" Click="FilterReady_Click" Style="{StaticResource Tinix.FilterPill}"/>
                     <RadioButton Content="Đã tính Bill (🧾)" IsChecked="{Binding CurrentFilter, ConverterParameter=Billed, Mode=OneWay}" Click="FilterBilled_Click" Style="{StaticResource Tinix.FilterPill}"/>

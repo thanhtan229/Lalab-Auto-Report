@@ -320,3 +320,49 @@ Tính năng **Quick Bill** phục vụ khách vãng lai, khách in gấp hoặc 
    - Tìm kiếm hoặc tạo mới khách hàng chuẩn (`Customer`), gán `bill.CustomerId = customer.Id`, chuyển `bill.BillType = Customer`, cập nhật `customer_id` trên toàn bộ các đơn hàng vật lý liên quan trong SQLite.
    - Bảo toàn 100% tính toàn vẹn tài chính, số lượng và lịch sử hóa đơn.
 
+---
+
+## 10. Kiến Trúc Đồng Bộ Vận Hành Đám Mây V2 (Cloud Sync V2 Architecture)
+
+> Tham chiếu chi tiết: [ADR 001 — Giao Thức Đồng Bộ Vận Hành Đám Mây V2](docs/adr/ADR-001-cloud-sync-v2-protocol.md) và [docs/CLOUD_PROTOCOL_V2.md](docs/CLOUD_PROTOCOL_V2.md).
+
+Nhằm hỗ trợ ứng dụng Mobile PWA quản lý trạng thái thanh toán, giao hàng và ghi chú từ xa mà không làm ảnh hưởng đến nguyên tắc Local-First của xưởng in, hệ thống áp dụng kiến trúc đồng bộ vận hành V2 với các nguyên tắc cốt lõi:
+
+### 10.1 Con trỏ kéo & Checkpoint an toàn (Monotonic Event ID & Atomic Checkpoint)
+- **Con trỏ kéo (Cursor):** Dựa hoàn toàn trên ID sự kiện nguyên tăng đơn điệu của server (`cloud_events.id`), không dùng mốc thời gian (wall-clock timestamp).
+- **Trang & nextCursor:** `nextCursor` luôn là ID sự kiện cuối cùng thực tế được trả về trong trang (`events.LastOrDefault()?.Id ?? cursor`).
+- **Atomic Event Application:** Với mỗi sự kiện nhận được, việc cập nhật trạng thái thực thể cục bộ, ghi sổ sự kiện đã áp dụng (`cloud_applied_events`), và nâng checkpoint (`cloud_sync_state.cursor`) diễn ra nguyên tử trong cùng một transaction SQLite. Checkpoint không bao giờ đi trước sự kiện đã commit an toàn.
+
+### 10.2 streamId Bền Vững & Kiểm Soát Tính Liên Tục (Stream Continuity)
+- Server D1 lưu `stream_id` duy nhất đại diện cho chuỗi sự kiện liên tục.
+- Desktop lưu `stream_id` và `endpoint` đã gắn kết. Nếu phát hiện thay đổi stream hoặc endpoint (ví dụ khôi phục database cũ hoặc đổi URL server), Desktop lập tức kích hoạt cơ chế **Fail-Closed**, chặn tự động đồng bộ và yêu cầu đối soát con trỏ (`requires_reconciliation = 1`), không tự ý reset về 0 hoặc phát lại lịch sử.
+
+### 10.3 Số Hiệu Sửa Đổi Theo Từng Trường (Per-Field Authoritative Server Revision)
+- ID sự kiện đóng vai trò là số hiệu sửa đổi (`revision`) của server cho từng trường vận hành (`bill_payment`, `order_delivered`, `order_note`).
+- Quản lý độc lập theo cặp `(entity_type, entity_id)` trong bảng `cloud_field_revisions`.
+- Revision mới nhất luôn thắng. Sự kiện cũ đến sau hoặc đồng hồ máy trạm bị lệch (skewed clock) không thể làm lùi trạng thái đã xác nhận.
+
+### 10.4 Hàng Đợi Ngoại Tuyến & Thử Lại Bất Biến (Durable Outbox & Idempotent operationId)
+- Mọi đột biến vận hành cục bộ khi chưa được server xác nhận đều nhận một `operationId` (UUID) và được lưu vào bảng `cloud_operational_outbox`.
+- Hiển thị rõ ràng trạng thái "Chờ Cloud xác nhận" (Pending) trên Desktop UI và Mobile LAN API.
+- Các lần gửi lại (retry) giữ nguyên `operationId`. Server nhận diện trùng `operationId` trong transaction và trả về sự kiện gốc, không tạo revision mới hay bản ghi trùng lặp.
+- Sau khi server phản hồi thành công, thao tác được xóa khỏi outbox và chuyển thành confirmed.
+
+### 10.5 Phân Tách Tuyệt Đối Giữa Projection và Operational Mutations
+- Đẩy dữ liệu hàng loạt (`POST /api/sync/batch`) chỉ phục vụ projection hiển thị danh sách đơn, bill và báo cáo. Projection chỉ khởi tạo trường vận hành khi `INSERT` bản ghi mới; các lệnh `UPDATE` trong projection không được ghi đè trường vận hành và không cấp revision.
+- Đột biến vận hành chỉ thực hiện qua endpoint chuyên dụng `POST /api/sync/v2/operations` hoặc pull events.
+
+### 10.6 Điều Kiện Tiên Quyết: Pull-Before-Push & Fail-Closed
+- Kéo dữ liệu V2 thành công là **điều kiện tiên quyết** bắt buộc trước khi thực hiện bất kỳ lệnh đẩy projection nào.
+- Nếu pull thất bại, server không hỗ trợ V2, hoặc đang chờ đối soát con trỏ, toàn bộ quá trình push bị chặn ngay lập tức.
+- Thứ tự triển khai: Worker V2 phải được triển khai trước; Desktop V2 triển khai sau. Desktop V2 sẽ fail-closed nếu Worker chưa sẵn sàng giao thức V2.
+
+### 10.7 Tính Bất Biến Của Snapshot Tài Chính (Financial Snapshot Immutability)
+- Quá trình đồng bộ hoặc khôi phục từ Cloud tuyệt đối không làm thay đổi các trường dữ liệu tài chính lịch sử của các hóa đơn đã khóa (`Locked` / `Exported`): `ProductSubtotal`, `AdjustmentsTotal`, `GrandTotal`, và các chi tiết dòng bill lines.
+- Chỉ các trường vận hành được phép (`is_paid`, `paid_at`, `is_delivered`, `delivered_at`, `delivered_by`, `note`) mới có thể cập nhật.
+
+### 10.8 Cô Lập Cấu Hình Đồng Bộ (Settings Persistence Isolation)
+- Cập nhật thời gian đồng bộ `LastCloudSyncAt` được thực hiện qua phương thức riêng biệt (`SetLastSyncAtAsync`), ghi trực tiếp trường đơn lẻ vào cơ sở dữ liệu.
+- Tuyệt đối không serialize ghi đè toàn bộ đối tượng `AppSettings` làm mất các thay đổi cấu hình khác của người dùng diễn ra đồng thời.
+
+

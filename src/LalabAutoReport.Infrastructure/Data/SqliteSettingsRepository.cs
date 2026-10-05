@@ -183,14 +183,14 @@ public class SqliteSettingsRepository : ISettingsRepository
             settings.MobileServerPort = parsedPort;
         }
 
-        if (dict.TryGetValue("AdminPin", out var adminPin) && !string.IsNullOrWhiteSpace(adminPin))
+        if (dict.TryGetValue("AdminPin", out var adminPin))
         {
-            settings.AdminPin = adminPin;
+            settings.AdminPin = adminPin?.Trim() ?? string.Empty;
         }
 
-        if (dict.TryGetValue("StaffPin", out var staffPin) && !string.IsNullOrWhiteSpace(staffPin))
+        if (dict.TryGetValue("StaffPin", out var staffPin))
         {
-            settings.StaffPin = staffPin;
+            settings.StaffPin = staffPin?.Trim() ?? string.Empty;
         }
 
         if (dict.TryGetValue("MobileAuthSecret", out var authSecret) && !string.IsNullOrWhiteSpace(authSecret))

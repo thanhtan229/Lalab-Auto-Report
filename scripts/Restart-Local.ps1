@@ -17,9 +17,16 @@ $current = Get-CimInstance Win32_Process -Filter "ProcessId=$($started.Id)"
 if (!$current -or $current.ExecutablePath -ne $exe) { throw 'Owned application did not remain running.' }
 if ($started.StartTime.ToUniversalTime() -lt $dll.LastWriteTimeUtc) { throw 'Running process predates current build.' }
 Write-Output "Verified PID $($started.Id), start $($started.StartTime.ToString('o')), DLL $($dll.LastWriteTimeUtc.ToString('o'))"
+$health = $null
+for ($attempt = 0; $attempt -lt 20; $attempt++) {
+    Start-Sleep -Seconds 1
+    try {
+        $health = Invoke-RestMethod -Uri 'http://127.0.0.1:5050/api/status' -TimeoutSec 2
+        if ($health.appName -eq 'Lalab Auto Report') { break }
+    } catch { }
+}
 try {
-    $health = Invoke-RestMethod -Uri 'http://127.0.0.1:5050/api/status' -TimeoutSec 8
-    if ($health.appName -ne 'Lalab Auto Report') { throw 'Unexpected health response.' }
+    if (!$health -or $health.appName -ne 'Lalab Auto Report') { throw 'Unexpected or missing health response.' }
     $listener = Get-NetTCPConnection -LocalPort 5050 -State Listen -ErrorAction Stop
     if (!($listener.OwningProcess -contains $started.Id)) { throw 'Health listener belongs to another process.' }
     Write-Output 'Owned LAN health check: OK'

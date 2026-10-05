@@ -96,3 +96,99 @@ it('debt detail includes bill contract and reflects server payment even if Deskt
   await acceptOperation(db,{operationId:'collect-payment',entityType:'bill_payment',entityId:1,value:true});
   expect(await getUnpaidCustomers(db)).toEqual([]);
 });
+
+it.each([0, -1, 501])('rejects invalid limit %i at the query boundary', async limit => {
+  const { db } = fixture();
+  await expect(getEventPage(db, 0, limit)).rejects.toMatchObject({ status: 400 });
+});
+
+it.each([1, 500])('accepts valid boundary limit %i', async limit => {
+  const { db } = fixture();
+  const page = await getEventPage(db, 0, limit);
+  expect(page.success).toBe(true);
+  expect(page.events).toEqual([]);
+});
+
+it('handles concurrent duplicate operation requests idempotently', async () => {
+  const { db, sqlite } = fixture();
+  const mutation = { operationId: 'concurrent-op-1', entityType: 'order_note' as const, entityId: 1, value: 'concurrent-val' };
+  const [res1, res2] = await Promise.all([
+    acceptOperation(db, mutation),
+    acceptOperation(db, mutation)
+  ]);
+  expect(res1).toEqual(res2);
+  const rows = sqlite.prepare("SELECT * FROM cloud_operational_events WHERE operation_id = 'concurrent-op-1'").all();
+  expect(rows).toHaveLength(1);
+});
+
+it('assigns monotonically increasing revisions for sequential mutations', async () => {
+  const { db, sqlite } = fixture();
+  const m1 = await acceptOperation(db, { operationId: 'seq-op-1', entityType: 'order_note', entityId: 1, value: 'val-1' });
+  const m2 = await acceptOperation(db, { operationId: 'seq-op-2', entityType: 'order_note', entityId: 1, value: 'val-2' });
+  expect(m2.id).toBeGreaterThan(m1.id);
+  const order = sqlite.prepare('SELECT note, note_revision FROM cloud_orders WHERE id = 1').get() as any;
+  expect(order.note).toBe('val-2');
+  expect(order.note_revision).toBe(m2.id);
+});
+
+it('verifies projection batch sync never creates operational events or mutates revisions', async () => {
+  const { db, sqlite } = fixture();
+  const m = await acceptOperation(db, { operationId: 'proj-op-1', entityType: 'order_delivered', entityId: 1, value: true });
+  expect(m.id).toBe(1);
+
+  const batch: SyncBatchPayload = {
+    orders: [{
+      id: 1, orderCode: 'ORD-1', customerName: 'C1', folderName: 'F1', workDate: '2026-10-02',
+      status: 'Done', isPrinted: true, isDelivered: false, note: 'ignore', hasIssues: false,
+      isLocked: true, hasThumbnail: false, totalQuantity: 10, itemsJson: '[]'
+    }],
+    bills: [{
+      id: 1, billNumber: 'B1', billType: 'Customer', customerNameSnapshot: 'C1', periodDate: '2026-10-02',
+      totalAmount: 100000, isPaid: false, linesJson: '[]', adjustmentsJson: '[]', hasJpeg: false
+    }]
+  };
+
+  // Run batch twice to verify idempotence and zero side effects
+  await upsertSyncBatch(db, batch);
+  await upsertSyncBatch(db, batch);
+
+  const eventsCount = sqlite.prepare('SELECT COUNT(*) as cnt FROM cloud_operational_events').get() as any;
+  expect(eventsCount.cnt).toBe(1); // Only the initial mutation event, zero events from batch sync
+
+  const order = sqlite.prepare('SELECT is_delivered, delivery_revision, note_revision, status FROM cloud_orders WHERE id = 1').get() as any;
+  expect(order.is_delivered).toBe(1);
+  expect(order.delivery_revision).toBe(1);
+  expect(order.note_revision).toBe(0);
+  expect(order.status).toBe('Done');
+
+  const bill = sqlite.prepare('SELECT is_paid, payment_revision, total_amount FROM cloud_bills WHERE id = 1').get() as any;
+  expect(bill.is_paid).toBe(0);
+  expect(bill.payment_revision).toBe(0);
+  expect(bill.total_amount).toBe(100000);
+});
+
+it('preserves unknown/future event types without skipping or dropping them', async () => {
+  const { db, sqlite } = fixture();
+  sqlite.exec("INSERT INTO cloud_operational_events (entity_type, entity_id, payload_json, created_at, operation_id) VALUES ('unknown_future_event', 99, '{\"meta\":\"future\"}', '2026-10-05T00:00:00Z', 'future-op-123')");
+  const page = await getEventPage(db, 0);
+  expect(page.events).toHaveLength(1);
+  expect(page.events[0]).toMatchObject({
+    id: 1,
+    entityType: 'unknown_future_event',
+    entityId: 99,
+    payloadJson: '{"meta":"future"}',
+    operationId: 'future-op-123'
+  });
+});
+
+it('accepts deliveredBy as null without rejecting as invalid actor', async () => {
+  const { db } = fixture();
+  const mutation = { operationId: 'deliv-null-op', entityType: 'order_delivered' as const, entityId: 1, toggle: true, deliveredBy: null };
+  const res = await acceptOperation(db, mutation);
+  expect(res.operationId).toBe('deliv-null-op');
+  const payload = JSON.parse(res.payloadJson);
+  expect(payload.isDelivered).toBe(true);
+  expect(payload.deliveredBy).toBe('Mobile');
+});
+
+

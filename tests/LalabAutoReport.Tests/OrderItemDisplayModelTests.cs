@@ -228,4 +228,50 @@ public class OrderItemDisplayModelTests
         notifiedProperties.Should().Contain(nameof(vm.DeliveredDetailText));
         notifiedProperties.Should().Contain(nameof(vm.DeliveredStatusText));
     }
+
+    [Fact]
+    public void OrderDisplayModel_WhenNoCustomer_DefaultsToGuestBadge_AndNeverShowsUnassigned()
+    {
+        var order = new Order
+        {
+            Id = 1,
+            OriginalFolderName = "Chi Lan Q7",
+            CustomerId = null,
+            Customer = null
+        };
+        var vm = new OrderDisplayModel(order);
+
+        vm.HasCustomer.Should().BeFalse();
+        vm.IsGuest.Should().BeTrue();
+        vm.CustomerBadgeText.Should().Be("⚡ Khách lẻ: Chi Lan Q7");
+        vm.CustomerBadgeText.Should().NotContain("Chưa gán");
+        vm.CustomerBadgeBg.Should().Be("#FEF3C7");
+        vm.CustomerBadgeFg.Should().Be("#B45309");
+        vm.CustomerMappingTooltip.Should().Contain("Khách lẻ");
+    }
+
+    [Fact]
+    public void OrderDisplayModel_WhenHasCustomer_ShowsRegularCustomerBadge()
+    {
+        var customer = new Customer
+        {
+            Id = 10,
+            CanonicalName = "Studio Paris"
+        };
+        var order = new Order
+        {
+            Id = 2,
+            OriginalFolderName = "Paris Q1",
+            CustomerId = customer.Id,
+            Customer = customer
+        };
+        var vm = new OrderDisplayModel(order);
+
+        vm.HasCustomer.Should().BeTrue();
+        vm.IsGuest.Should().BeFalse();
+        vm.CustomerBadgeText.Should().Be("👤 Studio Paris");
+        vm.CustomerBadgeBg.Should().Be("#E0F2FE");
+        vm.CustomerBadgeFg.Should().Be("#0369A1");
+        vm.CustomerMappingTooltip.Should().Contain("Studio Paris");
+    }
 }

@@ -447,4 +447,178 @@ public class MultiRootFolderTests : IDisposable
             try { Directory.Delete(root2Dir, true); } catch { }
         }
     }
+
+    [Fact]
+    public async Task RootOffline_DoesNotFallbackToAnotherRootWithSameRelativePath()
+    {
+        await _migrator.MigrateAsync();
+
+        string folder = Path.Combine(Path.GetTempPath(), "lalab_offline_test_" + Guid.NewGuid().ToString("N"));
+        string rootADir = Path.Combine(folder, "RootA");
+        string rootBDir = Path.Combine(folder, "RootB");
+        string relOrder = Path.Combine("2026-10-02", "SameCustomer");
+        string relSpec = Path.Combine(relOrder, "13x18 in");
+
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(rootADir, relSpec));
+            Directory.CreateDirectory(Path.Combine(rootBDir, relSpec));
+            File.WriteAllText(Path.Combine(rootADir, relSpec, "img_a.jpg"), "onlineA");
+            File.WriteAllText(Path.Combine(rootBDir, relSpec, "img_b.jpg"), "onlineB");
+
+            long rootAId = await _rootRepo.InsertAsync(new RootFolder { Name = "Kho A", FullPath = rootADir, IsActive = true, IsDefault = true });
+            long rootBId = await _rootRepo.InsertAsync(new RootFolder { Name = "Kho B", FullPath = rootBDir, IsActive = true, IsDefault = false });
+
+            var settingsRepo = new SqliteSettingsRepository(_connectionFactory);
+            await settingsRepo.SaveSettingsAsync(new AppSettings { RootFolder = rootADir });
+
+            var fs = new PhysicalFileSystemAdapter();
+            var scanner = new ScanService(fs, new FolderStructureParser(fs), new PrintFolderResolver(fs),
+                settingsRepo, _orderRepo, rootFolderRepository: _rootRepo);
+
+            // Initial scan: both roots discovered
+            var initialOrders = await scanner.ScanDateAsync("2026-10-02");
+            Assert.Equal(2, initialOrders.Count);
+
+            var dbOrderB = await _orderRepo.GetOrderByRootAndRelativePathAsync(rootBId, relOrder);
+            Assert.NotNull(dbOrderB);
+            Assert.Equal(rootBId, dbOrderB.RootFolderId);
+
+            // Now Root B goes offline (e.g. external drive disconnected or network share offline)
+            Directory.Delete(rootBDir, true);
+
+            // Rescan order of Root B specifically: must return null (not found on disk), NEVER fallback to Root A!
+            var rescanB = await scanner.ScanOrderInRootAsync(relOrder, rootBId);
+            Assert.Null(rescanB);
+
+            // Rescan unscoped when ambiguous (exists in both roots in DB): must refuse and throw!
+            await Assert.ThrowsAsync<InvalidOperationException>(() => scanner.ScanOrderAsync(relOrder));
+
+            // Also test single order in DB whose root is Root B:
+            string uniqueOrderRel = Path.Combine("2026-10-02", "UniqueCustomerB");
+            var uniqueOrderB = new Order
+            {
+                WorkDate = "2026-10-02",
+                OriginalFolderName = "UniqueCustomerB",
+                RelativePath = uniqueOrderRel,
+                RootFolderId = rootBId,
+                Status = OrderStatus.Ready
+            };
+            await _orderRepo.SaveOrderAsync(uniqueOrderB, new ScanSnapshot());
+
+            // Root B is offline. Even though Root A is online and Root A is default root,
+            // scanning this order by path alone must resolve Root B from DB and return null, NOT fallback to Root A!
+            var rescanUnique = await scanner.ScanOrderAsync(uniqueOrderRel);
+            Assert.Null(rescanUnique);
+
+            // Verify Root B order in DB remains completely unchanged with its original root identity!
+            var persistedOrderB = await _orderRepo.GetOrderByIdAsync(dbOrderB.Id);
+            Assert.NotNull(persistedOrderB);
+            Assert.Equal(rootBId, persistedOrderB.RootFolderId);
+            Assert.Equal("Kho B", persistedOrderB.RootFolderName);
+
+            // Verify Root A order in DB remains intact as well
+            var dbOrderA = await _orderRepo.GetOrderByRootAndRelativePathAsync(rootAId, relOrder);
+            Assert.NotNull(dbOrderA);
+            Assert.Equal(rootAId, dbOrderA.RootFolderId);
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+            {
+                try { Directory.Delete(folder, true); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InactiveOrArchiveRoot_PreservesIdentityAndDoesNotPruneFromDateScan()
+    {
+        await _migrator.MigrateAsync();
+
+        string folder = Path.Combine(Path.GetTempPath(), "lalab_archive_test_" + Guid.NewGuid().ToString("N"));
+        string rootADir = Path.Combine(folder, "RootA");
+        string rootBDir = Path.Combine(folder, "RootB");
+        string relOrder = Path.Combine("2026-10-02", "ArchivedCustomer");
+        string relSpec = Path.Combine(relOrder, "13x18 in");
+
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(rootADir, relSpec));
+            Directory.CreateDirectory(Path.Combine(rootBDir, relSpec));
+            File.WriteAllText(Path.Combine(rootADir, relSpec, "1.jpg"), "");
+            File.WriteAllText(Path.Combine(rootBDir, relSpec, "2.jpg"), "");
+
+            long rootAId = await _rootRepo.InsertAsync(new RootFolder { Name = "Kho Active", FullPath = rootADir, IsActive = true, IsDefault = true });
+            long rootBId = await _rootRepo.InsertAsync(new RootFolder { Name = "Kho Archive", FullPath = rootBDir, IsActive = true, IsDefault = false });
+
+            var settingsRepo = new SqliteSettingsRepository(_connectionFactory);
+            await settingsRepo.SaveSettingsAsync(new AppSettings { RootFolder = rootADir });
+
+            var fs = new PhysicalFileSystemAdapter();
+            var scanner = new ScanService(fs, new FolderStructureParser(fs), new PrintFolderResolver(fs),
+                settingsRepo, _orderRepo, rootFolderRepository: _rootRepo);
+
+            var initialOrders = await scanner.ScanDateAsync("2026-10-02");
+            Assert.Equal(2, initialOrders.Count);
+
+            var dbOrderB = await _orderRepo.GetOrderByRootAndRelativePathAsync(rootBId, relOrder);
+            Assert.NotNull(dbOrderB);
+
+            // Now archive Root B (deactivate)
+            await _rootRepo.SetActiveAsync(rootBId, false);
+            var updatedRootB = await _rootRepo.GetByIdAsync(rootBId);
+            Assert.False(updatedRootB!.IsActive);
+
+            // Scanning date now only scans active roots (Root A), but MUST NOT prune Root B's orders!
+            var dateOrders = await scanner.ScanDateAsync("2026-10-02");
+            Assert.Single(dateOrders); // only Root A is returned in active scan
+            Assert.Equal(rootAId, dateOrders[0].RootFolderId);
+
+            // Verify Root B order in database is preserved and NOT pruned
+            var preservedB = await _orderRepo.GetOrderByIdAsync(dbOrderB.Id);
+            Assert.NotNull(preservedB);
+            Assert.Equal(rootBId, preservedB.RootFolderId);
+            Assert.Equal("Kho Archive", preservedB.RootFolderName);
+
+            // Scoped rescan of Root B specifically retains its identity
+            var rescanB = await scanner.ScanOrderInRootAsync(relOrder, rootBId);
+            Assert.NotNull(rescanB);
+            Assert.Equal(rootBId, rescanB.RootFolderId);
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+            {
+                try { Directory.Delete(folder, true); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AcceptanceProfile_Database_InventoryCheck()
+    {
+        string acceptanceDb = Path.Combine(AppContext.BaseDirectory, "../../../../artifacts/acceptance/profile/lalab_autoreport.db");
+        if (!File.Exists(acceptanceDb)) return;
+
+        var factory = new SqliteConnectionFactory(acceptanceDb);
+        using var connection = factory.CreateConnection();
+
+        // 1. Integrity check
+        string integrity = await connection.QuerySingleAsync<string>("PRAGMA integrity_check;");
+        Assert.Equal("ok", integrity);
+
+        // 2. Foreign key check
+        var fkViolations = await connection.QueryAsync<dynamic>("PRAGMA foreign_key_check;");
+        Assert.Empty(fkViolations);
+
+        // 3. Null root orders check
+        int nullRoots = await connection.QuerySingleAsync<int>("SELECT COUNT(*) FROM orders WHERE root_folder_id IS NULL;");
+        Assert.Equal(0, nullRoots);
+
+        // 4. Duplicate (root_folder_id, relative_path)
+        int dupCount = await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(*) FROM (SELECT root_folder_id, relative_path FROM orders GROUP BY root_folder_id, relative_path HAVING count(*) > 1);");
+        Assert.Equal(0, dupCount);
+    }
 }

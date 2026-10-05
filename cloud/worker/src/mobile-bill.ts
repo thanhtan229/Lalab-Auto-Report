@@ -3,7 +3,8 @@ import { CloudBillDto, UserRole } from './types';
 // Storage projection names are independent of the LAN/PWA API contract.
 export function toMobileBill(bill: CloudBillDto, role: UserRole) {
   const admin = role === 'Admin';
-  const adjustmentsTotal = bill.adjustmentsTotal ?? bill.adjustments.reduce((sum, a) => sum + (a.direction === 'Deduct' ? -a.amount : a.amount), 0);
+  const adjustments = Array.isArray(bill.adjustments) ? bill.adjustments : [];
+  const adjustmentsTotal = bill.adjustmentsTotal ?? adjustments.reduce((sum, a) => sum + (a.direction === 'Deduct' ? -a.amount : a.amount), 0);
   const lines = (Array.isArray(bill.lines) ? bill.lines : []).map(line => ({
     id: line.id,
     description: line.description ?? line.productName ?? '',
@@ -23,7 +24,7 @@ export function toMobileBill(bill: CloudBillDto, role: UserRole) {
     adjustmentsTotal: admin ? adjustmentsTotal : null,
     grandTotal: admin ? bill.totalAmount : null,
     lines,
-    adjustments: admin ? bill.adjustments.map(a => ({
+    adjustments: admin ? adjustments.map(a => ({
       id: a.id, description: a.description ?? '', amount: a.amount, type: a.type, direction: a.direction ?? 'Add'
     })) : null
   };

@@ -178,6 +178,72 @@ checkAuthAndLoad().then(()=>{assert.equal(nodes.get('pinModal').classList.hidden
         finally { File.Delete(path); }
     }
 
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Staff")]
+    public void ActualLanScript_ViewBillRendersAdminAndStaffWithoutUndefinedOrLeakage(string role)
+    {
+        string script = Regex.Match(MobileSpaHtmlProvider.GetIndexHtml(), @"(?s)<script>(.*?)</script>").Groups[1].Value;
+        string fixture = @"
+const assert = require('node:assert/strict');
+const nodes = new Map();
+global.currentRole = ROLE;
+global.authToken = 'fixture-token';
+global.localStorage = {getItem(){return 'fixture-token'}, setItem(){}};
+global.navigator = {};
+global.window = {addEventListener(){}};
+global.document = {getElementById(id){if(!nodes.has(id)) nodes.set(id,{value:'',innerText:'',innerHTML:'',classList:{hidden:false,add(){this.hidden=true},remove(){this.hidden=false}},focus(){},addEventListener(){}});return nodes.get(id)}};
+const billData = {
+  id: 1, billNumber: 'AUDIT-1', billType: 'Customer', customerName: 'Audit <Safe> Customer',
+  periodEnd: '2026-10-02', status: 'Draft', isPaid: false, paidAt: null,
+  hasExportFile: ROLE === 'Admin', hasPaymentQr: ROLE === 'Admin',
+  productSubtotal: ROLE === 'Admin' ? 75000 : null,
+  adjustmentsTotal: ROLE === 'Admin' ? 0 : null,
+  grandTotal: ROLE === 'Admin' ? 75000 : null,
+  lines: [{ id: 1, description: 'Photo & Print', size: '10x15', quantity: 15, unitPrice: ROLE === 'Admin' ? 5000 : null, lineTotal: ROLE === 'Admin' ? 75000 : null }],
+  adjustments: ROLE === 'Admin' ? [] : null
+};
+global.fetch = async () => ({ok: true, json: async () => billData});
+";
+
+        string assertions = @"
+currentRole = ROLE;
+viewBill(1).then(()=>{
+  const body = nodes.get('previewModalBody').innerHTML;
+  assert.ok(body.includes('Audit &lt;Safe&gt; Customer'), 'Escaped customer name must be present');
+  assert.ok(body.includes('AUDIT-1'), 'Bill number must be present');
+  assert.ok(body.includes('2026-10-02'), 'Period date must be present');
+  assert.ok(body.includes('Photo &amp; Print'), 'Line description must be present and escaped');
+  assert.ok(!body.includes('undefined'), 'No literal undefined');
+  assert.ok(!body.includes('NaN'), 'No literal NaN');
+
+  if (currentRole === 'Admin') {
+    assert.ok(body.includes('75.000'), 'Admin sees total amount');
+    assert.ok(body.includes('Xác nhận ĐÃ THU'), 'Admin sees payment button');
+    assert.ok(body.includes('/api/bills/1/image?token=fixture-token'), 'Admin sees export image link');
+    assert.ok(body.includes('showBillQr(1)'), 'Admin sees QR button');
+  } else {
+    assert.ok(!body.includes('75.000'), 'Staff must not see total amount');
+    assert.ok(!body.includes('5.000'), 'Staff must not see unit price');
+    assert.ok(!body.includes('Xác nhận ĐÃ THU'), 'Staff must not see payment button');
+    assert.ok(!body.includes('/api/bills/1/image'), 'Staff must not see export image link');
+    assert.ok(!body.includes('showBillQr'), 'Staff must not see QR button');
+  }
+}).catch(e=>{console.error(e);process.exitCode=1});
+";
+        string path = Path.Combine(Path.GetTempPath(), "lalab_viewbill_" + Guid.NewGuid().ToString("N") + ".cjs");
+        try
+        {
+            string fullScript = (fixture + script + assertions).Replace("ROLE", System.Text.Json.JsonSerializer.Serialize(role));
+            File.WriteAllText(path, fullScript);
+            using var process = Process.Start(new ProcessStartInfo("node", $"\"{path}\"") { RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true })!;
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit(5000);
+            Assert.True(process.ExitCode == 0, error);
+        }
+        finally { File.Delete(path); }
+    }
+
     private static int CountChar(string text, char target)
     {
         int count = 0;

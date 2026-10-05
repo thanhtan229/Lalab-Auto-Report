@@ -13,6 +13,10 @@ namespace LalabAutoReport.Core.Services;
 public class FolderStructureParser : IFolderStructureParser
 {
     private static readonly Regex DatePatternRegex = new(@"^\d{4}[-_.]\d{2}[-_.]\d{2}$", RegexOptions.Compiled);
+    private static readonly Regex DateYmdRegex = new(@"^(?<year>\d{4})[-_.](?<month>\d{1,2})[-_.](?<day>\d{1,2})$", RegexOptions.Compiled);
+    private static readonly Regex DateDmyRegex = new(@"^(?<day>\d{1,2})[-_.](?<month>\d{1,2})[-_.](?<year>\d{4})$", RegexOptions.Compiled);
+    private static readonly Regex DateDmRegex = new(@"^(?<day>\d{1,2})[-_.](?<month>\d{1,2})$", RegexOptions.Compiled);
+    private static readonly Regex YearInPathRegex = new(@"\b(20\d\d)\b", RegexOptions.Compiled);
     private static readonly Regex DimensionRegex = new(@"^\d+[\s._xX*xX-]+\d+", RegexOptions.Compiled);
 
     private readonly IFileSystemAdapter _fileSystem;
@@ -35,6 +39,173 @@ public class FolderStructureParser : IFolderStructureParser
         _productResolver = productResolver ?? (specRepository is IProductRepository prodRepo ? new ProductResolver(prodRepo) : null);
     }
 
+    public static bool TryParseDateFolder(
+        string folderName,
+        string? rootFolderPath,
+        int? targetYear,
+        out DateTime parsedDate,
+        out string canonicalDateString)
+    {
+        parsedDate = default;
+        canonicalDateString = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(folderName)) return false;
+
+        string trimmed = folderName.Trim();
+
+        // 1. Check YYYY[-_.]MM[-_.]DD
+        var matchYmd = DateYmdRegex.Match(trimmed);
+        if (matchYmd.Success)
+        {
+            if (int.TryParse(matchYmd.Groups["year"].Value, out int y) &&
+                int.TryParse(matchYmd.Groups["month"].Value, out int m) &&
+                int.TryParse(matchYmd.Groups["day"].Value, out int d))
+            {
+                if (IsValidDate(y, m, d, out parsedDate))
+                {
+                    canonicalDateString = parsedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 2. Check DD[-_.]MM[-_.]YYYY
+        var matchDmy = DateDmyRegex.Match(trimmed);
+        if (matchDmy.Success)
+        {
+            if (int.TryParse(matchDmy.Groups["year"].Value, out int y) &&
+                int.TryParse(matchDmy.Groups["month"].Value, out int m) &&
+                int.TryParse(matchDmy.Groups["day"].Value, out int d))
+            {
+                if (IsValidDate(y, m, d, out parsedDate))
+                {
+                    canonicalDateString = parsedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 3. Check DD[-_.]MM
+        var matchDm = DateDmRegex.Match(trimmed);
+        if (matchDm.Success)
+        {
+            if (int.TryParse(matchDm.Groups["month"].Value, out int m) &&
+                int.TryParse(matchDm.Groups["day"].Value, out int d))
+            {
+                if (m < 1 || m > 12) return false;
+
+                int y = targetYear ?? ResolveYearFromContext(rootFolderPath);
+                if (IsValidDate(y, m, d, out parsedDate))
+                {
+                    canonicalDateString = parsedDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool IsValidDate(int year, int month, int day, out DateTime date)
+    {
+        date = default;
+        if (year < 1900 || year > 2100) return false;
+        if (month < 1 || month > 12) return false;
+        if (day < 1 || day > DateTime.DaysInMonth(year, month)) return false;
+
+        try
+        {
+            date = new DateTime(year, month, day);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static int ResolveYearFromContext(string? contextPath)
+    {
+        if (!string.IsNullOrWhiteSpace(contextPath))
+        {
+            var match = YearInPathRegex.Match(contextPath);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int y))
+            {
+                if (y >= 1900 && y <= 2100) return y;
+            }
+        }
+        return DateTime.Today.Year;
+    }
+
+    public string? FindDateFolderPath(string rootFolder, string dateString)
+    {
+        if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
+        {
+            return null;
+        }
+
+        // 1. Direct match
+        string exactPath = _fileSystem.Combine(rootFolder, dateString);
+        if (_fileSystem.DirectoryExists(exactPath))
+        {
+            return exactPath;
+        }
+
+        // 2. Parse target date
+        if (!TryParseDateFolder(dateString, rootFolder, null, out var targetDate, out string canonicalTarget))
+        {
+            return null;
+        }
+
+        // 3. Fast probe for common representations
+        string[] candidates = new[]
+        {
+            targetDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            targetDate.ToString("yyyy_MM_dd", CultureInfo.InvariantCulture),
+            targetDate.ToString("yyyy.MM.dd", CultureInfo.InvariantCulture),
+            targetDate.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture),
+            targetDate.ToString("dd_MM_yyyy", CultureInfo.InvariantCulture),
+            targetDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
+            $"{targetDate.Day}-{targetDate.Month}-{targetDate.Year}",
+            targetDate.ToString("dd-MM", CultureInfo.InvariantCulture),
+            targetDate.ToString("dd_MM", CultureInfo.InvariantCulture),
+            targetDate.ToString("dd.MM", CultureInfo.InvariantCulture),
+            $"{targetDate.Day}-{targetDate.Month}"
+        };
+
+        foreach (var cand in candidates)
+        {
+            string candPath = _fileSystem.Combine(rootFolder, cand);
+            if (_fileSystem.DirectoryExists(candPath))
+            {
+                return candPath;
+            }
+        }
+
+        // 4. Fallback: Enumerate directories in root and check TryParseDateFolder
+        try
+        {
+            foreach (var dir in _fileSystem.EnumerateDirectories(rootFolder))
+            {
+                string folderName = _fileSystem.GetFileName(dir);
+                if (TryParseDateFolder(folderName, rootFolder, targetDate.Year, out _, out string cDate) &&
+                    string.Equals(cDate, canonicalTarget, StringComparison.OrdinalIgnoreCase))
+                {
+                    return dir;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to enumerate directories in '{Root}' while searching for date '{Date}'", rootFolder, dateString);
+        }
+
+        return null;
+    }
+
     public IReadOnlyList<string> DiscoverDateFolders(string rootFolder)
     {
         if (string.IsNullOrWhiteSpace(rootFolder) || !_fileSystem.DirectoryExists(rootFolder))
@@ -43,15 +214,15 @@ public class FolderStructureParser : IFolderStructureParser
             return Array.Empty<string>();
         }
 
-        var results = new List<string>();
+        var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
             foreach (var dir in _fileSystem.EnumerateDirectories(rootFolder))
             {
                 string folderName = _fileSystem.GetFileName(dir);
-                if (DatePatternRegex.IsMatch(folderName))
+                if (TryParseDateFolder(folderName, rootFolder, null, out _, out string canonicalDate))
                 {
-                    results.Add(folderName);
+                    results.Add(canonicalDate);
                 }
             }
         }
@@ -65,11 +236,17 @@ public class FolderStructureParser : IFolderStructureParser
 
     public IReadOnlyList<DiscoveredOrder> DiscoverOrdersForDate(string rootFolder, string dateString)
     {
-        string dateFolderPath = _fileSystem.Combine(rootFolder, dateString);
-        if (!_fileSystem.DirectoryExists(dateFolderPath))
+        string? dateFolderPath = FindDateFolderPath(rootFolder, dateString);
+        if (dateFolderPath == null || !_fileSystem.DirectoryExists(dateFolderPath))
         {
-            _logger?.LogWarning("Date folder '{Path}' does not exist.", dateFolderPath);
-            throw new System.IO.DirectoryNotFoundException($"Không đọc được thư mục ngày: {dateFolderPath}");
+            _logger?.LogWarning("Date folder for '{Date}' does not exist in root '{Root}'.", dateString, rootFolder);
+            throw new System.IO.DirectoryNotFoundException($"Không đọc được thư mục ngày: {dateString} tại {rootFolder}");
+        }
+
+        string canonicalDate = dateString;
+        if (TryParseDateFolder(dateString, rootFolder, null, out _, out string cDate))
+        {
+            canonicalDate = cDate;
         }
 
         var orders = new List<DiscoveredOrder>();
@@ -77,10 +254,10 @@ public class FolderStructureParser : IFolderStructureParser
         {
             foreach (var customerDir in _fileSystem.EnumerateDirectories(dateFolderPath))
             {
-                try { orders.AddRange(DiscoverOrdersInFolder(rootFolder, customerDir, dateString)); }
+                try { orders.AddRange(DiscoverOrdersInFolder(rootFolder, customerDir, canonicalDate)); }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
                 {
-                    orders.Add(new DiscoveredOrder(dateString, _fileSystem.GetFileName(customerDir), customerDir,
+                    orders.Add(new DiscoveredOrder(canonicalDate, _fileSystem.GetFileName(customerDir), customerDir,
                         _fileSystem.GetRelativePath(rootFolder, customerDir), Array.Empty<DiscoveredSpecification>(),
                         DiscoveryError: $"{customerDir}: {ex.Message}"));
                 }
@@ -112,16 +289,17 @@ public class FolderStructureParser : IFolderStructureParser
         string[] parts = normalizedRel.Split('\\', StringSplitOptions.RemoveEmptyEntries);
 
         // Check if folderPath is a deep descendant inside a date folder: Date \ Customer \ ...
-        if (parts.Length >= 3 && DatePatternRegex.IsMatch(parts[0]))
+        if (parts.Length >= 3 && TryParseDateFolder(parts[0], rootFolder, null, out _, out string canonicalDate))
         {
-            string date = parts[0];
+            string date = canonicalDate;
+            string dateFolderOnDisk = parts[0];
             string customerName = parts[1];
 
             // Subcase: KHACH_LE
             if (string.Equals(customerName, "KHACH_LE", StringComparison.OrdinalIgnoreCase))
             {
                 string guestName = parts[2];
-                string guestRelPath = _fileSystem.Combine(date, customerName, guestName);
+                string guestRelPath = _fileSystem.Combine(dateFolderOnDisk, customerName, guestName);
                 string guestFullPath = _fileSystem.Combine(rootFolder, guestRelPath);
 
                 if (parts.Length == 3)
@@ -164,7 +342,7 @@ public class FolderStructureParser : IFolderStructureParser
             bool isExplicitOrder = (parts.Length >= 4 && IsProductFolder(parts[3]));
             if (!isExplicitOrder)
             {
-                string potentialOrderPath = _fileSystem.Combine(rootFolder, date, customerName, parts[2]);
+                string potentialOrderPath = _fileSystem.Combine(rootFolder, dateFolderOnDisk, customerName, parts[2]);
                 if (_fileSystem.DirectoryExists(potentialOrderPath))
                 {
                     try
@@ -182,7 +360,7 @@ public class FolderStructureParser : IFolderStructureParser
             if (!isExplicitOrder && IsProductFolder(parts[2]))
             {
                 string specName = parts[2];
-                string orderRelPath = _fileSystem.Combine(date, customerName);
+                string orderRelPath = _fileSystem.Combine(dateFolderOnDisk, customerName);
                 string orderFullPath = _fileSystem.Combine(rootFolder, orderRelPath);
                 string specRelPath = _fileSystem.Combine(orderRelPath, specName);
                 string specFullPath = _fileSystem.Combine(rootFolder, specRelPath);
@@ -207,7 +385,7 @@ public class FolderStructureParser : IFolderStructureParser
             {
                 // parts[2] is an explicit order (e.g. Minh Studio\Don 01)
                 string explicitOrderName = parts[2];
-                string orderRelPath = _fileSystem.Combine(date, customerName, explicitOrderName);
+                string orderRelPath = _fileSystem.Combine(dateFolderOnDisk, customerName, explicitOrderName);
                 string orderFullPath = _fileSystem.Combine(rootFolder, orderRelPath);
 
                 if (parts.Length == 3)
@@ -392,9 +570,10 @@ public class FolderStructureParser : IFolderStructureParser
         string resolvedOrderFullPath = fullPath;
         IReadOnlyList<DiscoveredSpecification> specs;
 
-        if (parts.Length >= 3 && DatePatternRegex.IsMatch(parts[0]))
+        if (parts.Length >= 3 && TryParseDateFolder(parts[0], rootFolder, null, out _, out string canonicalSingleDate))
         {
-            dateString = parts[0];
+            dateString = canonicalSingleDate;
+            string dateFolderOnDisk = parts[0];
             string secondPart = parts[1];
 
             // Subcase: KHACH_LE
@@ -403,7 +582,7 @@ public class FolderStructureParser : IFolderStructureParser
                 customerFolderName = parts[2];
                 orderName = parts[2];
                 kind = OrderKind.Explicit;
-                resolvedOrderRelativePath = _fileSystem.Combine(parts[0], parts[1], parts[2]);
+                resolvedOrderRelativePath = _fileSystem.Combine(dateFolderOnDisk, parts[1], parts[2]);
                 resolvedOrderFullPath = _fileSystem.Combine(rootFolder, resolvedOrderRelativePath);
 
                 if (parts.Length == 3)
@@ -421,7 +600,7 @@ public class FolderStructureParser : IFolderStructureParser
             bool isExplicitOrder = (parts.Length >= 4 && IsProductFolder(parts[3]));
             if (!isExplicitOrder)
             {
-                string potentialOrderPath = _fileSystem.Combine(rootFolder, parts[0], parts[1], parts[2]);
+                string potentialOrderPath = _fileSystem.Combine(rootFolder, dateFolderOnDisk, parts[1], parts[2]);
                 if (_fileSystem.DirectoryExists(potentialOrderPath))
                 {
                     try
@@ -442,7 +621,7 @@ public class FolderStructureParser : IFolderStructureParser
                 customerFolderName = secondPart;
                 orderName = customerFolderName;
                 kind = OrderKind.Implicit;
-                resolvedOrderRelativePath = _fileSystem.Combine(parts[0], parts[1]);
+                resolvedOrderRelativePath = _fileSystem.Combine(dateFolderOnDisk, parts[1]);
                 resolvedOrderFullPath = _fileSystem.Combine(rootFolder, resolvedOrderRelativePath);
 
                 string specName = parts[2];
@@ -456,7 +635,7 @@ public class FolderStructureParser : IFolderStructureParser
                 customerFolderName = secondPart;
                 orderName = parts[2];
                 kind = OrderKind.Explicit;
-                resolvedOrderRelativePath = _fileSystem.Combine(parts[0], parts[1], parts[2]);
+                resolvedOrderRelativePath = _fileSystem.Combine(dateFolderOnDisk, parts[1], parts[2]);
                 resolvedOrderFullPath = _fileSystem.Combine(rootFolder, resolvedOrderRelativePath);
 
                 if (parts.Length == 3)
@@ -472,10 +651,10 @@ public class FolderStructureParser : IFolderStructureParser
                 }
             }
         }
-        else if (parts.Length == 2 && DatePatternRegex.IsMatch(parts[0]))
+        else if (parts.Length == 2 && TryParseDateFolder(parts[0], rootFolder, null, out _, out string canonicalSingleDate2))
         {
             // Implicit order e.g. 2026-09-28\Anh An
-            dateString = parts[0];
+            dateString = canonicalSingleDate2;
             customerFolderName = parts[1];
             orderName = customerFolderName;
             kind = OrderKind.Implicit;

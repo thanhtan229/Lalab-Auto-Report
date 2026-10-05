@@ -246,7 +246,7 @@ public class Order
     public Customer? Customer { get; set; }
     public List<OrderItemScan> Items { get; set; } = new();
 
-    public bool IsGuest => CustomerId == null && IsGuestFolderName(OriginalFolderName, OrderName);
+    public bool IsGuest => CustomerId == null;
 
     public static bool IsGuestFolderName(string? folderName, string? orderName = null, IEnumerable<string>? guestAliases = null)
     {
@@ -462,8 +462,8 @@ public class AppSettings
     // Mobile Web Server & Remote Access Settings
     public bool EnableMobileServer { get; set; } = true;
     public int MobileServerPort { get; set; } = 5050;
-    public string AdminPin { get; set; } = "123456";
-    public string StaffPin { get; set; } = "000000";
+    public string AdminPin { get; set; } = string.Empty;
+    public string StaffPin { get; set; } = string.Empty;
     public bool ShowOrderThumbnails { get; set; } = true;
     public string MobileAuthSecret { get; set; } = string.Empty;
 

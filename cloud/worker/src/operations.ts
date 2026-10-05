@@ -6,7 +6,7 @@ export interface OperationalMutation {
   entityId: number;
   value?: boolean | string;
   toggle?: boolean;
-  deliveredBy?: string;
+  deliveredBy?: string | null;
 }
 
 export class OperationError extends Error {
@@ -27,7 +27,7 @@ export async function acceptOperation(db: D1Database, mutation: OperationalMutat
   if (!['order_delivered', 'order_note', 'bill_payment'].includes(entityType)) throw new OperationError('Unknown operation type.');
   if (entityType === 'order_note' ? typeof mutation.value !== 'string' || mutation.value.length > 10000
     : mutation.toggle !== true && typeof mutation.value !== 'boolean') throw new OperationError('Invalid operation value.');
-  if (mutation.deliveredBy !== undefined && (typeof mutation.deliveredBy !== 'string' || mutation.deliveredBy.length > 200))
+  if (mutation.deliveredBy != null && (typeof mutation.deliveredBy !== 'string' || mutation.deliveredBy.length > 200))
     throw new OperationError('Invalid actor.');
   const requestJson = JSON.stringify({ entityType, entityId, value: mutation.value ?? null,
     toggle: mutation.toggle === true, deliveredBy: mutation.deliveredBy ?? null });

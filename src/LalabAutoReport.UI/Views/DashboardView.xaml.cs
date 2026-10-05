@@ -23,6 +23,16 @@ public partial class DashboardView : UserControl
         if (ViewModel != null) ViewModel.CurrentFilter = "All";
     }
 
+    private void FilterRegular_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null) ViewModel.CurrentFilter = "Regular";
+    }
+
+    private void FilterGuest_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null) ViewModel.CurrentFilter = "Guest";
+    }
+
     private void FilterNeedsReview_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel != null) ViewModel.CurrentFilter = "NeedsReview";

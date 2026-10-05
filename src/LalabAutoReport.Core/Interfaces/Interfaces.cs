@@ -101,6 +101,7 @@ public interface IFolderStructureParser
     IReadOnlyList<DiscoveredOrder> DiscoverOrdersInFolder(string rootFolder, string folderPath, string? dateString = null);
     DiscoveredOrder? DiscoverSingleOrder(string rootFolder, string orderRelativePath);
     DiscoveredSpecification? DiscoverSingleSpecification(string rootFolder, string specRelativePath);
+    string? FindDateFolderPath(string rootFolder, string dateString);
 }
 
 /// <summary>

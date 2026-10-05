@@ -19,10 +19,26 @@ export function createSqliteD1() {
     };
     return statement;
   }
+  let lock = Promise.resolve();
   const db = { prepare, async batch(statements: any[]) {
-    sqlite.exec('BEGIN');
-    try { const results = []; for (const statement of statements) results.push(await statement.run()); sqlite.exec('COMMIT'); return results; }
-    catch (error) { sqlite.exec('ROLLBACK'); throw error; }
+    const prev = lock;
+    let release: () => void = () => {};
+    lock = new Promise<void>(resolve => { release = resolve; });
+    await prev;
+    try {
+      sqlite.exec('BEGIN');
+      try {
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
+        sqlite.exec('COMMIT');
+        return results;
+      } catch (error) {
+        sqlite.exec('ROLLBACK');
+        throw error;
+      }
+    } finally {
+      release();
+    }
   } } as unknown as D1Database;
   return { db, sqlite };
 }

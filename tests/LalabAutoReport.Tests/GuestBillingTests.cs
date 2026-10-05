@@ -515,7 +515,7 @@ public class GuestBillingTests : IDisposable
     }
 
     [Fact]
-    public async Task ScanService_WhenScanningRegularUnregisteredCustomer_SetsStatusToNeedsReview()
+    public async Task ScanService_WhenScanningUnregisteredFolder_DefaultsToGuest_AndSetsStatusToReady()
     {
         // 1. Create physical folder: 2026-09-29\Studio Sen Vang\13x18 in
         string dateDir = Path.Combine(_tempRoot, "2026-09-29");
@@ -526,12 +526,12 @@ public class GuestBillingTests : IDisposable
         // 2. Action: Scan date
         var scannedOrders = await _scanService.ScanDateAsync("2026-09-29");
 
-        // 3. Assert
+        // 3. Assert: Unregistered folders default to Guest (Khách lẻ) and Ready status if items are valid
         var studioOrder = scannedOrders.FirstOrDefault(o => o.OriginalFolderName == "Studio Sen Vang");
         studioOrder.Should().NotBeNull();
-        studioOrder!.IsGuest.Should().BeFalse();
+        studioOrder!.IsGuest.Should().BeTrue();
         studioOrder.CustomerId.Should().BeNull();
-        studioOrder.Status.Should().Be(OrderStatus.NeedsReview); // Regular unknown studio MUST be NeedsReview!
+        studioOrder.Status.Should().Be(OrderStatus.Ready);
     }
 
     [Fact]

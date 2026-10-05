@@ -35,6 +35,7 @@ public partial class CustomerBillReviewViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PaymentStatusText))]
     [NotifyPropertyChangedFor(nameof(PaymentStatusButtonText))]
+    [NotifyPropertyChangedFor(nameof(CanSplitOrders))]
     private bool _isPaid;
 
     [ObservableProperty]
@@ -153,7 +154,7 @@ public partial class CustomerBillReviewViewModel : ObservableObject
 
     public bool IsEditable => !IsLocked;
 
-    public bool CanSplitOrders => Orders.Count > 1 && !IsLocked && Bill?.Status != CustomerBillStatus.Locked && Bill?.Status != CustomerBillStatus.Exported;
+    public bool CanSplitOrders => Orders.Count > 1 && !IsLocked && Bill?.Status != CustomerBillStatus.Locked && Bill?.Status != CustomerBillStatus.Exported && !IsPaid;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSuggestedCustomer))]

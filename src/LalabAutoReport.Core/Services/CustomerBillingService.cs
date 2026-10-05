@@ -436,7 +436,10 @@ public class CustomerBillingService : ICustomerBillingService
         // Order subtotal = sum of included lines
         foreach (var order in bill.Orders)
         {
-            order.Subtotal = order.Lines.Where(l => l.IsIncluded).Sum(l => l.LineTotal);
+            var lines = order.Lines != null && order.Lines.Count > 0
+                ? order.Lines
+                : bill.Lines.Where(l => l.OrderId == order.OrderId);
+            order.Subtotal = lines.Where(l => l.IsIncluded).Sum(l => l.LineTotal);
         }
 
         // Product subtotal = sum of lines included AND belonging to included orders
@@ -650,9 +653,9 @@ public class CustomerBillingService : ICustomerBillingService
             throw new KeyNotFoundException($"Không tìm thấy hóa đơn ID {currentBillId}.");
         }
 
-        if (currentBill.Status == CustomerBillStatus.Locked || currentBill.Status == CustomerBillStatus.Exported)
+        if (currentBill.Status == CustomerBillStatus.Locked || currentBill.Status == CustomerBillStatus.Exported || currentBill.IsPaid)
         {
-            throw new InvalidOperationException("Hóa đơn đã bị khóa hoặc đã xuất. Vui lòng mở khóa (Reopen) hóa đơn trước khi tách đơn.");
+            throw new InvalidOperationException("Hóa đơn đã bị khóa, đã xuất hoặc đã thanh toán. Vui lòng mở khóa (Reopen) hoặc hủy thanh toán trước khi tách đơn.");
         }
 
         var expectedUpdatedAt = currentBill.UpdatedAt;
@@ -701,25 +704,9 @@ public class CustomerBillingService : ICustomerBillingService
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        // Transfer orders and lines
-        int sortOrder = 0;
-        foreach (var order in movingOrders)
-        {
-            sortOrder++;
-            newBill.Orders.Add(new CustomerBillOrder
-            {
-                OrderId = order.OrderId,
-                OrderCodeSnapshot = order.OrderCodeSnapshot,
-                OriginalFolderNameSnapshot = order.OriginalFolderNameSnapshot,
-                OrderNameSnapshot = order.OrderNameSnapshot,
-                OrderDateSnapshot = order.OrderDateSnapshot,
-                SourceFolderPath = order.SourceFolderPath,
-                Subtotal = order.Subtotal,
-                IsIncluded = order.IsIncluded,
-                IsFromPreviousPeriod = order.IsFromPreviousPeriod,
-                SortOrder = sortOrder
-            });
-        }
+        newBill.Adjustments.Add(new BillAdjustment { Type = AdjustmentType.Shipping, Label = "Phí vận chuyển", Direction = AdjustmentDirection.Add, Amount = 0, SortOrder = 1 });
+        newBill.Adjustments.Add(new BillAdjustment { Type = AdjustmentType.Surcharge, Label = "Phụ thu", Direction = AdjustmentDirection.Add, Amount = 0, SortOrder = 2 });
+        newBill.Adjustments.Add(new BillAdjustment { Type = AdjustmentType.Discount, Label = "Giảm giá", Direction = AdjustmentDirection.Deduct, Amount = 0, SortOrder = 3 });
 
         int lineSort = 0;
         foreach (var line in movingLines)
@@ -752,6 +739,28 @@ public class CustomerBillingService : ICustomerBillingService
                 FolderResolutionModeSnapshot = line.FolderResolutionModeSnapshot,
                 IssueMessage = line.IssueMessage,
                 Note = line.Note
+            });
+        }
+
+        // Transfer orders with lines wired
+        int sortOrder = 0;
+        foreach (var order in movingOrders)
+        {
+            sortOrder++;
+            var orderLines = newBill.Lines.Where(l => l.OrderId == order.OrderId).ToList();
+            newBill.Orders.Add(new CustomerBillOrder
+            {
+                OrderId = order.OrderId,
+                OrderCodeSnapshot = order.OrderCodeSnapshot,
+                OriginalFolderNameSnapshot = order.OriginalFolderNameSnapshot,
+                OrderNameSnapshot = order.OrderNameSnapshot,
+                OrderDateSnapshot = order.OrderDateSnapshot,
+                SourceFolderPath = order.SourceFolderPath,
+                Subtotal = order.Subtotal,
+                IsIncluded = order.IsIncluded,
+                IsFromPreviousPeriod = order.IsFromPreviousPeriod,
+                SortOrder = sortOrder,
+                Lines = orderLines
             });
         }
 
@@ -788,6 +797,7 @@ public class CustomerBillingService : ICustomerBillingService
             currentBill.PeriodEnd = remainingOrderDates.Max()!;
         }
 
+        currentBill.UpdatedAt = DateTimeOffset.UtcNow;
         RecalculateTotals(currentBill);
         await _customerBillRepository.SplitBillAtomicAsync(currentBill, newBill, orderIdsToMove,
             expectedUpdatedAt, cancellationToken);

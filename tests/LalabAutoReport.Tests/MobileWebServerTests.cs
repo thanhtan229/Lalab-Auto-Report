@@ -109,11 +109,36 @@ public class MobileWebServerTests : IDisposable
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             var bill = json.RootElement;
+            bill.GetProperty("id").GetInt64().Should().Be(1);
+            bill.GetProperty("billNumber").GetString().Should().Be("AUDIT-1");
+            bill.GetProperty("billType").GetString().Should().Be("Customer");
             bill.GetProperty("customerName").GetString().Should().Be("Audit Customer");
             bill.GetProperty("periodEnd").GetString().Should().Be("2026-10-02");
+            bill.GetProperty("status").GetString().Should().Be("Draft");
+            bill.GetProperty("isPaid").GetBoolean().Should().BeFalse();
             bill.GetProperty("lines")[0].GetProperty("description").GetString().Should().Be("Photo");
-            if (role == MobileUserRole.Admin) bill.GetProperty("grandTotal").GetInt64().Should().Be(75000);
-            else bill.GetProperty("grandTotal").ValueKind.Should().Be(JsonValueKind.Null);
+            bill.GetProperty("lines")[0].GetProperty("quantity").GetInt32().Should().Be(15);
+
+            if (role == MobileUserRole.Admin)
+            {
+                bill.GetProperty("productSubtotal").GetInt64().Should().Be(75000);
+                bill.GetProperty("adjustmentsTotal").GetInt64().Should().Be(0);
+                bill.GetProperty("grandTotal").GetInt64().Should().Be(75000);
+                bill.GetProperty("lines")[0].GetProperty("unitPrice").GetInt64().Should().Be(5000);
+                bill.GetProperty("lines")[0].GetProperty("lineTotal").GetInt64().Should().Be(75000);
+                bill.GetProperty("adjustments").GetArrayLength().Should().Be(0);
+            }
+            else
+            {
+                bill.GetProperty("productSubtotal").ValueKind.Should().Be(JsonValueKind.Null);
+                bill.GetProperty("adjustmentsTotal").ValueKind.Should().Be(JsonValueKind.Null);
+                bill.GetProperty("grandTotal").ValueKind.Should().Be(JsonValueKind.Null);
+                bill.GetProperty("lines")[0].GetProperty("unitPrice").ValueKind.Should().Be(JsonValueKind.Null);
+                bill.GetProperty("lines")[0].GetProperty("lineTotal").ValueKind.Should().Be(JsonValueKind.Null);
+                bill.GetProperty("adjustments").ValueKind.Should().Be(JsonValueKind.Null);
+                bill.GetProperty("hasExportFile").GetBoolean().Should().BeFalse();
+                bill.GetProperty("hasPaymentQr").GetBoolean().Should().BeFalse();
+            }
         }
         finally { await _webServer.StopAsync(); }
     }
@@ -268,6 +293,66 @@ public class MobileWebServerTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_WhenAdminPinNotConfigured_ShouldReturn503ServiceUnavailable()
+    {
+        string originalAdminPin = _settings.AdminPin;
+        _settings.AdminPin = string.Empty;
+        await _webServer.StartAsync();
+
+        try
+        {
+            var content = new StringContent(
+                JsonSerializer.Serialize(new { pin = "888888" }),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            var response = await _httpClient.PostAsync("/api/auth/login", content);
+            response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+
+            string json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            doc.RootElement.GetProperty("success").GetBoolean().Should().BeFalse();
+            doc.RootElement.GetProperty("message").GetString().Should().Contain("Chưa cấu hình mã PIN");
+        }
+        finally
+        {
+            _settings.AdminPin = originalAdminPin;
+            await _webServer.StopAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Login_WhenAdminAndStaffPinsAreIdentical_ShouldReturn503ServiceUnavailable()
+    {
+        string originalStaffPin = _settings.StaffPin;
+        _settings.StaffPin = _settings.AdminPin;
+        await _webServer.StartAsync();
+
+        try
+        {
+            var content = new StringContent(
+                JsonSerializer.Serialize(new { pin = _settings.AdminPin }),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            var response = await _httpClient.PostAsync("/api/auth/login", content);
+            response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+
+            string json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            doc.RootElement.GetProperty("success").GetBoolean().Should().BeFalse();
+            doc.RootElement.GetProperty("message").GetString().Should().Contain("không được trùng nhau");
+        }
+        finally
+        {
+            _settings.StaffPin = originalStaffPin;
+            await _webServer.StopAsync();
+        }
+    }
+
+    [Fact]
     public async Task RoleAuthorization_StaffAccessingDailyReport_ShouldBeForbidden()
     {
         await _webServer.StartAsync();
@@ -284,6 +369,12 @@ public class MobileWebServerTests : IDisposable
             var staffRes = await _httpClient.SendAsync(staffReq);
             staffRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
+            // 1b. Staff access monthly report -> 403 Forbidden
+            var staffMonthlyReq = new HttpRequestMessage(HttpMethod.Get, "/api/reports/monthly?year=2026&month=10");
+            staffMonthlyReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", staffToken);
+            var staffMonthlyRes = await _httpClient.SendAsync(staffMonthlyReq);
+            staffMonthlyRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
             // 2. Staff access unpaid debts -> 403 Forbidden
             var staffDebtsReq = new HttpRequestMessage(HttpMethod.Get, "/api/customers/unpaid");
             staffDebtsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", staffToken);
@@ -295,6 +386,18 @@ public class MobileWebServerTests : IDisposable
             adminReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
             var adminRes = await _httpClient.SendAsync(adminReq);
             adminRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // 3b. Admin access monthly report -> 200 OK
+            var adminMonthlyReq = new HttpRequestMessage(HttpMethod.Get, "/api/reports/monthly?year=2026&month=10");
+            adminMonthlyReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            var adminMonthlyRes = await _httpClient.SendAsync(adminMonthlyReq);
+            adminMonthlyRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // 3c. Admin access unpaid debts -> 200 OK
+            var adminDebtsReq = new HttpRequestMessage(HttpMethod.Get, "/api/customers/unpaid");
+            adminDebtsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            var adminDebtsRes = await _httpClient.SendAsync(adminDebtsReq);
+            adminDebtsRes.StatusCode.Should().Be(HttpStatusCode.OK);
         }
         finally
         {

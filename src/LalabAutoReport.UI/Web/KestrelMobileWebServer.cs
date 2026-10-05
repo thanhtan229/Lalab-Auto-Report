@@ -159,7 +159,7 @@ public class KestrelMobileWebServer : IMobileWebServer, IDisposable
             return Results.Ok(new
             {
                 appName = "Lalab Auto Report",
-                version = "1.0",
+                version = "1.0.0",
                 workshopName = settings.WorkshopName,
                 serverTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 cloudSyncEnabled = settings.EnableCloudSync,
@@ -176,6 +176,16 @@ public class KestrelMobileWebServer : IMobileWebServer, IDisposable
 
             string pin = doc.RootElement.TryGetProperty("pin", out var pinElem) ? pinElem.GetString() ?? "" : "";
             var settings = await _settingsRepository.GetSettingsAsync();
+
+            if (string.IsNullOrWhiteSpace(settings.AdminPin))
+            {
+                return Results.Json(new { success = false, message = "Chưa cấu hình mã PIN Admin trên ứng dụng Desktop. Vui lòng vào Cài đặt để thiết lập mã PIN." }, statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+
+            if (!string.IsNullOrWhiteSpace(settings.StaffPin) && string.Equals(settings.AdminPin.Trim(), settings.StaffPin.Trim(), StringComparison.Ordinal))
+            {
+                return Results.Json(new { success = false, message = "Mã PIN Admin và Nhân viên không được trùng nhau. Vui lòng cấu hình lại trong Cài đặt." }, statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
 
             var role = _authService.AuthenticateWithPin(pin, settings);
             if (role == null)

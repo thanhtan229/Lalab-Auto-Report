@@ -149,8 +149,18 @@ public class MobileAuthService : IMobileAuthService
             return null;
         }
 
+        if (string.IsNullOrWhiteSpace(settings.AdminPin))
+        {
+            return null;
+        }
+
         string cleanPin = pin.Trim();
-        if (!string.IsNullOrWhiteSpace(settings.AdminPin) && cleanPin == settings.AdminPin.Trim())
+        if (!string.IsNullOrWhiteSpace(settings.StaffPin) && string.Equals(settings.AdminPin.Trim(), settings.StaffPin.Trim(), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        if (cleanPin == settings.AdminPin.Trim())
         {
             return MobileUserRole.Admin;
         }

@@ -73,10 +73,10 @@ public partial class SettingsViewModel : ObservableObject
     private int _mobileServerPort = 5050;
 
     [ObservableProperty]
-    private string _adminPin = "123456";
+    private string _adminPin = string.Empty;
 
     [ObservableProperty]
-    private string _staffPin = "000000";
+    private string _staffPin = string.Empty;
 
     [ObservableProperty]
     private string _mobileServerStatusText = "Đang kiểm tra...";
@@ -397,8 +397,8 @@ public partial class SettingsViewModel : ObservableObject
 
             EnableMobileServer = settings.EnableMobileServer;
             MobileServerPort = settings.MobileServerPort > 0 ? settings.MobileServerPort : 5050;
-            AdminPin = string.IsNullOrWhiteSpace(settings.AdminPin) ? "123456" : settings.AdminPin;
-            StaffPin = string.IsNullOrWhiteSpace(settings.StaffPin) ? "000000" : settings.StaffPin;
+            AdminPin = settings.AdminPin ?? string.Empty;
+            StaffPin = settings.StaffPin ?? string.Empty;
             ShowOrderThumbnails = settings.ShowOrderThumbnails;
 
             // Thermal Printer Settings
@@ -826,6 +826,11 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
+        if (!string.IsNullOrWhiteSpace(AdminPin) && !string.IsNullOrWhiteSpace(StaffPin) && string.Equals(AdminPin.Trim(), StaffPin.Trim(), StringComparison.Ordinal))
+        {
+            MessageBox.Show("Mã PIN Admin và mã PIN Nhân viên không được trùng nhau.", "Lỗi cấu hình", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         var exts = SupportedExtensions
             .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(e => e.Trim())
@@ -858,8 +863,8 @@ public partial class SettingsViewModel : ObservableObject
             IdleScanWindowDays = IdleScanWindowDays,
             EnableMobileServer = EnableMobileServer,
             MobileServerPort = MobileServerPort,
-            AdminPin = AdminPin.Trim(),
-            StaffPin = StaffPin.Trim(),
+            AdminPin = AdminPin?.Trim() ?? string.Empty,
+            StaffPin = StaffPin?.Trim() ?? string.Empty,
             ShowOrderThumbnails = ShowOrderThumbnails,
             ThermalPrinterName = (SelectedThermalPrinter == "(Sử dụng máy in mặc định của Windows)" || string.IsNullOrWhiteSpace(SelectedThermalPrinter)) ? null : SelectedThermalPrinter.Trim(),
             AutoMarkDeliveredOnPrint = AutoMarkDeliveredOnPrint,

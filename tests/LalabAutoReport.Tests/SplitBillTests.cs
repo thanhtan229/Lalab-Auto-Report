@@ -93,7 +93,9 @@ public class SplitBillTests : IDisposable
     }
 
     [Theory]
+    [InlineData("AFTER INSERT ON customer_bills")]
     [InlineData("BEFORE UPDATE ON customer_bills")]
+    [InlineData("BEFORE DELETE ON customer_bill_orders")]
     [InlineData("BEFORE UPDATE ON order_item_scans")]
     public async Task ProductionSplit_WriteFailureRollsBackNewBillAndMembership(string triggerTarget)
     {
@@ -112,6 +114,19 @@ public class SplitBillTests : IDisposable
         Assert.Equal(2, (await _customerBillRepo.GetByIdAsync(bill.Id))!.Orders.Count);
         Assert.Equal(1, await connection.QuerySingleAsync<int>("SELECT COUNT(*) FROM customer_bill_orders WHERE order_id=@Id", new { Id = moved }));
         Assert.Empty(await connection.QueryAsync("PRAGMA foreign_key_check"));
+
+        // Reconnect/reload verification
+        using (var reconnectConn = _connectionFactory.CreateConnection())
+        {
+            Assert.Equal("ok", await reconnectConn.QuerySingleAsync<string>("PRAGMA integrity_check"));
+            Assert.Empty(await reconnectConn.QueryAsync("PRAGMA foreign_key_check"));
+            Assert.Equal(count, await reconnectConn.QuerySingleAsync<long>("SELECT COUNT(*) FROM customer_bills"));
+            var reloaded = await _customerBillRepo.GetByIdAsync(bill.Id);
+            Assert.NotNull(reloaded);
+            Assert.Equal(2, reloaded.Orders.Count);
+            Assert.Contains(reloaded.Orders, o => o.OrderId == moved);
+        }
+
         await connection.ExecuteAsync("DROP TRIGGER reject_split");
         var split = await _customerBillingService.SplitOrdersToNewBillAsync(bill.Id, new[] { moved });
         Assert.NotEqual(bill.Id, split.Id);
@@ -197,6 +212,9 @@ public class SplitBillTests : IDisposable
         newBill.Orders[0].OrderId.Should().Be(order2Id);
         newBill.Lines.Should().HaveCount(1);
         newBill.Lines[0].OrderId.Should().Be(order2Id);
+        newBill.Orders[0].Lines.Should().HaveCount(1);
+        newBill.Orders[0].Subtotal.Should().Be(order2Subtotal);
+        newBill.Adjustments.Should().HaveCount(3);
         newBill.GrandTotal.Should().Be(order2Subtotal);
 
         // 5. Assert Original Bill
@@ -205,6 +223,9 @@ public class SplitBillTests : IDisposable
         updatedOriginal!.Orders.Should().HaveCount(2);
         updatedOriginal.Orders.Select(o => o.OrderId).Should().NotContain(order2Id);
         updatedOriginal.Orders.Select(o => o.OrderId).Should().Contain(new[] { order1Id, order3Id });
+        updatedOriginal.Orders[0].Subtotal.Should().BeGreaterThan(0);
+        updatedOriginal.Orders[1].Subtotal.Should().BeGreaterThan(0);
+        updatedOriginal.Orders.Sum(o => o.Subtotal).Should().Be(updatedOriginal.GrandTotal);
         updatedOriginal.GrandTotal.Should().Be(initialTotal - order2Subtotal);
 
         // 6. Verify order item scans reference new bill
@@ -213,6 +234,15 @@ public class SplitBillTests : IDisposable
         foreach (var item in movedOrder!.Items)
         {
             item.CustomerBillId.Should().Be(newBill.Id);
+        }
+
+        // 7. Verify persisted order subtotal in database matches line sum
+        using (var checkConn = _connectionFactory.CreateConnection())
+        {
+            var newBillOrderSubtotal = await checkConn.QuerySingleAsync<long>(
+                "SELECT subtotal FROM customer_bill_orders WHERE bill_id=@BillId AND order_id=@OrderId",
+                new { BillId = newBill.Id, OrderId = order2Id });
+            newBillOrderSubtotal.Should().Be(order2Subtotal);
         }
     }
 
@@ -355,6 +385,15 @@ public class SplitBillTests : IDisposable
         bill.Orders.RemoveAt(1);
         vm.LoadFromBill(bill);
         vm.CanSplitOrders.Should().BeFalse();
+
+        // When 2 orders but bill is Paid: CanSplitOrders is false
+        bill.Orders.Add(new() { OrderId = 103, OrderNameSnapshot = "Đơn 3", Subtotal = 60000 });
+        vm.LoadFromBill(bill);
+        vm.CanSplitOrders.Should().BeTrue();
+        vm.IsPaid = true;
+        vm.CanSplitOrders.Should().BeFalse();
+        vm.IsPaid = false;
+        vm.CanSplitOrders.Should().BeTrue();
     }
 
     [Fact]
@@ -369,5 +408,86 @@ public class SplitBillTests : IDisposable
         var actNotFound = async () => await _customerBillingService.SplitOrdersToNewBillAsync(999999, new[] { 1L });
         await actNotFound.Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage("*Không tìm thấy hóa đơn*");
+    }
+
+    [Fact]
+    public async Task SplitOrdersToNewBillAsync_ThrowsIfBillIsPaid()
+    {
+        var customer = await _customerRepo.CreateCustomerAsync(new Customer
+        {
+            CanonicalName = "Studio Thanh Hoa",
+            PriceTier = PriceTier.Retail
+        });
+        await _customerRepo.AddAliasAsync(customer.Id, "Thanh Hoa 2");
+
+        string date = "2026-10-05";
+        string folder1 = Path.Combine(_tempRoot, date, "Studio Thanh Hoa", "13x18 in");
+        CreateDummyFiles(folder1, 2);
+        string folder2 = Path.Combine(_tempRoot, date, "Thanh Hoa 2", "13x18 in");
+        CreateDummyFiles(folder2, 3);
+
+        await _scanService.ScanDateAsync(date);
+        var bill = (await _customerBillingService.BuildOrRefreshDraftAsync(customer.Id)).Draft;
+        bill.Orders.Should().HaveCount(2);
+
+        // Mark bill as paid
+        await _customerBillRepo.SetPaymentStatusAsync(bill.Id, true);
+
+        // Refresh in-memory bill object
+        var paidBill = await _customerBillRepo.GetByIdAsync(bill.Id);
+        paidBill.Should().NotBeNull();
+        paidBill!.IsPaid.Should().BeTrue();
+
+        // Attempting to split a paid bill must throw InvalidOperationException
+        var act = async () => await _customerBillingService.SplitOrdersToNewBillAsync(paidBill.Id, new[] { paidBill.Orders[0].OrderId });
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*thanh toán*");
+
+        // Verify original bill remains unchanged in DB
+        var persistedBill = await _customerBillRepo.GetByIdAsync(bill.Id);
+        persistedBill.Should().NotBeNull();
+        persistedBill!.IsPaid.Should().BeTrue();
+        persistedBill.Orders.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task SplitBillAtomicAsync_RejectsStaleTimestampAndMembership()
+    {
+        var customer = await _customerRepo.CreateCustomerAsync(new Customer { CanonicalName = "Stale Split Customer" });
+        await _customerRepo.AddAliasAsync(customer.Id, "Stale Split Customer 2");
+        string date = "2026-10-06";
+        CreateDummyFiles(Path.Combine(_tempRoot, date, "Stale Split Customer", "13x18 in"), 2);
+        CreateDummyFiles(Path.Combine(_tempRoot, date, "Stale Split Customer 2", "13x18 in"), 3);
+
+        await _scanService.ScanDateAsync(date);
+        var bill = (await _customerBillingService.BuildOrRefreshDraftAsync(customer.Id)).Draft;
+        long movedOrderId = bill.Orders[1].OrderId;
+
+        var createdBill = new CustomerBill
+        {
+            BillNumber = "NEW-STALE-TEST",
+            CustomerId = customer.Id,
+            CustomerNameSnapshot = customer.CanonicalName,
+            Status = CustomerBillStatus.Draft,
+            Orders = new List<CustomerBillOrder> { new() { OrderId = movedOrderId } }
+        };
+        var originalCopy = new CustomerBill
+        {
+            Id = bill.Id,
+            BillNumber = bill.BillNumber,
+            Status = CustomerBillStatus.Draft,
+            Orders = new List<CustomerBillOrder> { new() { OrderId = bill.Orders[0].OrderId } }
+        };
+
+        // 1. Stale timestamp rejection
+        var staleTimestamp = bill.UpdatedAt.AddMinutes(-10);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _customerBillRepo.SplitBillAtomicAsync(originalCopy, createdBill, new[] { movedOrderId }, staleTimestamp));
+
+        // 2. Stale membership rejection (order not belonging to original bill)
+        long foreignOrderId = 8888888L;
+        createdBill.Orders[0].OrderId = foreignOrderId;
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _customerBillRepo.SplitBillAtomicAsync(originalCopy, createdBill, new[] { foreignOrderId }, bill.UpdatedAt));
     }
 }

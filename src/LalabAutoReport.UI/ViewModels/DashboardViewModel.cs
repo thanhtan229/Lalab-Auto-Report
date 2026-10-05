@@ -29,6 +29,7 @@ public partial class DashboardViewModel : ObservableObject
     private readonly ICustomerRepository? _customerRepository;
     private readonly IRootFolderRepository? _rootFolderRepository;
     private readonly IThumbnailService? _thumbnailService;
+    private readonly IFolderStructureParser? _structureParser;
 
     private CancellationTokenSource? _scanCts;
     private CancellationTokenSource? _thumbnailCts;
@@ -130,7 +131,8 @@ public partial class DashboardViewModel : ObservableObject
         IThumbnailService? thumbnailService = null,
         IShippingLabelExporter? shippingLabelExporter = null,
         IPrintStatusService? printStatusService = null,
-        ICloudSyncService? cloudSyncService = null)
+        ICloudSyncService? cloudSyncService = null,
+        IFolderStructureParser? structureParser = null)
     {
         _scanService = scanService;
         _settingsRepository = settingsRepository;
@@ -148,6 +150,7 @@ public partial class DashboardViewModel : ObservableObject
         _shippingLabelExporter = shippingLabelExporter;
         _printStatusService = printStatusService;
         _cloudSyncService = cloudSyncService;
+        _structureParser = structureParser;
 
         if (_printStatusService != null)
         {
@@ -416,16 +419,54 @@ public partial class DashboardViewModel : ObservableObject
         if (IsScanning) return;
 
         var settings = await _settingsRepository.GetSettingsAsync();
-        if (string.IsNullOrWhiteSpace(settings.RootFolder) || !_fileSystem.DirectoryExists(settings.RootFolder))
+        IReadOnlyList<RootFolder> activeRoots = Array.Empty<RootFolder>();
+        if (_rootFolderRepository != null)
+        {
+            activeRoots = await _rootFolderRepository.GetActiveRootsAsync();
+        }
+
+        bool hasAccessibleRoot = false;
+        string? matchedDateFolder = null;
+
+        if (activeRoots.Count > 0)
+        {
+            foreach (var r in activeRoots)
+            {
+                if (!string.IsNullOrWhiteSpace(r.FullPath) && _fileSystem.DirectoryExists(r.FullPath))
+                {
+                    hasAccessibleRoot = true;
+                    string? df = _structureParser != null
+                        ? _structureParser.FindDateFolderPath(r.FullPath, FormattedDateString)
+                        : (_fileSystem.DirectoryExists(_fileSystem.Combine(r.FullPath, FormattedDateString)) ? _fileSystem.Combine(r.FullPath, FormattedDateString) : null);
+
+                    if (df != null && _fileSystem.DirectoryExists(df))
+                    {
+                        matchedDateFolder = df;
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(settings.RootFolder) && _fileSystem.DirectoryExists(settings.RootFolder))
+            {
+                hasAccessibleRoot = true;
+                matchedDateFolder = _structureParser != null
+                    ? _structureParser.FindDateFolderPath(settings.RootFolder, FormattedDateString)
+                    : (_fileSystem.DirectoryExists(_fileSystem.Combine(settings.RootFolder, FormattedDateString)) ? _fileSystem.Combine(settings.RootFolder, FormattedDateString) : null);
+            }
+        }
+
+        if (!hasAccessibleRoot)
         {
             StatusMessage = "Vui lòng chọn Thư Mục Gốc (Root Folder) trong phần Cài Đặt trước khi quét!";
             return;
         }
 
-        string dateFolder = _fileSystem.Combine(settings.RootFolder, FormattedDateString);
-        if (!_fileSystem.DirectoryExists(dateFolder))
+        if (matchedDateFolder == null)
         {
-            StatusMessage = $"Không tìm thấy thư mục ngày: '{FormattedDateString}' trong thư mục gốc.";
+            StatusMessage = $"Không tìm thấy thư mục ngày: '{FormattedDateString}' trong bất kỳ kho nào đang hoạt động.";
             return;
         }
 
@@ -488,7 +529,16 @@ public partial class DashboardViewModel : ObservableObject
         if (IsScanning) return;
 
         var settings = await _settingsRepository.GetSettingsAsync();
-        if (string.IsNullOrWhiteSpace(settings.RootFolder) || !_fileSystem.DirectoryExists(settings.RootFolder))
+        IReadOnlyList<RootFolder> activeRoots = Array.Empty<RootFolder>();
+        if (_rootFolderRepository != null)
+        {
+            activeRoots = await _rootFolderRepository.GetActiveRootsAsync();
+        }
+
+        bool hasAccessibleRoot = activeRoots.Any(r => !string.IsNullOrWhiteSpace(r.FullPath) && _fileSystem.DirectoryExists(r.FullPath))
+            || (!string.IsNullOrWhiteSpace(settings.RootFolder) && _fileSystem.DirectoryExists(settings.RootFolder));
+
+        if (!hasAccessibleRoot)
         {
             StatusMessage = "Vui lòng chọn Thư Mục Gốc trong Cài Đặt trước!";
             return;
@@ -779,72 +829,7 @@ public partial class DashboardViewModel : ObservableObject
     {
         try
         {
-            // 1. Kiểm tra gán khách hàng nếu chưa có và không phải khách lẻ
-            if (!orderDisplay.HasCustomer && !orderDisplay.IsGuest)
-            {
-                if (_customerRepository == null) return;
-
-                var assignVm = new AssignCustomerViewModel(
-                    orderDisplay.OriginalFolderName,
-                    FormattedDateString,
-                    _customerRepository,
-                    _orderRepository);
-
-                var assignWin = new AssignCustomerWindow(assignVm)
-                {
-                    Owner = Application.Current?.MainWindow
-                };
-
-                if (assignWin.ShowDialog() != true)
-                {
-                    return; // Người dùng hủy gán khách
-                }
-
-                // Cập nhật lại các đơn hàng liên quan trên Dashboard
-                string folderName = orderDisplay.OriginalFolderName;
-                foreach (var order in AllOrders.Where(o => string.Equals(o.OriginalFolderName, folderName, StringComparison.OrdinalIgnoreCase)))
-                {
-                    if (assignVm.IsGuestAssigned)
-                    {
-                        order.Order.CustomerId = null;
-                        order.Order.Customer = null;
-                        order.Order.OrderName = "Khách lẻ";
-                    }
-                    else if (assignVm.AssignedCustomer != null)
-                    {
-                        order.Order.CustomerId = assignVm.AssignedCustomer.Id;
-                        order.Order.Customer = assignVm.AssignedCustomer;
-                        if (order.Order.OrderName == "Khách lẻ")
-                        {
-                            order.Order.OrderName = null;
-                        }
-                    }
-
-                    if (order.Order.Status == OrderStatus.NeedsReview)
-                    {
-                        bool itemsHaveIssues = order.Order.Items.Count == 0 ||
-                            order.Order.Items.Any(i => i.PrintFolderStatus != PrintFolderResolutionStatus.Resolved ||
-                                                       i.ScanStatus == ScanStatus.Failed ||
-                                                       i.PrintSpecificationId == null);
-                        if (!itemsHaveIssues)
-                        {
-                            order.Order.Status = OrderStatus.Ready;
-                            order.Status = OrderStatus.Ready;
-                            if (_orderRepository != null && order.Order.Id > 0)
-                            {
-                                _ = _orderRepository.UpdateOrderStatusAsync(order.Order.Id, OrderStatus.Ready);
-                            }
-                        }
-                    }
-
-                    order.NotifyTotalsChanged();
-                }
-
-                ApplyFilter();
-                UpdateSummary();
-            }
-
-            // 2. Tính bill cho Khách hàng cụ thể
+            // 1. Tính bill cho Khách quen
             if (orderDisplay.HasCustomer && orderDisplay.Order.CustomerId.HasValue)
             {
                 long customerId = orderDisplay.Order.CustomerId.Value;
@@ -1042,20 +1027,16 @@ public partial class DashboardViewModel : ObservableObject
     private async Task OpenDateFolderAsync()
     {
         var settings = await _settingsRepository.GetSettingsAsync();
-        string dateFolder = _fileSystem.Combine(settings.RootFolder, FormattedDateString);
-        if (_fileSystem.DirectoryExists(dateFolder))
-        {
-            _fileSystem.OpenDirectoryInShell(dateFolder);
-            return;
-        }
-
         if (_rootFolderRepository != null)
         {
             var activeRoots = await _rootFolderRepository.GetActiveRootsAsync();
             foreach (var root in activeRoots)
             {
-                string path = _fileSystem.Combine(root.FullPath, FormattedDateString);
-                if (_fileSystem.DirectoryExists(path))
+                string? path = _structureParser != null
+                    ? _structureParser.FindDateFolderPath(root.FullPath, FormattedDateString)
+                    : _fileSystem.Combine(root.FullPath, FormattedDateString);
+
+                if (path != null && _fileSystem.DirectoryExists(path))
                 {
                     _fileSystem.OpenDirectoryInShell(path);
                     return;
@@ -1063,7 +1044,16 @@ public partial class DashboardViewModel : ObservableObject
             }
         }
 
-        TryOpenDirectory(dateFolder, $"Thư mục ngày '{FormattedDateString}'");
+        string fallbackPath = (_structureParser != null ? _structureParser.FindDateFolderPath(settings.RootFolder, FormattedDateString) : null)
+                              ?? _fileSystem.Combine(settings.RootFolder, FormattedDateString);
+
+        if (_fileSystem.DirectoryExists(fallbackPath))
+        {
+            _fileSystem.OpenDirectoryInShell(fallbackPath);
+            return;
+        }
+
+        TryOpenDirectory(fallbackPath, $"Thư mục ngày '{FormattedDateString}'");
     }
 
     [RelayCommand]
@@ -1128,6 +1118,14 @@ public partial class DashboardViewModel : ObservableObject
         {
             filtered = filtered.Where(o => o.Status == OrderStatus.Locked || o.Status == OrderStatus.Billed || o.IsBilled);
         }
+        else if (CurrentFilter == "Regular")
+        {
+            filtered = filtered.Where(o => o.HasCustomer);
+        }
+        else if (CurrentFilter == "Guest")
+        {
+            filtered = filtered.Where(o => o.IsGuest);
+        }
         else if (CurrentFilter == "Delivered")
         {
             filtered = filtered.Where(o => o.IsDelivered);
@@ -1169,14 +1167,15 @@ public partial class DashboardViewModel : ObservableObject
                 {
                     if (ct.IsCancellationRequested) break;
 
-                    string root = defaultRoot ?? string.Empty;
-                    if (order.RootFolderId.HasValue && _rootFolderRepository != null)
+                    string root;
+                    if (order.RootFolderId.HasValue)
                     {
-                        var rf = await _rootFolderRepository.GetByIdAsync(order.RootFolderId.Value, ct);
-                        if (rf != null && !string.IsNullOrWhiteSpace(rf.FullPath))
-                        {
-                            root = rf.FullPath;
-                        }
+                        var rf = _rootFolderRepository == null ? null : await _rootFolderRepository.GetByIdAsync(order.RootFolderId.Value, ct);
+                        root = (rf != null && !string.IsNullOrWhiteSpace(rf.FullPath)) ? rf.FullPath : string.Empty;
+                    }
+                    else
+                    {
+                        root = defaultRoot ?? string.Empty;
                     }
 
                     if (!string.IsNullOrWhiteSpace(root))

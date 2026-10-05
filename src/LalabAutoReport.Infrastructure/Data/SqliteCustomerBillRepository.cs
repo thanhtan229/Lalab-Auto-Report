@@ -253,10 +253,12 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var stored = await connection.QuerySingleAsync<CustomerBillDto>(
+            var stored = await connection.QuerySingleOrDefaultAsync<CustomerBillDto>(
                 "SELECT * FROM customer_bills WHERE id=@Id", new { original.Id }, transaction);
-            if (stored.status != "Draft" || original.Status != CustomerBillStatus.Draft || created.Status != CustomerBillStatus.Draft)
-                throw new InvalidOperationException("Hãy mở lại hóa đơn trước khi tách đơn.");
+            if (stored == null)
+                throw new KeyNotFoundException($"Không tìm thấy hóa đơn ID {original.Id}.");
+            if (stored.status != "Draft" || original.Status != CustomerBillStatus.Draft || created.Status != CustomerBillStatus.Draft || stored.is_paid == 1 || original.IsPaid)
+                throw new InvalidOperationException("Hãy mở lại hoặc hủy thanh toán hóa đơn trước khi tách đơn.");
             if (DateTimeOffset.Parse(stored.updated_at) != expectedUpdatedAt || created.Id != 0)
                 throw new InvalidOperationException("Hóa đơn đã thay đổi. Hãy tải lại trước khi tách đơn.");
             var currentIds = (await connection.QueryAsync<long>(
@@ -268,6 +270,9 @@ public class SqliteCustomerBillRepository : ICustomerBillRepository
                 throw new InvalidOperationException("Danh sách đơn hàng đã thay đổi. Hãy tải lại hóa đơn.");
             await SaveBillInternalAsync(connection, transaction, created);
             await SaveBillInternalAsync(connection, transaction, original);
+            await connection.ExecuteAsync(
+                "UPDATE order_item_scans SET customer_bill_id=@Id WHERE order_id IN @MovedOrderIds",
+                new { Id = created.Id, MovedOrderIds = movedOrderIds }, transaction);
             var jobs = created.Lines.Select(l => l.ProductJobId).Where(id => id > 0).Distinct().ToArray();
             if (jobs.Length > 0)
                 await connection.ExecuteAsync("UPDATE order_item_scans SET customer_bill_id=@Id WHERE id IN @Jobs",

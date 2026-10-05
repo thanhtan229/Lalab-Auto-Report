@@ -199,4 +199,170 @@ public sealed class DurableCloudSyncTests : IDisposable
         Assert.Equal(0,posts); Assert.Equal(0,(await _state.GetCheckpointAsync()).Cursor);
         await Assert.ThrowsAsync<InvalidOperationException>(() => _state.BindStreamAsync("changed-stream","https://fixture"));
     }
+
+    [Fact]
+    public async Task PullPaginationBoundaries_0_1_500_1501_CommitsExactCursor()
+    {
+        await EnableAsync();
+
+        // 0 events
+        using (var service0 = Service(request => Task.FromResult(Json(Page(0, [])))))
+        {
+            Assert.Equal(0, await service0.PullRemoteChangesAsync());
+            Assert.Equal(0, (await _state.GetCheckpointAsync()).Cursor);
+        }
+
+        // 1 event
+        using (var service1 = Service(request => Task.FromResult(Json(Page(0, [Note(1, "one")])))))
+        {
+            Assert.Equal(1, await service1.PullRemoteChangesAsync());
+            Assert.Equal(1, (await _state.GetCheckpointAsync()).Cursor);
+        }
+
+        // 500 events from cursor 1 -> nextCursor 501, hasMore = false
+        using (var service500 = Service(request => {
+            long cursor = long.Parse(request.RequestUri!.Query.Split('=')[1]);
+            Assert.Equal(1, cursor);
+            var evts = Enumerable.Range(2, 500).Select(i => Note(i, i.ToString())).ToArray();
+            return Task.FromResult(Json(Page(cursor, evts, more: false)));
+        }))
+        {
+            Assert.Equal(500, await service500.PullRemoteChangesAsync());
+            Assert.Equal(501, (await _state.GetCheckpointAsync()).Cursor);
+        }
+
+        // 1501 events: 4 pages (500 + 500 + 500 + 1)
+        int pageCount = 0;
+        using (var service1501 = Service(request => {
+            pageCount++;
+            long cursor = long.Parse(request.RequestUri!.Query.Split('=')[1]);
+            int count = pageCount <= 3 ? 500 : 1;
+            bool more = pageCount < 4;
+            var evts = Enumerable.Range((int)cursor + 1, count).Select(i => Note(i, i.ToString())).ToArray();
+            return Task.FromResult(Json(Page(cursor, evts, more: more)));
+        }))
+        {
+            Assert.Equal(1501, await service1501.PullRemoteChangesAsync());
+            Assert.Equal(4, pageCount);
+            Assert.Equal(2002, (await _state.GetCheckpointAsync()).Cursor);
+        }
+    }
+
+    [Fact]
+    public async Task EventFailureInLaterPage_RollsBackThatEventAndRetainsPreviousPageCheckpoint_ThenRetryResumes()
+    {
+        await EnableAsync();
+        bool injectFailure = true;
+
+        using var service = Service(request => {
+            long cursor = long.Parse(request.RequestUri!.Query.Split('=')[1]);
+            if (cursor == 0)
+            {
+                // Page 1: 500 events (1..500)
+                var page1 = Enumerable.Range(1, 500).Select(i => Note(i, i.ToString())).ToArray();
+                return Task.FromResult(Json(Page(0, page1, more: true)));
+            }
+            if (cursor == 500)
+            {
+                // Page 2: event 501 is valid, event 502 is malformed or invalid
+                var page2 = injectFailure
+                    ? new[] { Note(501, "501"), Note(502, "502") with { EntityType = "unknown_type" } }
+                    : new[] { Note(501, "501"), Note(502, "502") };
+                return Task.FromResult(Json(Page(500, page2, more: false)));
+            }
+            if (cursor == 501)
+            {
+                // Resumed from 501: remaining event 502
+                return Task.FromResult(Json(Page(501, new[] { Note(502, "502") }, more: false)));
+            }
+            throw new InvalidOperationException($"Unexpected cursor: {cursor}");
+        });
+
+        // First attempt: page 1 succeeds (500 events), page 2 event 502 fails
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PullRemoteChangesAsync());
+        // Checkpoint must be exactly 501 (500 from page 1 + 1 from page 2), NOT advanced to 502
+        Assert.Equal(501, (await _state.GetCheckpointAsync()).Cursor);
+
+        // Retry without failure: resumes from cursor 501
+        injectFailure = false;
+        int resumedCount = await service.PullRemoteChangesAsync();
+        Assert.Equal(1, resumedCount);
+        Assert.Equal(502, (await _state.GetCheckpointAsync()).Cursor);
+    }
+
+    [Fact]
+    public async Task MobileWriteBetweenPullAndPush_ProjectionDoesNotOverwriteMobileAndPullsLatestRevision()
+    {
+        await EnableAsync();
+        Assert.False((await _bills.GetByIdAsync(1))!.IsPaid);
+
+        bool initialPullDone = false;
+        CloudOperationalEvent mobileEvent = new(100, "bill_payment", 1, "{\"isPaid\":true,\"paidAt\":\"2026-10-02T12:00:00Z\"}", "2026-10-02T12:00:00Z");
+
+        using var service = Service(request => {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/pull"))
+            {
+                long cursor = long.Parse(request.RequestUri.Query.Split('=')[1]);
+                if (!initialPullDone)
+                {
+                    // Initial pull: no events yet
+                    initialPullDone = true;
+                    return Task.FromResult(Json(Page(0, [])));
+                }
+                // Secondary pull after batch: mobile event arrives
+                return Task.FromResult(Json(Page(cursor, cursor < 100 ? [mobileEvent] : [])));
+            }
+            if (request.RequestUri.AbsolutePath.EndsWith("/batch"))
+            {
+                return Task.FromResult(Json(new { success = true }));
+            }
+            return Task.FromResult(Json(new { success = true }));
+        });
+
+        var result = await service.SyncAllAsync();
+        Assert.True(result.Success, result.Error ?? result.Message);
+        // Secondary pull inside SyncAllCoreAsync applied mobile event!
+        var bill = (await _bills.GetByIdAsync(1))!;
+        Assert.True(bill.IsPaid);
+        Assert.Equal(75000, bill.GrandTotal); // Immutability preserved
+        Assert.Equal(100, (await _state.GetCheckpointAsync()).Cursor);
+    }
+
+    [Fact]
+    public async Task SyncGate_SimultaneousAccessAndCancellationReleasesGate()
+    {
+        await EnableAsync();
+        var blockerTcs = new TaskCompletionSource<bool>();
+        int activeCalls = 0;
+        int maxActive = 0;
+
+        using var service = Service(async request => {
+            int current = Interlocked.Increment(ref activeCalls);
+            maxActive = Math.Max(maxActive, current);
+            await blockerTcs.Task;
+            Interlocked.Decrement(ref activeCalls);
+            return Json(Page(0, []));
+        });
+
+        // Launch first call which will block inside the gate
+        var task1 = Task.Run(() => service.PullRemoteChangesAsync());
+        await Task.Delay(50);
+
+        // Attempt second concurrent call with a short cancellation token
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.PullRemoteChangesAsync(cts.Token));
+
+        // Release the first call
+        blockerTcs.SetResult(true);
+        await task1;
+
+        // Gate should be 1 at a time max
+        Assert.Equal(1, maxActive);
+
+        // Gate is now free; subsequent call proceeds smoothly
+        using var servicePost = Service(request => Task.FromResult(Json(Page(0, []))));
+        var count = await servicePost.PullRemoteChangesAsync();
+        Assert.Equal(0, count);
+    }
 }
+

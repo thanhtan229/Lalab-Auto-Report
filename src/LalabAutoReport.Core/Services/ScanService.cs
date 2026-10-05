@@ -104,6 +104,28 @@ public class ScanService : IScanService
                 continue;
             }
 
+            if (_structureParser.FindDateFolderPath(root.FullPath, dateString) == null)
+            {
+                if (_orderRepository != null)
+                {
+                    var retained = root.Id > 0
+                        ? await _orderRepository.GetOrdersByDateAndRootAsync(dateString, root.Id, cancellationToken)
+                        : await _orderRepository.GetOrdersByDateAsync(dateString, cancellationToken);
+
+                    if (retained.Count > 0)
+                    {
+                        _logger?.LogWarning("Previously observed date folder for '{Date}' in root '{Root}' is missing; retaining existing orders as Error.", dateString, root.Name);
+                        progress?.Report(new ScanProgress($"Không tìm thấy thư mục ngày {dateString} tại kho {root.Name}", 0, 0));
+                        foreach (var failed in retained)
+                        {
+                            failed.Status = OrderStatus.Error;
+                            resultOrders.Add(failed);
+                        }
+                    }
+                }
+                continue;
+            }
+
             IReadOnlyList<DiscoveredOrder> discoveredOrders;
             try { discoveredOrders = _structureParser.DiscoverOrdersForDate(root.FullPath, dateString); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
@@ -265,7 +287,7 @@ public class ScanService : IScanService
             if (dbOrder?.RootFolderId != null && _rootFolderRepository != null)
             {
                 var root = await _rootFolderRepository.GetByIdAsync(dbOrder.RootFolderId.Value, cancellationToken);
-                if (root != null && _fileSystem.DirectoryExists(root.FullPath))
+                if (root != null)
                 {
                     rootFolder = root.FullPath;
                     rootFolderId = root.Id;
@@ -611,33 +633,24 @@ public class ScanService : IScanService
         }
 
         bool hasIssues = false;
-        bool isGuest = order.IsGuest || Order.IsGuestFolderName(discOrder.OriginalCustomerFolderName, discOrder.OrderName);
 
-        // Resolve Customer Identity
+        // Resolve Customer Identity:
+        // Nếu khớp Exact/Normalized -> Khách quen (order.CustomerId != null).
+        // Nếu không khớp -> Mặc định là Khách lẻ (order.CustomerId = null), hợp lệ và KHÔNG coi là lỗi.
         if (_customerResolver != null && order.CustomerId == null)
         {
-            if (isGuest)
+            var custResult = await _customerResolver.ResolveCustomerAsync(discOrder.OriginalCustomerFolderName, cancellationToken);
+            if (custResult.Status == CustomerResolutionStatus.ExactMatch || custResult.Status == CustomerResolutionStatus.NormalizedMatch)
             {
-                // Guest / Khách lẻ orders do not require a Customer record in database.
-                // Do not mark hasIssues as true for guests.
+                order.CustomerId = custResult.ResolvedCustomer?.Id;
+                order.Customer = custResult.ResolvedCustomer;
             }
             else
             {
-                var custResult = await _customerResolver.ResolveCustomerAsync(discOrder.OriginalCustomerFolderName, cancellationToken);
-                if (custResult.Status == CustomerResolutionStatus.ExactMatch || custResult.Status == CustomerResolutionStatus.NormalizedMatch)
-                {
-                    order.CustomerId = custResult.ResolvedCustomer?.Id;
-                    order.Customer = custResult.ResolvedCustomer;
-                }
-                else
-                {
-                    hasIssues = true; // Unknown customer or collision
-                }
+                // Mặc định Khách lẻ (IsGuest = true)
+                order.CustomerId = null;
+                order.Customer = null;
             }
-        }
-        else if (order.CustomerId == null && !isGuest)
-        {
-            // No customer resolver configured
         }
 
         var snapshot = new ScanSnapshot
