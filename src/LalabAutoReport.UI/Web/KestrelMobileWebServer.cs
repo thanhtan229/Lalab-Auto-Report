@@ -159,7 +159,7 @@ public class KestrelMobileWebServer : IMobileWebServer, IDisposable
             return Results.Ok(new
             {
                 appName = "Lalab Auto Report",
-                version = "1.0.0",
+                version = typeof(KestrelMobileWebServer).Assembly.GetName().Version?.ToString(3) ?? "2.0.0",
                 workshopName = settings.WorkshopName,
                 serverTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 cloudSyncEnabled = settings.EnableCloudSync,
