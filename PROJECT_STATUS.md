@@ -1,3 +1,18 @@
+> [!WARNING]
+> # HISTORICAL / SUPERSEDED STATUS DOCUMENT
+>
+> **TÀI LIỆU LỊCH SỬ / ĐÃ ĐƯỢC THAY THẾ — KHÔNG SỬ DỤNG LÀM CURRENT SOURCE OF TRUTH**
+>
+> - Tài liệu này chứa các ảnh chụp trạng thái triển khai lịch sử (historical implementation snapshots tính đến ngày 2026-10-01) và **không được phép sử dụng để đánh giá mức độ sẵn sàng production hiện tại (current production readiness)**.
+> - Tài liệu chứa các tuyên bố kiến trúc và cấu hình cũ đã lỗi thời (ví dụ: các thiết lập mã PIN mặc định trước đây đã bị xóa bỏ hoàn toàn ở Phase 5/10 để đảm bảo an toàn fail-closed, cũng như kiến trúc Cloud V1 cũ trước khi triển khai Cloud Sync Protocol V2).
+> - Các nguồn sự thật bền vững hiện tại (current durable sources of truth) bao gồm:
+>   - `PRODUCTION_FIX_PROGRESS.md`
+>   - `FINAL_REVIEW_VERIFIED.md`
+>   - `PLAN_PRODUCTION_HARDENING.md` execution outcome
+>   - `ARCHITECTURE.md` / ADRs for current architecture.
+
+---
+
 # Trạng Thái Dự Án Lalab Auto Report V2
 
 > Báo cáo tiến độ và kết quả nghiệm thu nâng cấp toàn diện Lalab Auto Report lên phiên bản V2 (bao gồm cơ chế Thư Mục Tính Số Lượng - Effective Billing Folder).

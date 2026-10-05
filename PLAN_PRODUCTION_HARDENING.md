@@ -2,7 +2,41 @@
 
 Ngày lập: 2026-10-02 (UTC+7).
 
-**Trạng thái: PLAN ONLY — chưa viết code.** Thực hiện tuần tự, mỗi lần giao coding agent một phase. Không triển khai cả kế hoạch trong một batch.
+**Trạng thái: EXECUTED — Phase 10 COMPLETE WITH DEFERRED ITEMS. Release v2.0 đã phát hành và nghiệm thu. Xem PRODUCTION_FIX_PROGRESS.md và FINAL_REVIEW_VERIFIED.md cho evidence cuối.**
+
+### Execution outcome
+
+**Phase execution summary:**
+- Phase 0 COMPLETE
+- Phase 1 COMPLETE WITH DEFERRED ITEMS
+- Phase 2 COMPLETE
+- Phase 3 COMPLETE
+- Phase 4 COMPLETE
+- Phase 5 COMPLETE
+- Phase 6 COMPLETE
+- Phase 7 COMPLETE
+- Phase 8 COMPLETE
+- Phase 9 COMPLETE
+- Phase 10 COMPLETE WITH DEFERRED ITEMS
+
+**Production gates:**
+- Gate 1 NOT TESTED — USER DEFERRED
+- Gate 2 PASS
+- Gate 3 PASS for current deployment
+- Gate 4 PASS
+- Gate 5 PASS
+
+**Release:**
+- v2.0
+- release commit `54385f770817abd4d87521f234b84a1f1ca6182f`
+- release readiness `READY WITH DOCUMENTED NON-BLOCKING ISSUES`
+
+**Deferred:**
+- Thermal printer hardware acceptance
+- Physical NAS not applicable/current deployment; not hardware-tested
+- `ScanService.HasFilesystemChangedFromCustomerBill` private unused helper
+
+---
 
 ## 1. Mục tiêu và nguồn quyết định
 
@@ -335,4 +369,4 @@ Cập nhật progress bằng evidence; báo kết quả theo deliverable của k
 Dừng khi phase đạt hoặc có blocker; không tự bắt đầu phase kế tiếp.
 ```
 
-**Bước triển khai đầu tiên: Phase 0.** Kế hoạch này chưa cho phép coi các sửa đổi sau review là đủ production-ready và chưa thực hiện coding/deploy/restart.
+**Ghi chú triển khai:** Toàn bộ kế hoạch từ Phase 0 đến Phase 10 đã được thực thi và nghiệm thu hoàn tất (xem chi tiết tại phần Execution outcome và PRODUCTION_FIX_PROGRESS.md).
